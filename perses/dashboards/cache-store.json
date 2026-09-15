@@ -1,0 +1,489 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "cache-store",
+    "project": "dcu-monitoring"
+  },
+  "spec": {
+    "display": {
+      "name": "HiCache 与 Mooncake",
+      "description": "数据源：test4 VictoriaMetrics。缺失或无效观测留空；默认 1 小时 / 15 秒刷新。"
+    },
+    "duration": "1h",
+    "refreshInterval": "15s",
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "role",
+          "display": {
+            "name": "角色"
+          },
+          "defaultValue": ".*",
+          "plugin": {
+            "kind": "StaticListVariable",
+            "spec": {
+              "values": [
+                {
+                  "value": ".*",
+                  "label": "全部"
+                },
+                {
+                  "value": "prefill",
+                  "label": "Prefill / dcu1"
+                },
+                {
+                  "value": "decode",
+                  "label": "Decode / dcu2"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "panels": {
+      "p0": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "模型缓存命中率",
+            "description": "缓存窗口约 60 秒。Store 查询命中不等同于模型 Token 命中、读取成功或物理 SSD I/O；SSD 容量是后端配额。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"}) < 15)) * 100",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p1": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "缓存命中分层",
+            "description": "缓存窗口约 60 秒。Store 查询命中不等同于模型 Token 命中、读取成功或物理 SSD I/O；SSD 容量是后端配额。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"}) < 15)) * 100",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "HiCache 容量使用率",
+            "description": "缓存窗口约 60 秒。Store 查询命中不等同于模型 Token 命中、读取成功或物理 SSD I/O；SSD 容量是后端配额。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"}) < 15)) * 100",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p3": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "HiCache Token 容量",
+            "description": "缓存窗口约 60 秒。Store 查询命中不等同于模型 Token 命中、读取成功或物理 SSD I/O；SSD 容量是后端配额。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "Token",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.(used|total)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.(used|total)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.(used|total)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.(used|total)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.(used|total)\"}) < 15)) * 1",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p4": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Mooncake 内存配额",
+            "description": "缓存窗口约 60 秒。Store 查询命中不等同于模型 Token 命中、读取成功或物理 SSD I/O；SSD 容量是后端配额。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "GiB",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.capacity.(used|total)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.capacity.(used|total)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.capacity.(used|total)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.capacity.(used|total)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.capacity.(used|total)\"}) < 15)) * 9.313225746154785e-10",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p5": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Mooncake SSD 配额",
+            "description": "缓存窗口约 60 秒。Store 查询命中不等同于模型 Token 命中、读取成功或物理 SSD I/O；SSD 容量是后端配额。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "GiB",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.ssd_capacity.(used|total)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.ssd_capacity.(used|total)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.ssd_capacity.(used|total)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.ssd_capacity.(used|total)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.ssd_capacity.(used|total)\"}) < 15)) * 9.313225746154785e-10",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p6": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Store 查询成功比例",
+            "description": "缓存窗口约 60 秒。Store 查询命中不等同于模型 Token 命中、读取成功或物理 SSD I/O；SSD 容量是后端配额。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.query_60s.ratio\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.query_60s.ratio\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.query_60s.ratio\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.query_60s.ratio\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.query_60s.ratio\"}) < 15)) * 100",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p7": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Store 分层查询命中率",
+            "description": "缓存窗口约 60 秒。Store 查询命中不等同于模型 Token 命中、读取成功或物理 SSD I/O；SSD 容量是后端配额。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.tier_query_60s.(memory|ssd)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.tier_query_60s.(memory|ssd)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.tier_query_60s.(memory|ssd)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.tier_query_60s.(memory|ssd)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.tier_query_60s.(memory|ssd)\"}) < 15)) * 100",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p0"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p1"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p2"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p3"
+              }
+            },
+            {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p4"
+              }
+            },
+            {
+              "x": 12,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p5"
+              }
+            },
+            {
+              "x": 0,
+              "y": 24,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p6"
+              }
+            },
+            {
+              "x": 12,
+              "y": 24,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p7"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

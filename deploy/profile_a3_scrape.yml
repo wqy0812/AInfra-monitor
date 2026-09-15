@@ -1,0 +1,12 @@
+- job_name: aigate-a3
+  bearer_token_file: /config/aigate-a3-profile-key
+  static_configs:
+  - targets: ['122.52.5.131:18082']
+    labels: {environment: a3-vllm, node: worker-131, service: aigate}
+  relabel_configs:
+  - target_label: job
+    replacement: aigate
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'aigate_.*'
+    action: keep

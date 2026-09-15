@@ -1,0 +1,10 @@
+[Unit]
+Description=Access rules for Perses TCP 18431
+Before=monitoring-perses.service
+After=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/data2/monitoring/perses/release/access.sh apply
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target

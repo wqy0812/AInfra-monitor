@@ -1,0 +1,14 @@
+[Unit]
+Description=Perses monitoring dashboards
+Requires=docker.service perses-access.service
+After=docker.service network-online.target perses-access.service
+[Service]
+Type=simple
+ExecStartPre=/data2/monitoring/perses/release/access.sh apply
+ExecStart=/usr/local/bin/docker start -a monitoring-perses
+ExecStop=/usr/local/bin/docker stop -t 20 monitoring-perses
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+[Install]
+WantedBy=multi-user.target

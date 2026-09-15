@@ -1,0 +1,513 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "a3-overview",
+    "project": "dcu-monitoring"
+  },
+  "spec": {
+    "display": {
+      "name": "A3 · 运行概览",
+      "description": "数据源：test4 VictoriaMetrics。缺失或无效观测留空；默认 1 小时 / 15 秒刷新。"
+    },
+    "duration": "1h",
+    "refreshInterval": "15s",
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "role",
+          "display": {
+            "name": "角色"
+          },
+          "defaultValue": ".*",
+          "plugin": {
+            "kind": "StaticListVariable",
+            "spec": {
+              "values": [
+                {
+                  "value": ".*",
+                  "label": "全部"
+                },
+                {
+                  "value": "prefill",
+                  "label": "Prefill / A3-1"
+                },
+                {
+                  "value": "decode",
+                  "label": "Decode / A3-2"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "panels": {
+      "p0": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "A3 采集目标状态",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "1 = 正常",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "up{environment=\"a3-vllm\"} and (time() - timestamp(up{environment=\"a3-vllm\"}) < 15)",
+                    "seriesNameFormat": "{{node}} {{instance}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p1": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "完成请求速率",
+            "description": "每侧 4 个实例，逐实例按实际抓取间隔计算。完成量包含各结束原因，不代表成功量。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "req/s",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.requests\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.requests\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.requests\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.requests\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.requests\"}) < 15)) * 1",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Token 生成速率",
+            "description": "每侧 4 个实例，逐实例按实际抓取间隔计算。完成量包含各结束原因，不代表成功量。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "token/s",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.decode_tokens\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.decode_tokens\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.decode_tokens\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.decode_tokens\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.decode_tokens\"}) < 15)) * 1",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p3": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "首 Token 时延 TTFT",
+            "description": "最近约 60 秒，先合并 4 个实例的直方图增量再计算分位数；服务侧口径，无样本留空。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "ms",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p50\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p50\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p50\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p50\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p50\"}) < 15)) * 1000",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p95\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p95\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p95\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p95\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p95\"}) < 15)) * 1000",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p99\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p99\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p99\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p99\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.ttft.p99\"}) < 15)) * 1000",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p4": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Token 间隔 ITL",
+            "description": "最近约 60 秒，先合并 4 个实例的直方图增量再计算分位数；服务侧口径，无样本留空。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "ms",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p50\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p50\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p50\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p50\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p50\"}) < 15)) * 1000",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p95\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p95\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p95\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p95\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p95\"}) < 15)) * 1000",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p99\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p99\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p99\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p99\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.itl.p99\"}) < 15)) * 1000",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p5": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "请求总时延 E2E",
+            "description": "最近约 60 秒，先合并 4 个实例的直方图增量再计算分位数；服务侧口径，无样本留空。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "s",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p50\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p50\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p50\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p50\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p50\"}) < 15)) * 1",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p95\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p95\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p95\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p95\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p95\"}) < 15)) * 1",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p99\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p99\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p99\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p99\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.percentiles.e2e.p99\"}) < 15)) * 1",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p6": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "运行与排队请求",
+            "description": ""
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "请求",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.resources.queue..*\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.resources.queue..*\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.resources.queue..*\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.resources.queue..*\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-streaming-v1\",path=~\"nodes.$role.resources.queue..*\"}) < 15)) * 1",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p0"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p1"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p2"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p3"
+              }
+            },
+            {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p4"
+              }
+            },
+            {
+              "x": 12,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p5"
+              }
+            },
+            {
+              "x": 0,
+              "y": 24,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p6"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

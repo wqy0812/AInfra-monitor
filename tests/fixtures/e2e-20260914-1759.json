@@ -1,0 +1,848 @@
+[
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "0.2",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      0
+    ],
+    "last": [
+      1789379988863,
+      0
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "80.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "200.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "1200.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "2400.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "0.1",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      0
+    ],
+    "last": [
+      1789379988863,
+      0
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "0.4",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      89
+    ],
+    "last": [
+      1789379988863,
+      89
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "0.8",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      198
+    ],
+    "last": [
+      1789379988863,
+      198
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_sum",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      21.470506630837
+    ],
+    "last": [
+      1789379988863,
+      21.470506630837
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_count",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_count",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      9548
+    ],
+    "last": [
+      1789379988863,
+      9550
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "0.1",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      0
+    ],
+    "last": [
+      1789379988863,
+      0
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "0.4",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      1
+    ],
+    "last": [
+      1789379988863,
+      1
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "0.6",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      22
+    ],
+    "last": [
+      1789379988863,
+      22
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "0.8",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      27
+    ],
+    "last": [
+      1789379988863,
+      27
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "1.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      27
+    ],
+    "last": [
+      1789379988863,
+      27
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "2.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      27
+    ],
+    "last": [
+      1789379988863,
+      27
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "4.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "6.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "8.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "10.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "20.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "40.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "60.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "100.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "400.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "600.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "1800.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "false",
+      "le": "+Inf",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      30
+    ],
+    "last": [
+      1789379988863,
+      30
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "0.2",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      1
+    ],
+    "last": [
+      1789379988863,
+      1
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "0.6",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      142
+    ],
+    "last": [
+      1789379988863,
+      142
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "1.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      268
+    ],
+    "last": [
+      1789379988863,
+      268
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "2.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      484
+    ],
+    "last": [
+      1789379988863,
+      484
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "4.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      7661
+    ],
+    "last": [
+      1789379988863,
+      7661
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "6.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      8043
+    ],
+    "last": [
+      1789379988863,
+      8044
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "8.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      8508
+    ],
+    "last": [
+      1789379988863,
+      8509
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "10.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      8745
+    ],
+    "last": [
+      1789379988863,
+      8746
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "20.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      9173
+    ],
+    "last": [
+      1789379988863,
+      9174
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "40.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      9373
+    ],
+    "last": [
+      1789379988863,
+      9374
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "60.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      9432
+    ],
+    "last": [
+      1789379988863,
+      9433
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "80.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      9464
+    ],
+    "last": [
+      1789379988863,
+      9465
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "100.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      9491
+    ],
+    "last": [
+      1789379988863,
+      9493
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "200.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      9533
+    ],
+    "last": [
+      1789379988863,
+      9535
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "400.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      9547
+    ],
+    "last": [
+      1789379988863,
+      9549
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "600.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      9548
+    ],
+    "last": [
+      1789379988863,
+      9550
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "1200.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      9548
+    ],
+    "last": [
+      1789379988863,
+      9550
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "1800.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      9548
+    ],
+    "last": [
+      1789379988863,
+      9550
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "2400.0",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      9548
+    ],
+    "last": [
+      1789379988863,
+      9550
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_bucket",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "le": "+Inf",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      9548
+    ],
+    "last": [
+      1789379988863,
+      9550
+    ]
+  },
+  {
+    "metric": {
+      "__name__": "sglang:e2e_request_latency_seconds_sum",
+      "engine_type": "decode",
+      "is_streaming": "true",
+      "model_name": "DeepSeek-V4-Flash-FP8-Channel"
+    },
+    "first": [
+      1789379923863,
+      63215.95140164
+    ],
+    "last": [
+      1789379988863,
+      63300.56359351
+    ]
+  }
+]

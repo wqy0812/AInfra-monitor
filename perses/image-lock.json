@@ -1,0 +1,8 @@
+{
+  "version": "v0.54.0",
+  "platform": "linux/amd64",
+  "image_id": "sha256:7f2b38e8c3d57f2643c02eef108888e125954a0c0d5d51f86235092012b7fb1d",
+  "registry_digest": "sha256:a0e34ddaf9d7599d96036611af205b948c1179646844202d869f3bcf3d5d9e9c",
+  "archive_sha256": "3e3ff33ff1a80414b571711a763fc3af56e09c702b0736cbe2158773459af743",
+  "platform_manifest_digest": "sha256:6def46a662a22e790b49c01865c80f547d11d16a83213ac102a0e722d27ece13"
+}

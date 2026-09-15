@@ -1,0 +1,68 @@
+{
+  "VictoriaMetrics/VictoriaMetrics": {
+    "version": "v1.151.0",
+    "assets": [
+      {
+        "name": "victoria-metrics-linux-amd64-v1.151.0-cluster.tar.gz",
+        "browser_download_url": "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.151.0/victoria-metrics-linux-amd64-v1.151.0-cluster.tar.gz"
+      },
+      {
+        "name": "victoria-metrics-linux-amd64-v1.151.0-cluster_checksums.txt",
+        "browser_download_url": "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.151.0/victoria-metrics-linux-amd64-v1.151.0-cluster_checksums.txt"
+      },
+      {
+        "name": "victoria-metrics-linux-amd64-v1.151.0-enterprise-cluster.tar.gz",
+        "browser_download_url": "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.151.0/victoria-metrics-linux-amd64-v1.151.0-enterprise-cluster.tar.gz"
+      },
+      {
+        "name": "victoria-metrics-linux-amd64-v1.151.0-enterprise-cluster_checksums.txt",
+        "browser_download_url": "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.151.0/victoria-metrics-linux-amd64-v1.151.0-enterprise-cluster_checksums.txt"
+      },
+      {
+        "name": "victoria-metrics-linux-amd64-v1.151.0-enterprise.tar.gz",
+        "browser_download_url": "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.151.0/victoria-metrics-linux-amd64-v1.151.0-enterprise.tar.gz"
+      },
+      {
+        "name": "victoria-metrics-linux-amd64-v1.151.0-enterprise_checksums.txt",
+        "browser_download_url": "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.151.0/victoria-metrics-linux-amd64-v1.151.0-enterprise_checksums.txt"
+      },
+      {
+        "name": "victoria-metrics-linux-amd64-v1.151.0.tar.gz",
+        "browser_download_url": "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.151.0/victoria-metrics-linux-amd64-v1.151.0.tar.gz"
+      },
+      {
+        "name": "victoria-metrics-linux-amd64-v1.151.0_checksums.txt",
+        "browser_download_url": "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.151.0/victoria-metrics-linux-amd64-v1.151.0_checksums.txt"
+      },
+      {
+        "name": "vmutils-linux-amd64-v1.151.0-enterprise.tar.gz",
+        "browser_download_url": "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.151.0/vmutils-linux-amd64-v1.151.0-enterprise.tar.gz"
+      },
+      {
+        "name": "vmutils-linux-amd64-v1.151.0-enterprise_checksums.txt",
+        "browser_download_url": "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.151.0/vmutils-linux-amd64-v1.151.0-enterprise_checksums.txt"
+      },
+      {
+        "name": "vmutils-linux-amd64-v1.151.0.tar.gz",
+        "browser_download_url": "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.151.0/vmutils-linux-amd64-v1.151.0.tar.gz"
+      },
+      {
+        "name": "vmutils-linux-amd64-v1.151.0_checksums.txt",
+        "browser_download_url": "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v1.151.0/vmutils-linux-amd64-v1.151.0_checksums.txt"
+      }
+    ]
+  },
+  "prometheus/node_exporter": {
+    "version": "v1.12.1",
+    "assets": [
+      {
+        "name": "node_exporter-1.12.1.linux-amd64.tar.gz",
+        "browser_download_url": "https://github.com/prometheus/node_exporter/releases/download/v1.12.1/node_exporter-1.12.1.linux-amd64.tar.gz"
+      },
+      {
+        "name": "sha256sums.txt",
+        "browser_download_url": "https://github.com/prometheus/node_exporter/releases/download/v1.12.1/sha256sums.txt"
+      }
+    ]
+  }
+}

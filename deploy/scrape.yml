@@ -1,0 +1,103 @@
+global:
+  scrape_interval: 5s
+  scrape_timeout: 4s
+scrape_configs:
+- job_name: sglang-prefill
+  static_configs:
+  - targets: ['122.235.251.106:30125']
+    labels: {environment: dcu-pd, role: prefill, node: dcu1, service: sglang}
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'sglang:(num_requests_total|prompt_tokens_total|generation_tokens_total|cached_tokens_total|num_running_reqs|num_queue_reqs|token_usage|cache_hit_rate|hicache_host_used_tokens|hicache_host_total_tokens|prefill_effective_tokens_total|realtime_tokens_total|(time_to_first_token_seconds|inter_token_latency_seconds|e2e_request_latency_seconds)_(bucket|count|sum))'
+    action: keep
+- job_name: sglang-decode
+  static_configs:
+  - targets: ['122.235.251.182:30127']
+    labels: {environment: dcu-pd, role: decode, node: dcu2, service: sglang}
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'sglang:(num_requests_total|prompt_tokens_total|generation_tokens_total|cached_tokens_total|num_running_reqs|num_queue_reqs|token_usage|cache_hit_rate|hicache_host_used_tokens|hicache_host_total_tokens|prefill_effective_tokens_total|realtime_tokens_total|(time_to_first_token_seconds|inter_token_latency_seconds|e2e_request_latency_seconds)_(bucket|count|sum))'
+    action: keep
+- job_name: mooncake
+  static_configs:
+  - targets: ['122.235.251.182:9003']
+    labels: {environment: dcu-pd, node: dcu2, service: mooncake}
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: '(master_allocated_bytes|master_total_capacity_bytes|segment_allocated_bytes|segment_total_capacity_bytes|valid_get_nums_|total_get_nums_|master_allocated_file_size_bytes|master_total_file_capacity_bytes|mem_cache_hit_nums_|file_cache_hit_nums_)'
+    action: keep
+- job_name: node-prefill
+  metrics_path: /node-metrics
+  static_configs:
+  - targets: ['122.235.251.106:19500']
+    labels: {environment: dcu-pd, role: prefill, node: dcu1, service: host}
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'node_(load1|load5|load15|cpu_seconds_total|boot_time_seconds|memory_.*_bytes|filesystem_(size|avail)_bytes|network_(receive|transmit)_bytes_total|disk_(read|written)_bytes_total)'
+    action: keep
+- job_name: node-decode
+  metrics_path: /node-metrics
+  static_configs:
+  - targets: ['122.235.251.182:19500']
+    labels: {environment: dcu-pd, role: decode, node: dcu2, service: host}
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'node_(load1|load5|load15|cpu_seconds_total|boot_time_seconds|memory_.*_bytes|filesystem_(size|avail)_bytes|network_(receive|transmit)_bytes_total|disk_(read|written)_bytes_total)'
+    action: keep
+- job_name: dcu-prefill
+  static_configs:
+  - targets: ['122.235.251.106:19500']
+    labels: {environment: dcu-pd, role: prefill, node: dcu1, service: dcu}
+- job_name: dcu-decode
+  static_configs:
+  - targets: ['122.235.251.182:19500']
+    labels: {environment: dcu-pd, role: decode, node: dcu2, service: dcu}
+- job_name: vmagent
+  static_configs:
+  - targets: ['127.0.0.1:18429']
+    labels: {environment: dcu-pd}
+- job_name: victoriametrics
+  static_configs:
+  - targets: ['127.0.0.1:18428']
+    labels: {environment: dcu-pd}
+- job_name: aigate
+  bearer_token_file: /config/aigate-profile-key
+  static_configs:
+  - targets: ['122.235.251.106:18082']
+    labels: {environment: dcu-pd, node: dcu1, service: aigate}
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'aigate_.*'
+    action: keep
+- job_name: vllm-a3
+  static_configs:
+  - targets: ['122.209.21.24:7100', '122.209.21.24:7101', '122.209.21.24:7102', '122.209.21.24:7103']
+    labels: {environment: a3-vllm, node: a3-1, service: vllm}
+  - targets: ['122.209.21.25:7100', '122.209.21.25:7101', '122.209.21.25:7102', '122.209.21.25:7103']
+    labels: {environment: a3-vllm, node: a3-2, service: vllm}
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'vllm:.*'
+    action: keep
+- job_name: node-a3
+  static_configs:
+  - targets: ['122.209.21.24:9100']
+    labels: {environment: a3-vllm, node: a3-1, service: host}
+  - targets: ['122.209.21.25:9100']
+    labels: {environment: a3-vllm, node: a3-2, service: host}
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'node_.*'
+    action: keep
+- job_name: aigate-a3
+  bearer_token_file: /config/aigate-a3-profile-key
+  static_configs:
+  - targets: ['122.52.5.131:18082']
+    labels: {environment: a3-vllm, node: worker-131, service: aigate}
+  relabel_configs:
+  - target_label: job
+    replacement: aigate
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'aigate_.*'
+    action: keep

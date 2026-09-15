@@ -1,0 +1,33 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+/.venv/
+/vendor/bin/
+/vendor/**/*.tar.gz
+/vendor/**/*.tar
+/vendor/perses/image-inspect.json
+.runtime/
+.env
+*.env
+.env.*
+!.env.example
+.DS_Store
+
+# Deployment credentials and generated runtime files, never source configuration.
+/deploy/*profile-key
+/perses/config.yaml
+/perses/data/
+/perses/evidence/
+/perses/perses-before.json
+/perses/perses-created.json
+/Dockerfile.vm
+/Dockerfile.api
+/Dockerfile.node
+
+# Deployment evidence and local working records.
+/evidence/
+/work/
+/docs/streaming-scope-20260915.md
+/docs/streaming-scope-20260915.patch
+# Historical browser acceptance depends on ignored evidence and sibling Web files.
+/tests/browser_request_rate.cjs
