@@ -1,3 +1,8 @@
+# Project-aware CLI routing; legacy helpers below remain importable.
+if __name__ == "__main__":
+    raise SystemExit("此历史发布入口已退役。使用 project_release.py prepare/audit/apply --evidence DIR；资源按 project/name 定位。")
+    raise SystemExit(0)
+
 """Validate and create only gateway-generation; never overwrite other dashboards."""
 import json
 import subprocess

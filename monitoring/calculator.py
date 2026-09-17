@@ -1,6 +1,6 @@
 """Pure compatibility calculations copied from code-eval; no database or transport."""
 import json,math,re
-from .request_scope import streaming_rows
+from .request_scope import request_counters as source_counters, SCHEMA
 from .latency import LatencyWindow, quantile_buckets
 from .monitor_series import decode_counters,counter_rate,CacheSeriesWindow,MAX_GAP
 from .cache_metrics import effective_counters,host_capacity
@@ -23,12 +23,7 @@ def unique_value(rows,name):
  # Global tokenizer series only. Ambiguous multi-series counters must not be blindly summed.
  return xs[0]['value'] if len(xs)==1 else None
 def request_counters(rows):
- """One streaming tokenizer counter with full identity for reset/topology checks."""
- xs=select(streaming_rows(rows),'sglang:num_requests_total')
- if len(xs)!=1:return None
- row=xs[0];labels=row.get('source_labels',row['labels']);value=row['value']
- if any(k.endswith('_rank') for k in labels) or not isinstance(value,(int,float)) or not math.isfinite(value) or value<0:return None
- return {json.dumps(labels,sort_keys=True):value}
+ return source_counters(rows,'sglang:num_requests_total')
 def delta(a,b):return a-b if a is not None and b is not None and a>=b else None
 
 class Calculator:
@@ -37,17 +32,18 @@ class Calculator:
   self.cache_windows={r:CacheSeriesWindow() for r in ('prefill','decode')}
   self.previous={}
  def metrics(self,role,rows,ts):
-  p={'ts':ts,'request_scope':'streaming'}
-  scoped=streaming_rows(rows)
-  for short,name in [('input_tokens','prompt_tokens_total'),('output_tokens','generation_tokens_total')]:p[short]=unique_value(scoped,'sglang:'+name)
-  p['cache_input_tokens']=unique_value(rows,'sglang:prompt_tokens_total')
+  p={'ts':ts,'request_scope':'all','request_schema':SCHEMA,'metric_scopes':{'ttft':'native_mixed','itl':'native_mixed','e2e':'all'},'itl_semantics':'按输出批次平均的 Token 间隔，未区分流式'}
+  for short,name in [('input_tokens','prompt_tokens_total'),('output_tokens','generation_tokens_total')]:
+   counters=source_counters(rows,'sglang:'+name)
+   p[short+'_counters']=counters
+   p[short]=sum(counters.values()) if counters else None
+  p['cache_input_tokens']=p['input_tokens']
   p['request_counters']=request_counters(rows)
   p['requests']=sum(p['request_counters'].values()) if p['request_counters'] else None
   p['cache_sources']={x['labels'].get('cache_source','unknown'):x['value'] for x in select(rows,'sglang:cached_tokens_total')}
   # Keep scheduler gauges per rank rather than inventing an aggregation across TP/CP.
   p['rank_gauges']=[x for x in rows if x['name'] in ['sglang:num_running_reqs','sglang:num_queue_reqs','sglang:token_usage','sglang:cache_hit_rate','sglang:hicache_host_used_tokens','sglang:hicache_host_total_tokens']]
-  p['rank_gauges']=[r for r in p['rank_gauges'] if r['name'] not in ('sglang:num_running_reqs','sglang:num_queue_reqs') or r['labels'].get('is_streaming')=='true']
-  p['decode_counters']=decode_counters(scoped) if role=='decode' else None
+  p['decode_counters']=decode_counters(rows) if role=='decode' else None
   old=self.previous.get(('metrics',role));p['rates']={'decode_tokens':None,'requests':None};p['cache_hit_ratio']=None;p['rate_interval_seconds']=None
   if old:
    dt=p['ts']-old['ts']
@@ -55,8 +51,7 @@ class Calculator:
    p['rates']['decode_tokens']=counter_rate(p['decode_counters'],old.get('decode_counters'),dt)
    p['rates']['requests']=counter_rate(p['request_counters'],old.get('request_counters'),dt)
    for k in ['input_tokens','output_tokens']:
-    change=delta(p[k],old[k])
-    p['rates'][k]=change/dt if change is not None and 0<dt<20 else None
+    p['rates'][k]=counter_rate(p[k+'_counters'],old.get(k+'_counters'),dt)
    inp=delta(p['cache_input_tokens'],old['cache_input_tokens'])
    if inp and p['cache_sources']:
     changes=[delta(v,old['cache_sources'].get(k,0)) for k,v in p['cache_sources'].items()]

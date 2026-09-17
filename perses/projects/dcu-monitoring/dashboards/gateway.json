@@ -1,0 +1,458 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "gateway",
+    "project": "dcu-monitoring"
+  },
+  "spec": {
+    "display": {
+      "name": "网关基础状态",
+      "description": "数据源：test4 VictoriaMetrics。缺失或无效观测留空；默认 1 小时 / 15 秒刷新。"
+    },
+    "panels": {
+      "p0": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "在途请求",
+            "description": "指标含义\n当前已纳入画像且尚未结束的请求数量（含流式与非流式）。它是同时在途数量，不是累计请求数；路由、模型发现、等待下游及向客户端写入等阶段都可能占用在途请求。\n\nY 轴单位\n请求数。\n\n曲线与范围\nDCU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。\n\n项目与源口径\nDCU 主机网关；按采集环境归属，后端可能跨环境转发。请求量、画像、总耗时、错误率和在途状态包含流式及非流式；首增量、首输出等待、流停顿及流观察未知仅统计流式。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "请求",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(aigate_requests_inflight{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
+                    "seriesNameFormat": "在途"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p1": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "请求到达速率",
+            "description": "指标含义\n网关完成请求解析、进入请求画像时累计一次到达（含流式与非流式）。曲线为最近 1 分钟请求计数增量除以时间，即平均到达速率；0.1 请求/秒约等于每分钟 6 个请求。它不代表成功率或生成完成速率。\n\nY 轴单位\n请求 / 秒；表示每秒的平均变化量。\n\n曲线与范围\nDCU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。\n\n时间口径\n速率使用最近 1 分钟滚动窗口；比例使用同一窗口的分子和分母。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 速率窗口的采样、生命周期或计数重置检查不通过时留空。\n\n项目与源口径\nDCU 主机网关；按采集环境归属，后端可能跨环境转发。请求量、画像、总耗时、错误率和在途状态包含流式及非流式；首增量、首输出等待、流停顿及流观察未知仅统计流式。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "请求 / 秒",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(rate(aigate_requests_started_total{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) and (resets(aigate_requests_started_total{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_requests_started_total{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) >= 12)) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15)) and on(job,instance) ((changes(aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) >= 12) and (time() - aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} >= 60) and on(job,instance) (min_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[1m]) == 1) and on(job,instance) (count_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[1m]) >= 12))",
+                    "seriesNameFormat": "到达"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "画像队列",
+            "description": "指标含义\n等待画像后台写入的事件队列长度。一个请求可产生多个事件，因此不能把事件数当作请求数。持续增长提示画像写入跟不上事件产生速度。\n\nY 轴单位\n事件数。\n\n曲线与范围\nDCU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。\n\n项目与源口径\nDCU 主机网关；按采集环境归属，后端可能跨环境转发。请求量、画像、总耗时、错误率和在途状态包含流式及非流式；首增量、首输出等待、流停顿及流观察未知仅统计流式。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "事件",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(aigate_profile_queue_events{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
+                    "seriesNameFormat": "画像队列"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p3": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "画像索引条目",
+            "description": "指标含义\n当前内存画像索引条目数，用于近期请求特征分析。条目与业务请求不一定一一对应，也不表示 KV Cache 条目或命中数。\n\nY 轴单位\n条目数。\n\n曲线与范围\nDCU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。\n\n项目与源口径\nDCU 主机网关；按采集环境归属，后端可能跨环境转发。请求量、画像、总耗时、错误率和在途状态包含流式及非流式；首增量、首输出等待、流停顿及流观察未知仅统计流式。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "条目",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(aigate_profile_index_entries{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
+                    "seriesNameFormat": "画像索引条目"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p4": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "画像索引就绪",
+            "description": "指标含义\n画像索引的就绪标志。1 表示距索引重建或重置已满 1 小时，0 表示仍在准备；此标志不保证期间没有画像丢弃或写入错误；它不表示模型推理服务是否可用。\n\nY 轴单位\n状态值；1 = 就绪，0 = 尚未就绪。\n\n曲线与范围\nDCU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。\n\n项目与源口径\nDCU 主机网关；按采集环境归属，后端可能跨环境转发。请求量、画像、总耗时、错误率和在途状态包含流式及非流式；首增量、首输出等待、流停顿及流观察未知仅统计流式。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "1 = 就绪",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(aigate_profile_index_ready{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
+                    "seriesNameFormat": "画像索引就绪"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p5": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "画像写入错误速率",
+            "description": "指标含义\n最近 1 分钟画像写入错误计数的平均增长速率。统计对象是画像记录的写入错误，不是下游推理失败或 HTTP 错误。\n\nY 轴单位\n事件 / 秒；表示每秒的平均变化量。\n\n曲线与范围\nDCU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。\n\n时间口径\n速率使用最近 1 分钟滚动窗口；比例使用同一窗口的分子和分母。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 速率窗口的采样、生命周期或计数重置检查不通过时留空。\n\n项目与源口径\nDCU 主机网关；按采集环境归属，后端可能跨环境转发。请求量、画像、总耗时、错误率和在途状态包含流式及非流式；首增量、首输出等待、流停顿及流观察未知仅统计流式。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "事件 / 秒",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(rate(aigate_profile_write_errors_total{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) and (resets(aigate_profile_write_errors_total{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_write_errors_total{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) >= 12)) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15)) and on(job,instance) ((changes(aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) >= 12) and (time() - aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} >= 60) and on(job,instance) (min_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[1m]) == 1) and on(job,instance) (count_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[1m]) >= 12))",
+                    "seriesNameFormat": "画像写入错误速率"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p6": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "画像事件丢弃速率",
+            "description": "指标含义\n最近 1 分钟画像丢弃事件计数的平均增长速率。队列满或事件超过记录大小限制等情况可导致丢弃；它说明画像证据不完整，不等于业务请求被丢弃。\n\nY 轴单位\n事件 / 秒；表示每秒的平均变化量。\n\n曲线与范围\nDCU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。\n\n时间口径\n速率使用最近 1 分钟滚动窗口；比例使用同一窗口的分子和分母。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 速率窗口的采样、生命周期或计数重置检查不通过时留空。\n\n项目与源口径\nDCU 主机网关；按采集环境归属，后端可能跨环境转发。请求量、画像、总耗时、错误率和在途状态包含流式及非流式；首增量、首输出等待、流停顿及流观察未知仅统计流式。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "事件 / 秒",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(rate(aigate_profile_dropped_events_total{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) and (resets(aigate_profile_dropped_events_total{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_dropped_events_total{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) >= 12)) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15)) and on(job,instance) ((changes(aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[1m]) >= 12) and (time() - aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} >= 60) and on(job,instance) (min_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[1m]) == 1) and on(job,instance) (count_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[1m]) >= 12))",
+                    "seriesNameFormat": "画像事件丢弃速率"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p7": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "画像存储量",
+            "description": "指标含义\n当前画像记录占用的存储字节数除以 2^20。表示画像文件空间，不是模型权重、KV Cache 或进程内存大小。\n\nY 轴单位\nMiB；1 MiB = 2^20 字节。\n\n曲线与范围\nDCU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。\n\n项目与源口径\nDCU 主机网关；按采集环境归属，后端可能跨环境转发。请求量、画像、总耗时、错误率和在途状态包含流式及非流式；首增量、首输出等待、流停顿及流观察未知仅统计流式。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "MiB",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(aigate_profile_stored_bytes{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
+                    "seriesNameFormat": "存储"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p0"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p1"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p2"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p3"
+              }
+            },
+            {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p4"
+              }
+            },
+            {
+              "x": 12,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p5"
+              }
+            },
+            {
+              "x": 0,
+              "y": 24,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p6"
+              }
+            },
+            {
+              "x": 12,
+              "y": 24,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p7"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "1h",
+    "refreshInterval": "15s"
+  }
+}

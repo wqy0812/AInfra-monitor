@@ -7,7 +7,7 @@ import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from gateway_generation import queries, ENDED, ERRORS, ORIGIN
+from gateway_generation import queries, complete_rate, ENDED, ERRORS, ORIGIN
 
 
 def main():
@@ -47,13 +47,17 @@ def main():
                     def emit(metric, value, extra=None):
                         tags = dict(labels, **(extra or {}))
                         if metric.startswith('aigate_'):
-                            tags['request_scope'] = 'streaming'
+                            tags.setdefault('request_scope', 'streaming')
                         label = '{' + ','.join(k + '=' + json.dumps(v) for k, v in tags.items()) + '}'
                         lines.append(f'{metric}{label} {value} {at}')
                     emit('up', 0 if case == 'down' and i == 58 else 1)
                     emit(ORIGIN, start + 275 if case == 'lifecycle' and i >= 55 else start - 600)
                     val = 10 if case == 'idle' else (i - 55 if case == 'reset' and i >= 55 else i)
                     scale = 2 if case == 'a3-vllm' else 1
+                    emit('aigate_nonstream_requests_total', val * 3, {'request_scope': 'nonstreaming'})
+                    # Deliberate wrong-scope traffic must not enter streaming charts.
+                    emit(ENDED, i * 10000, {'request_scope': 'nonstreaming', 'result': 'completed'})
+                    emit(ERRORS, i * 10000, {'request_scope': 'nonstreaming', 'error_class': 'server_error'})
                     for backend in ['first', 'second']:
                         if backend == 'second' and ((case == 'partial' and i in (57, 58)) or (case == 'disappeared' and i > 54)):
                             continue
@@ -75,6 +79,16 @@ def main():
                         rows = data['data']['result']
                         assert len(rows) <= 1, (case, rows)
                         result.append(float(rows[0]['value'][1]) if rows else None)
+                    q = '60 * (' + complete_rate('aigate_nonstream_requests_total', case) + ')'
+                    params = {'query': q.replace('$__interval', f'{step}s'), 'time': start + 300}
+                    data = json.load(urllib.request.urlopen(url + '/api/v1/query?' + urllib.parse.urlencode(params), timeout=15))
+                    assert data['status'] == 'success', data
+                    rows = data['data']['result']
+                    if case in ('gap', 'stale', 'lifecycle', 'down', 'reset') or (case == 'old-gap' and step == 300):
+                        assert not rows, (case, step, rows)
+                    else:
+                        expected_count = 0 if case == 'idle' else 36
+                        assert len(rows) == 1 and math.isclose(float(rows[0]['value'][1]), expected_count, rel_tol=1e-6), (case, step, rows)
                     report[f'{case}/{step}'] = result
                     if case in ('dcu-pd', 'a3-vllm'):
                         scale = 2 if case == 'a3-vllm' else 1
@@ -91,7 +105,7 @@ def main():
                     elif case == 'old-gap':
                         assert all(v is not None for v in result), result
             Path('semantics.json').write_text(json.dumps({'passed': True, 'scenarios': len(report), 'results': report}, indent=2))
-            print(json.dumps({'passed': True, 'scenarios': len(report), 'queries': len(report) * len(queries('dcu-pd'))}))
+            print(json.dumps({'passed': True, 'scenarios': len(report), 'queries': len(report) * (len(queries('dcu-pd')) + 1)}))
         finally:
             if created:
                 subprocess.run(['docker', 'rm', '-f', name], check=True, stdout=subprocess.DEVNULL)

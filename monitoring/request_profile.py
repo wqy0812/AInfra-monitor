@@ -17,7 +17,8 @@ def validate_environment(environment):
 
 
 def selector(metric, backend='', model='', environment='dcu-pd'):
-    labels = ['job="aigate"', 'request_scope="streaming"', 'environment=' + json.dumps(validate_environment(environment))]
+    scope = 'streaming' if metric.startswith('first_increment_seconds') else 'all'
+    labels = ['job="aigate"', 'request_scope=' + json.dumps(scope), 'environment=' + json.dumps(validate_environment(environment))]
     for key, value in (('backend', backend), ('model', model)):
         if value:
             labels.append(key + '=' + json.dumps(value, ensure_ascii=False))
@@ -48,7 +49,7 @@ def vector(data):
 async def metrics(service, vm, start, end, backend='', model='', environment='dcu-pd'):
     validate_window(start, end, backend, model)
     scope = '{job="aigate",environment=' + json.dumps(validate_environment(environment)) + '}'
-    metric_scope = scope[:-1] + ',request_scope="streaming"}'
+    metric_scope = scope[:-1] + ',request_scope="all"}'
     span = str(end-start) + 's'
     sel = lambda name: selector(name, backend, model, environment)
     window = await CounterWindow(service, vm, start, end, backend, model, environment).read()
@@ -87,12 +88,13 @@ async def metrics(service, vm, start, end, backend='', model='', environment='dc
         'start':start,'end':end,'step':step,'latency_offset':'1ms','nocache':'1'})
     r.raise_for_status()
     coverage = {float(t):finite(v) for row in r.json()['data']['result'] for t,v in row['values']}
-    for rows in trends.values():
+    for name, rows in trends.items():
         for row in rows:
-            row['values'] = [[t,v if window.trend_valid(float(t),width) and coverage.get(float(t))==1 else 'NaN']
+            row['values'] = [[t,v if window.trend_valid(float(t),width,name) and coverage.get(float(t))==1 else 'NaN']
                              for t,v in row['values']]
     invalid_histograms = sorted({name for name,reason in window.issues if reason=='inconsistent_histogram'})
-    notes = ['仅统计解析确认 stream=true 的请求，非流式和无法确认请求类型的入口拒绝不计入。',
+    notes = ['请求量、画像、Token、总耗时和结果统计包含流式及非流式；无法解析的入口拒绝不计入画像。',
+             '网关首增量仅统计观察到有效增量的流式请求，其样本数与总请求数不同。',
              'Token 和总耗时按完成时计入；筛选模型/后端后的请求量为已选路请求。',
              '前缀再次出现的前驱可位于所选窗口之前，最多回看一小时；不等于缓存命中。',
              '统计按计数器生命周期分段；抓取边界存在近似，跨生命周期或缺测的速率留空。']
@@ -100,7 +102,7 @@ async def metrics(service, vm, start, end, backend='', model='', environment='dc
         notes.append('部分统计不完整：缺少边界观测或计数器存在异常，相关值显示为 —。')
     if invalid_histograms:
         notes.append('统计异常：部分累计桶与总数不一致，相关分布、均值和分位数暂不可用。')
-    return {'schema': 'gateway-profile-v1', 'request_scope': 'streaming', 'source': 'victoriametrics', 'counter_method': 'lifecycle-v2', 'start': start, 'end': end,
+    return {'schema': 'gateway-profile-v1', 'request_scope': 'all', 'scope_policy': 'metric-v2', 'metric_scopes': {'first_increment_seconds': 'streaming'}, 'source': 'victoriametrics', 'counter_method': 'lifecycle-v2', 'start': start, 'end': end,
             'computed_at': time.time(), 'environment': environment, 'backend': backend, 'model': model, 'values': values,
             'cache_token_ratio': ratio, 'trends': trends, 'step': step,
             'time_basis': {'requests': 'arrival_or_routing', 'tokens_and_latency': 'completion'},

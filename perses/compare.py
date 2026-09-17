@@ -1,3 +1,11 @@
+# Project-aware CLI routing; legacy helpers below remain importable.
+if __name__ == "__main__":
+    import sys
+    from project_release import main
+    sys.argv.insert(1, "audit-published")
+    main()
+    raise SystemExit(0)
+
 """Compare Perses proxy, direct VM and monitoring-api at identical timestamps."""
 import json,time,urllib.request,urllib.parse,urllib.error,math
 from pathlib import Path

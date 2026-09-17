@@ -1,0 +1,349 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "backend-diagnostics",
+    "project": "dcu-monitoring"
+  },
+  "spec": {
+    "display": {
+      "name": "后端诊断",
+      "description": "按指标采样含义确定请求范围。数据源：test4 VictoriaMetrics。"
+    },
+    "duration": "1h",
+    "refreshInterval": "15s",
+    "variables": [],
+    "panels": {
+      "extra-queue-prefill": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Prefill 运行与排队请求",
+            "description": "指标含义\n调度器当前运行与排队请求，按原始 rank 分线，未对复制 rank 求总和。\n\nY 轴单位\n请求\n\n曲线与范围\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "请求",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(sglang:num_running_reqs{environment=\"dcu-pd\",job=\"sglang-prefill\"} and ((time() - timestamp(sglang:num_running_reqs{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (count_over_time(sglang:num_running_reqs{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-prefill\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5)))))",
+                    "seriesNameFormat": "{{node}} · DP {{dp_rank}} / TP {{tp_rank}} / EP {{moe_ep_rank}} · 运行",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(sglang:num_queue_reqs{environment=\"dcu-pd\",job=\"sglang-prefill\"} and ((time() - timestamp(sglang:num_queue_reqs{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (count_over_time(sglang:num_queue_reqs{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-prefill\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5)))))",
+                    "seriesNameFormat": "{{node}} · DP {{dp_rank}} / TP {{tp_rank}} / EP {{moe_ep_rank}} · 排队",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-kv-prefill": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Prefill KV Token 占用",
+            "description": "指标含义\n源调度器 token_usage，反映 KV Token 池占用，不是整卡显存占用。\n\nY 轴单位\n%\n\n曲线与范围\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(sglang:token_usage{environment=\"dcu-pd\",job=\"sglang-prefill\"} and ((time() - timestamp(sglang:token_usage{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (count_over_time(sglang:token_usage{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-prefill\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5))))) * 100",
+                    "seriesNameFormat": "{{node}} · DP {{dp_rank}} / TP {{tp_rank}} / EP {{moe_ep_rank}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-queue-decode": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Decode 运行与排队请求",
+            "description": "指标含义\n调度器当前运行与排队请求，按原始 rank 分线，未对复制 rank 求总和。\n\nY 轴单位\n请求\n\n曲线与范围\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "请求",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(sglang:num_running_reqs{environment=\"dcu-pd\",job=\"sglang-decode\"} and ((time() - timestamp(sglang:num_running_reqs{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (count_over_time(sglang:num_running_reqs{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)))))",
+                    "seriesNameFormat": "{{node}} · DP {{dp_rank}} / TP {{tp_rank}} / EP {{moe_ep_rank}} · 运行",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(sglang:num_queue_reqs{environment=\"dcu-pd\",job=\"sglang-decode\"} and ((time() - timestamp(sglang:num_queue_reqs{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (count_over_time(sglang:num_queue_reqs{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)))))",
+                    "seriesNameFormat": "{{node}} · DP {{dp_rank}} / TP {{tp_rank}} / EP {{moe_ep_rank}} · 排队",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-kv-decode": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Decode KV Token 占用",
+            "description": "指标含义\n源调度器 token_usage，反映 KV Token 池占用，不是整卡显存占用。\n\nY 轴单位\n%\n\n曲线与范围\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(sglang:token_usage{environment=\"dcu-pd\",job=\"sglang-decode\"} and ((time() - timestamp(sglang:token_usage{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (count_over_time(sglang:token_usage{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5))))) * 100",
+                    "seriesNameFormat": "{{node}} · DP {{dp_rank}} / TP {{tp_rank}} / EP {{moe_ep_rank}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-latency-samples": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "时延窗口样本数",
+            "description": "指标含义\n当前有效窗口中的直方图样本数，帮助识别少样本分位数。\n\nY 轴单位\n样本\n\n曲线与范围\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "样本",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.ttft.samples\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.ttft.samples\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.ttft.samples\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.ttft.samples\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.ttft.samples\"}) < 15)) * 1",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.itl.samples\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.itl.samples\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.itl.samples\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.itl.samples\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.itl.samples\"}) < 15)) * 1",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.e2e.samples\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.e2e.samples\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.e2e.samples\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.e2e.samples\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.(prefill|decode).percentiles.e2e.samples\"}) < 15)) * 1",
+                    "seriesNameFormat": "{{path}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-queue-prefill"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-kv-prefill"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-queue-decode"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-kv-decode"
+              }
+            },
+            {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-latency-samples"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+--- a/ui/endpoint.go
++++ b/ui/endpoint.go
+@@ -123,6 +123,11 @@
+ 		// Without it, browsers perform "MIME sniffing". For example, a file served as text/plain could be sniffed as text/html and executed as HTML, which could open the door to XSS attacks.
+ 		// See https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-Content-Type-Options
+ 		c.Response().Header().Set("X-Content-Type-Options", "nosniff")
++		if strings.HasSuffix(localPath, "mf-manifest.json") || strings.HasSuffix(localPath, "mf-stats.json") {
++			c.Response().Header().Set("Cache-Control", "no-cache")
++		} else if fingerprintedAsset.MatchString(filepath.Base(localPath)) {
++			c.Response().Header().Set("Cache-Control", "public, max-age=31536000, immutable")
++		}
+ 		return c.File(localPath)
+ 	}
+ 	// Otherwise, it means we are in a dev environment, and we need to proxy the request to the dev server.
+@@ -204,8 +209,7 @@
+ 		}
+ 		c.Response().Header().Set("Content-Type", contentType)
+ 		c.Response().Header().Set("X-Content-Type-Options", "nosniff")
+-		_, err = c.Response().Write(data)
+-		return apiinterface.HandleError(err)
++		return apiinterface.HandleError(writeCachedAsset(c, fileName, data))
+ 	}
+ }
+ 
+@@ -263,8 +267,7 @@
+ 	idx = bytes.ReplaceAll(idx, []byte(prefixPathPlaceholder), []byte(f.apiPrefix))
+ 	c.Response().Header().Set("Content-Type", "text/html; charset=utf-8")
+ 	c.Response().Header().Set("X-Content-Type-Options", "nosniff")
+-	_, err = c.Response().Write(idx)
+-	return apiinterface.HandleError(err)
++	return apiinterface.HandleError(writeCachedAsset(c, "index.html", idx))
+ }
+ 
+ // parsePluginPath parses a URL path of the form:

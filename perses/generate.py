@@ -1,3 +1,9 @@
+# Project-aware CLI routing; legacy helpers below remain importable.
+if __name__ == "__main__":
+    from project_split import main
+    main()
+    raise SystemExit(0)
+
 """Generate editable Perses v0.54 dashboards; no writes to the metric store."""
 import json
 from pathlib import Path
@@ -11,7 +17,7 @@ NODE=variable('node','节点',[{'value':'.*','label':'全部'},{'value':'dcu1','
 DEVICE=variable('device','DCU',[{'value':'.*','label':'全部'}]+[{'value':'card'+str(i),'label':'card'+str(i)} for i in range(8)])
 
 def derived_schema(path):
- return 'request-streaming-v1' if '.resources.queue.' in path or '.resources.service_requests.' in path or '.percentiles.' in path or path.rsplit('.',1)[-1] in ('requests','input_tokens','output_tokens','decode_tokens','latency_window_seconds') else 'v1'
+ return 'request-metrics-v2' if '.resources.queue.' in path or '.resources.service_requests.' in path or '.percentiles.' in path or path.rsplit('.',1)[-1] in ('requests','input_tokens','output_tokens','decode_tokens','latency_window_seconds') else 'v1'
 
 def derived(path,scale=1):
  schema=derived_schema(path)
@@ -25,9 +31,9 @@ def raw(expr,job,extra=''):
  return f'({expr}) and on(job,instance) ({gate})'+extra
 
 def gateway_rate(metric):
- s=metric+'{job="aigate",request_scope="streaming"}'
- marker='aigate_profile_counter_start_time_seconds{job="aigate",request_scope="streaming"}'
- return raw(f'rate({s}[1m]) and (resets({s}[1m]) == 0) and (count_over_time({s}[1m]) >= 12)','aigate',f' and on(job,instance) ((changes({marker}[1m]) == 0) and (count_over_time({marker}[1m]) >= 12) and (time() - {marker} >= 60) and (min_over_time(up{{job="aigate"}}[1m]) == 1) and (count_over_time(up{{job="aigate"}}[1m]) >= 12))')
+ s=metric+'{job="aigate",request_scope="all"}'
+ marker='aigate_profile_counter_start_time_seconds{job="aigate",request_scope="all"}'
+ return raw(f'rate({s}[1m]) and (resets({s}[1m]) == 0) and (count_over_time({s}[1m]) >= 12)','aigate',f' and on(job,instance) ((changes({marker}[1m]) == 0) and (count_over_time({marker}[1m]) >= 12) and (time() - {marker} >= 60) and on(job,instance) (min_over_time(up{{job="aigate"}}[1m]) == 1) and on(job,instance) (count_over_time(up{{job="aigate"}}[1m]) >= 12))')
 
 def panel(title,queries,unit='',desc=''):
  return {'kind':'Panel','spec':{'display':{'name':title,'description':desc},'plugin':{'kind':'TimeSeriesChart','spec':{'legend':{'position':'bottom','mode':'list'},'yAxis':{'label':unit,'min':0},'visual':{'display':'line','lineWidth':1,'connectNulls':False},'tooltip':{'enablePinning':True}}},'queries':[{'kind':'TimeSeriesQuery','spec':{'plugin':{'kind':'PrometheusTimeSeriesQuery','spec':{'query':q,'seriesNameFormat':legend,'minStep':'5s'}}}} for q,legend in queries]}}
@@ -67,11 +73,11 @@ if __name__ == '__main__':
  for path,title,unit,scale in [('nodes.$role.cache_60s.ratio','模型缓存命中率','%',100),('nodes.$role.cache_60s.(device|host|storage)','缓存命中分层','%',100),('nodes.$role.hicache.representative.ratio','HiCache 容量使用率','%',100),('nodes.$role.hicache.representative.(used|total)','HiCache Token 容量','Token',1),('mooncake.capacity.(used|total)','Mooncake 内存配额','GiB',1/2**30),('mooncake.ssd_capacity.(used|total)','Mooncake SSD 配额','GiB',1/2**30),('mooncake.query_60s.ratio','Store 查询成功比例','%',100),('mooncake.tier_query_60s.(memory|ssd)','Store 分层查询命中率','%',100)]:
   p.append(panel(title,[(derived(path,scale),'{{path}}')],unit,'缓存窗口约 60 秒。Store 查询命中不等同于模型 Token 命中、读取成功或物理 SSD I/O；SSD 容量是后端配额。'))
  dashboard('cache-store','HiCache 与 Mooncake',p,[ROLE])
- p=[panel('在途请求',[(raw('aigate_requests_inflight{job="aigate",request_scope="streaming"}','aigate'),'在途')],'请求'),panel('请求到达速率',[(gateway_rate('aigate_requests_started_total'),'到达')],'请求 / 秒','1 分钟窗口；生命周期变化、计数重置和采集断档留空。')]
+ p=[panel('在途请求',[(raw('aigate_requests_inflight{job="aigate",request_scope="all"}','aigate'),'在途')],'请求'),panel('请求到达速率',[(gateway_rate('aigate_requests_started_total'),'到达')],'请求 / 秒','1 分钟窗口；生命周期变化、计数重置和采集断档留空。')]
  for metric,title,unit in [('aigate_profile_queue_events','画像队列','事件'),('aigate_profile_index_entries','画像索引条目','条目'),('aigate_profile_index_ready','画像索引就绪','1 = 就绪')]:
-  p.append(panel(title,[(raw(metric+'{job="aigate",request_scope="streaming"}','aigate'),title)],unit))
+  p.append(panel(title,[(raw(metric+'{job="aigate",request_scope="all"}','aigate'),title)],unit))
  for metric,title in [('aigate_profile_write_errors_total','画像写入错误速率'),('aigate_profile_dropped_events_total','画像事件丢弃速率')]:p.append(panel(title,[(gateway_rate(metric),title)],'事件 / 秒'))
- p.append(panel('画像存储量',[(raw('aigate_profile_stored_bytes{job="aigate",request_scope="streaming"} / 1024^2','aigate'),'存储')],'MiB'))
+ p.append(panel('画像存储量',[(raw('aigate_profile_stored_bytes{job="aigate",request_scope="all"} / 1024^2','aigate'),'存储')],'MiB'))
  dashboard('gateway','网关基础状态',p,[])
 
  project={'kind':'Project','metadata':{'name':PROJECT},'spec':{'display':{'name':'DCU 监控'}}}

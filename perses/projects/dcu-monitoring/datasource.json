@@ -1,0 +1,67 @@
+{
+  "kind": "Datasource",
+  "metadata": {
+    "name": "victoriametrics",
+    "project": "dcu-monitoring"
+  },
+  "spec": {
+    "display": {
+      "name": "test4 VictoriaMetrics"
+    },
+    "default": true,
+    "plugin": {
+      "kind": "PrometheusDatasource",
+      "spec": {
+        "proxy": {
+          "kind": "HTTPProxy",
+          "spec": {
+            "allowedEndpoints": [
+              {
+                "endpointPattern": "/api/v1/query",
+                "method": "GET"
+              },
+              {
+                "endpointPattern": "/api/v1/query",
+                "method": "POST"
+              },
+              {
+                "endpointPattern": "/api/v1/query_range",
+                "method": "GET"
+              },
+              {
+                "endpointPattern": "/api/v1/query_range",
+                "method": "POST"
+              },
+              {
+                "endpointPattern": "/api/v1/labels",
+                "method": "GET"
+              },
+              {
+                "endpointPattern": "/api/v1/labels",
+                "method": "POST"
+              },
+              {
+                "endpointPattern": "/api/v1/series",
+                "method": "GET"
+              },
+              {
+                "endpointPattern": "/api/v1/series",
+                "method": "POST"
+              },
+              {
+                "endpointPattern": "/api/v1/metadata",
+                "method": "GET"
+              },
+              {
+                "endpointPattern": "/api/v1/label/([a-zA-Z0-9_-]+)/values",
+                "method": "GET"
+              }
+            ],
+            "url": "http://127.0.0.1:18428"
+          }
+        },
+        "scrapeInterval": "5s"
+      }
+    }
+  }
+}

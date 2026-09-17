@@ -15,9 +15,9 @@ def rows(streaming=100, nonstreaming=10):
 def test_streaming_partitions_actual_interval_and_idle():
     calc = Calculator()
     first = calc.metrics('decode', rows(), 100)
-    assert first['requests'] == 100
+    assert first['requests'] == 110
     assert first['rates']['requests'] is None
-    assert calc.metrics('decode', rows(104, 11), 104)['rates']['requests'] == 1
+    assert calc.metrics('decode', rows(104, 11), 104)['rates']['requests'] == 1.25
     assert calc.metrics('decode', rows(104, 11), 109)['rates']['requests'] == 0
 
 
@@ -35,11 +35,11 @@ def test_reset_missing_partition_and_gap(after, seconds):
     assert calc.metrics('decode', after, 100 + seconds)['rates']['requests'] is None
 
 
-def test_nonstreaming_partition_does_not_affect_rate():
+def test_new_nonstreaming_partition_requires_a_fresh_baseline():
     calc = Calculator()
     calc.metrics('decode', rows(100, None), 100)
-    assert calc.metrics('decode', rows(102, 1), 105)['rates']['requests'] == .4
-    assert calc.metrics('decode', rows(103, 2), 110)['rates']['requests'] == .2
+    assert calc.metrics('decode', rows(102, 1), 105)['rates']['requests'] is None
+    assert calc.metrics('decode', rows(103, 2), 110)['rates']['requests'] == .4
 
 
 def test_legacy_single_counter_and_identity_change():
@@ -47,7 +47,7 @@ def test_legacy_single_counter_and_identity_change():
     del old[0]['labels']['is_streaming']
     after = json.loads(json.dumps(old));after[0]['value'] = 110
     calc = Calculator();calc.metrics('decode', old, 100)
-    assert calc.metrics('decode', after, 105)['rates']['requests'] is None
+    assert calc.metrics('decode', after, 105)['rates']['requests'] == 2
     after[0]['labels']['model_name'] = 'replacement'
     assert calc.metrics('decode', after, 110)['rates']['requests'] is None
 
@@ -77,5 +77,5 @@ def test_raw_vm_replay_produces_kpi_and_chart_with_same_rate():
                                       job='sglang-decode', instance='endpoint'),
                         'timestamps': [100000, 105000], 'values': [before['value'], after['value']]})
     snaps, points = replay(decode_export(exports), 100, 105)
-    assert snaps[-1]['nodes']['decode']['metrics']['data']['rates']['requests'] == .8
-    assert points[-1]['nodes']['decode']['requests'] == .8
+    assert snaps[-1]['nodes']['decode']['metrics']['data']['rates']['requests'] == 1
+    assert points[-1]['nodes']['decode']['requests'] == 1

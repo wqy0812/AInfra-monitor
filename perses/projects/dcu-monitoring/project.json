@@ -1,0 +1,11 @@
+{
+  "kind": "Project",
+  "metadata": {
+    "name": "dcu-monitoring"
+  },
+  "spec": {
+    "display": {
+      "name": "DCU 监控"
+    }
+  }
+}

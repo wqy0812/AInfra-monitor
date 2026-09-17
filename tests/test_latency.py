@@ -125,11 +125,11 @@ def test_schema_isolation_and_no_legacy_fallback():
     p = {'ts': 60, 'nodes': {'decode': LatencyWindow().add(rows(), 60)}}
     encoded = encode([p], latency_only=True)
     assert 'schema="v1"' not in encoded and '.requests' not in encoded
-    assert 'schema="request-streaming-v1"' in encode([p])
-    assert 'schema="request-streaming-v1"' in encode([p], 'a3-vllm')
+    assert 'schema="request-metrics-v2"' in encode([p])
+    assert 'schema="request-metrics-v2"' in encode([p], 'a3-vllm')
     for kind in ('value', 'valid', 'gaps'):
         expr = history_expression('dcu-pd', kind, 5)
-        assert 'path!~' in expr and 'schema="request-streaming-v1"' in expr
+        assert 'path!~' in expr and 'schema="request-metrics-v2"' in expr
 
 
 def test_rebuild_retry_checkpoint_and_chunk_boundary():

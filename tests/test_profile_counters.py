@@ -7,7 +7,7 @@ from monitoring.profile_counters import (
     metric_selector, profile_values, quantile,
 )
 
-LABELS = {'request_scope':'streaming', 'job':'aigate', 'environment':'dcu-pd', 'instance':'gateway:18082', 'backend':'dcu', 'model':'model'}
+LABELS = {'request_scope':'all', 'job':'aigate', 'environment':'dcu-pd', 'instance':'gateway:18082', 'backend':'dcu', 'model':'model'}
 
 
 def identity(name, **extra):
@@ -144,7 +144,7 @@ async def test_discovery_normalizes_preserved_epoch_and_ends_group_at_process_re
         for name,labels,birth in [
             ('group',LABELS,900), ('group',LABELS,1100.0000001),
             ('group',LABELS,1100.0000002),
-            ('counter',{'request_scope':'streaming', 'job':'aigate','environment':'dcu-pd','instance':'gateway:18082'},1050),
+            ('counter',{'request_scope':'all', 'job':'aigate','environment':'dcu-pd','instance':'gateway:18082'},1050),
             ('group',dict(LABELS,backend='other'),1000),
         ]:
             rows.append({'metric':dict(labels,__name__='aigate_profile_'+name+'_start_time_seconds',profile_epoch=str(birth)), 'value':[1200,'10']})
@@ -159,10 +159,10 @@ async def test_discovery_normalizes_preserved_epoch_and_ends_group_at_process_re
 
 def test_trends_omit_reset_boundaries_and_resume_after_clean_window():
     window = SamplesWindow(900,1300,[(900,1049.999),(1100,1300)],{})
-    assert not window.trend_valid(1101,60)
-    assert not window.trend_valid(1080,60)
-    assert not window.trend_valid(1150,60)
-    assert window.trend_valid(1200,60)
+    assert not window.trend_valid(1101,60,'requests_routed_total')
+    assert not window.trend_valid(1080,60,'requests_routed_total')
+    assert not window.trend_valid(1150,60,'requests_routed_total')
+    assert window.trend_valid(1200,60,'requests_routed_total')
 
 
 def test_selector_escapes_values_and_epoch_uses_milliseconds():
@@ -189,4 +189,22 @@ async def test_other_environment_reset_and_bad_counter_cannot_enter_lifetimes():
         await window.discover()
     assert len(window.lifetimes)==1
     assert window.lifetimes[0][2]==900
-    assert window.trend_valid(1150,60)
+    assert window.trend_valid(1150,60,'requests_routed_total')
+
+@pytest.mark.asyncio
+async def test_legacy_first_increment_before_all_request_origin_is_discarded():
+    global_labels={**LABELS,'backend':'','model':''}
+    group_labels=dict(LABELS)
+    class PolicyWindow(CounterWindow):
+        async def discover(self):
+            self.lifetimes=[(global_labels,NAMES,1100,1200),(group_labels,NAMES,1110,1200)]
+        async def segment(self, labels, names, birth, end):
+            if labels.get('backend'):
+                self.totals[identity('first_increment_seconds_count',request_scope='streaming')]=2
+        async def summaries(self, labels, names, left, right):
+            if left<1100:
+                return {identity('first_increment_seconds_count',request_scope='streaming'):{'last_over_time':999}}
+            return {}
+    w=await PolicyWindow(None,'',1000,1200).read()
+    assert w.aggregate('first_increment_seconds_count')==[{'labels':{},'value':2}]
+    assert not w.issues

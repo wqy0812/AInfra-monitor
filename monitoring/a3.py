@@ -4,7 +4,8 @@ import collections
 import json
 import math
 from .calculator import quantile_buckets
-from .request_scope import streaming_rows
+from .request_scope import SCHEMA
+from .latency import snapshot, increments as histogram_increments
 
 ENVIRONMENT = 'a3-vllm'
 NODES = {'prefill': ('a3-1', '122.209.21.24'), 'decode': ('a3-2', '122.209.21.25')}
@@ -28,8 +29,6 @@ def decode_export(lines):
 
 def values(rows, name):
     selected = {}
-    if name == 'vllm:request_success_total' or any(name.startswith('vllm:' + n + '_') for n in LATENCIES.values()) or name in ('vllm:generation_tokens_total', 'vllm:num_requests_running', 'vllm:num_requests_waiting'):
-        rows = streaming_rows(rows)
     for row in rows:
         if row['name'] != name:
             continue
@@ -55,36 +54,22 @@ def increments(history, name):
 
 
 def histogram(history, name):
-    name = 'vllm:' + name
-    # Validate current cumulative buckets and count as well as their deltas.
+    first = previous = None
     for _, rows in history:
-        raw = values(rows, name + '_bucket')
-        count = values(rows, name + '_count')
-        if not raw or not count or len(count) != 1:
+        current, reason = snapshot(rows, 'vllm:' + name)
+        if reason:
             return None
-        buckets = {}
-        identities = set()
-        for labels, v in raw.items():
-            lab = json.loads(labels)
-            bound = lab.pop('le', None)
-            if bound is None or bound in buckets:
+        if previous is not None:
+            _, reason = histogram_increments(current, previous)
+            if reason:
                 return None
-            buckets[bound] = v
-            identities.add(json.dumps(lab, sort_keys=True))
-        if identities != set(count) or '+Inf' not in buckets or buckets['+Inf'] != sum(count.values()):
-            return None
-        ordered = sorted((float(k), v) for k, v in buckets.items())
-        if any(not math.isfinite(k) and k != math.inf for k, _ in ordered) or any(b[1] < a[1] for a, b in zip(ordered, ordered[1:])):
-            return None
-    delta = increments(history, name + '_bucket')
-    counts = increments(history, name + '_count')
-    if delta is None or counts is None:
+        if first is None:
+            first = current
+        previous = current
+    if first is None or len(history) < 2:
         return None
-    result = {json.loads(k)['le']: v for k, v in delta.items()}
-    ordered = sorted((float(k), v) for k, v in result.items())
-    if result['+Inf'] != sum(counts.values()) or any(b[1] < a[1] for a, b in zip(ordered, ordered[1:])):
-        return None
-    return result
+    delta, reason = histogram_increments(previous, first)
+    return {('+Inf' if math.isinf(k) else str(k)): v for k, v in delta.items()} if reason is None else None
 
 
 def window(history):
@@ -120,7 +105,7 @@ def cache_ratio(histories, prefix):
 
 
 def role_point(histories, complete):
-    p = {'request_scope': 'streaming', 'request_scope_reason': '请求指标仅采用 is_streaming=true；无法区分类型的源指标留空', 'requests': None, 'decode_tokens': None, 'output_tokens': None, 'rate_interval_seconds': None,
+    p = {'request_scope': 'all', 'request_schema': SCHEMA, 'request_scope_reason': '后端原生整体统计，不按客户端流式类型过滤', 'metric_scopes': {'ttft': 'native', 'itl': 'native', 'e2e': 'all'}, 'requests': None, 'decode_tokens': None, 'output_tokens': None, 'rate_interval_seconds': None,
          'latency_window_seconds': None, 'cache_60s': {'ratio': None, 'external_ratio': None, 'semantics': 'vllm-prefix-token-v1'},
          'percentiles': {k: dict.fromkeys(('p50', 'p95', 'p99', 'samples')) for k in LATENCIES},
          'resources': {'queue': {}, 'kv_usage': {}}, 'request_by_reason': {}}

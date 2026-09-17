@@ -1,0 +1,2 @@
+# Local/deployment validation tools only; not monitoring-api runtime dependencies.
+PyYAML==6.0.3

@@ -1,0 +1,1531 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "a3-hosts",
+    "project": "a3-monitoring"
+  },
+  "spec": {
+    "display": {
+      "name": "A3 · 主机与 NPU",
+      "description": "数据源：test4 VictoriaMetrics。缺失或无效观测留空；默认 1 小时 / 15 秒刷新。"
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "display": {
+            "name": "节点",
+            "hidden": false
+          },
+          "defaultValue": ".*",
+          "allowAllValue": false,
+          "allowMultiple": false,
+          "plugin": {
+            "kind": "StaticListVariable",
+            "spec": {
+              "values": [
+                {
+                  "label": "全部",
+                  "value": ".*"
+                },
+                {
+                  "label": "A3-1",
+                  "value": "a3-1"
+                },
+                {
+                  "label": "A3-2",
+                  "value": "a3-2"
+                }
+              ]
+            }
+          },
+          "name": "node"
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "device",
+          "display": {
+            "name": "NPU 芯片"
+          },
+          "defaultValue": ".*",
+          "plugin": {
+            "kind": "StaticListVariable",
+            "spec": {
+              "values": [
+                {
+                  "value": ".*",
+                  "label": "全部"
+                },
+                {
+                  "value": "0",
+                  "label": "NPU 0"
+                },
+                {
+                  "value": "1",
+                  "label": "NPU 1"
+                },
+                {
+                  "value": "2",
+                  "label": "NPU 2"
+                },
+                {
+                  "value": "3",
+                  "label": "NPU 3"
+                },
+                {
+                  "value": "4",
+                  "label": "NPU 4"
+                },
+                {
+                  "value": "5",
+                  "label": "NPU 5"
+                },
+                {
+                  "value": "6",
+                  "label": "NPU 6"
+                },
+                {
+                  "value": "7",
+                  "label": "NPU 7"
+                },
+                {
+                  "value": "8",
+                  "label": "NPU 8"
+                },
+                {
+                  "value": "9",
+                  "label": "NPU 9"
+                },
+                {
+                  "value": "10",
+                  "label": "NPU 10"
+                },
+                {
+                  "value": "11",
+                  "label": "NPU 11"
+                },
+                {
+                  "value": "12",
+                  "label": "NPU 12"
+                },
+                {
+                  "value": "13",
+                  "label": "NPU 13"
+                },
+                {
+                  "value": "14",
+                  "label": "NPU 14"
+                },
+                {
+                  "value": "15",
+                  "label": "NPU 15"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "panels": {
+      "p0": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "主机 CPU",
+            "description": "指标含义\n主机 CPU 忙碌时间占总 CPU 时间的比例。当前查询扣除 idle 和 iowait，再按主机汇总；100% 表示接近全部 CPU 时间处于其余状态。iowait 被扣除，所以该图不能单独排除存储等待。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n速率使用最近 1 分钟滚动窗口；比例使用同一窗口的分子和分母。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 速率窗口的采样、生命周期或计数重置检查不通过时留空。\n\nCPU 数据来源\nmonitoring-api 每 5 秒计算新增时间点并保存主机聚合值；保持最近 1 分钟的 CPU 忙碌比例口径，扣除 idle 和 iowait。缺样、重置、重启、过期或计算失败时留空。聚合历史从发布后开始积累。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\"$node\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\"$node\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\"$node\"}) >= 0) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\"$node\"}) < 15))",
+                    "seriesNameFormat": "{{node}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p1": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "主机内存",
+            "description": "指标含义\n主机内存已用量及总量：已用 = MemTotal − MemAvailable。MemAvailable 包含可回收内存的估算，因此不等于把所有缓存都视作不可用。每条曲线按节点和已用/总量区分。\n\nY 轴单位\nGiB；1 GiB = 2^30 字节。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "GiB",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "((node_memory_MemTotal_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} - node_memory_MemAvailable_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) / 1024^3) and on(job,instance) ((min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\"}) < 15))",
+                    "seriesNameFormat": "{{node}} 已用"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(node_memory_MemTotal_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} / 1024^3) and on(job,instance) ((min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\"}) < 15))",
+                    "seriesNameFormat": "{{node}} 总量"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "文件系统容量使用率",
+            "description": "指标含义\n文件系统容量占用比例：(1 − 可用字节/总字节) × 100%。按节点、设备或挂载点分别展示；可用空间采用普通用户可用口径。它是容量百分比，不是磁盘 I/O 忙碌率。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(100 * (1 - node_filesystem_avail_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}) and (node_filesystem_size_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} > 0)) and on(job,instance) ((min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\"}) < 15))",
+                    "seriesNameFormat": "{{node}} {{mountpoint}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p3": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "磁盘 I/O",
+            "description": "指标含义\n设备读/写字节累计计数在最近 1 分钟的平均增长速率，除以 2^20。分别展示读和写及各设备；逻辑盘与其底层物理盘可能重复承载同一 I/O，不应把所有曲线直接相加。\n\nY 轴单位\nMiB/s；表示每秒的平均变化量。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n速率使用最近 1 分钟滚动窗口；比例使用同一窗口的分子和分母。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 速率窗口的采样、生命周期或计数重置检查不通过时留空。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "MiB/s",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(((rate(node_disk_read_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and (resets(node_disk_read_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (count_over_time(node_disk_read_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (time() - timestamp(node_disk_read_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15)) and on(job,instance) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= 12) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= 12))) / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\"}) < 15))",
+                    "seriesNameFormat": "{{node}} {{device}} 读"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(((rate(node_disk_written_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and (resets(node_disk_written_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (count_over_time(node_disk_written_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (time() - timestamp(node_disk_written_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15)) and on(job,instance) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= 12) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= 12))) / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\"}) < 15))",
+                    "seriesNameFormat": "{{node}} {{device}} 写"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p4": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "网络吞吐",
+            "description": "指标含义\n网络接口接收/发送字节累计计数在最近 1 分钟的平均增长速率，除以 2^20。单位是字节速率，不是位速率；1 MiB/秒约等于 8.39 Mbit/秒。按节点、网卡及收发方向区分，部分虚拟接口被排除。\n\nY 轴单位\nMiB/s；表示每秒的平均变化量。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n速率使用最近 1 分钟滚动窗口；比例使用同一窗口的分子和分母。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 速率窗口的采样、生命周期或计数重置检查不通过时留空。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "MiB/s",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(((rate(node_network_receive_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and (resets(node_network_receive_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (count_over_time(node_network_receive_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (time() - timestamp(node_network_receive_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15)) and on(job,instance) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= 12) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= 12))) / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\"}) < 15))",
+                    "seriesNameFormat": "{{node}} {{device}} 接收"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(((rate(node_network_transmit_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and (resets(node_network_transmit_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (count_over_time(node_network_transmit_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (time() - timestamp(node_network_transmit_bytes_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15)) and on(job,instance) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= 12) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= 12))) / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\"}) < 15))",
+                    "seriesNameFormat": "{{node}} {{device}} 发送"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-load": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "主机负载",
+            "description": "指标含义\n1/5/15 分钟系统负载，包含可运行及不可中断等待任务；不是百分比。\n\nY 轴单位\n任务数\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "任务数",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(node_load1{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} and ((time() - timestamp(node_load1{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (count_over_time(node_load1{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))",
+                    "seriesNameFormat": "{{node}} · 1m",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(node_load5{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} and ((time() - timestamp(node_load5{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (count_over_time(node_load5{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))",
+                    "seriesNameFormat": "{{node}} · 5m",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(node_load15{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} and ((time() - timestamp(node_load15{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (count_over_time(node_load15{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))",
+                    "seriesNameFormat": "{{node}} · 15m",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-iowait": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "CPU I/O 等待",
+            "description": "指标含义\nCPU 处于 iowait 状态的平均比例；结合磁盘延迟判断存储等待。\n\nY 轴单位\n%\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。\n\nCPU 数据来源\nmonitoring-api 每 5 秒计算新增时间点并保存主机聚合值；保持各逻辑 CPU 最近 1 分钟 iowait 增长率的平均比例；与主机忙碌率分别计算。缺样、重置、重启、过期或计算失败时留空。聚合历史从发布后开始积累。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu_iowait\",node=~\"$node\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu_iowait\",node=~\"$node\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu_iowait\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu_iowait\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu_iowait\",node=~\"$node\"}) >= 0) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu_iowait\",node=~\"$node\"}) < 15))",
+                    "seriesNameFormat": "{{node}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-memory-ratio": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "内存占用比例",
+            "description": "指标含义\n1 − MemAvailable/MemTotal，含可回收内存的可用量估算。\n\nY 轴单位\n%\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "100 * (1 - ((node_memory_MemAvailable_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} and ((time() - timestamp(node_memory_MemAvailable_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (count_over_time(node_memory_MemAvailable_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))) / ((node_memory_MemTotal_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} and ((time() - timestamp(node_memory_MemTotal_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (count_over_time(node_memory_MemTotal_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))))",
+                    "seriesNameFormat": "{{node}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-swap": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Swap 已用与总量",
+            "description": "指标含义\nSwap 总量为零表示没有配置 Swap；绝对容量显示有效零。\n\nY 轴单位\nGiB\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "GiB",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(((node_memory_SwapTotal_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} and ((time() - timestamp(node_memory_SwapTotal_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (count_over_time(node_memory_SwapTotal_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))) - ((node_memory_SwapFree_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} and ((time() - timestamp(node_memory_SwapFree_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (count_over_time(node_memory_SwapFree_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))))))) / 1024^3",
+                    "seriesNameFormat": "{{node}} · 已用",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "((node_memory_SwapTotal_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} and ((time() - timestamp(node_memory_SwapTotal_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (count_over_time(node_memory_SwapTotal_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))) / 1024^3",
+                    "seriesNameFormat": "{{node}} · 总量",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-fs-free": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "文件系统剩余容量",
+            "description": "指标含义\n普通用户可用空间，按挂载点分线，不对重复挂载累计。\n\nY 轴单位\nGiB\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "GiB",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(node_filesystem_avail_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"} and ((time() - timestamp(node_filesystem_avail_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}) < 15) and (count_over_time(node_filesystem_avail_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))))) / 1024^3",
+                    "seriesNameFormat": "{{node}} · {{mountpoint}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-iops": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "磁盘 IOPS",
+            "description": "指标含义\n每设备完成的读/写操作速率；不累加逻辑盘和底层物理盘。\n\nY 轴单位\n次 / 秒\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "次 / 秒",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(node_disk_reads_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and ((time() - timestamp(node_disk_reads_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15) and (count_over_time(node_disk_reads_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))) and (count_over_time(node_disk_reads_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (resets(node_disk_reads_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (resets(node_disk_reads_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))",
+                    "seriesNameFormat": "{{node}} · {{device}} · 读",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(node_disk_writes_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and ((time() - timestamp(node_disk_writes_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15) and (count_over_time(node_disk_writes_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))) and (count_over_time(node_disk_writes_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (resets(node_disk_writes_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (resets(node_disk_writes_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))",
+                    "seriesNameFormat": "{{node}} · {{device}} · 写",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-disk-latency": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "磁盘平均读写延迟",
+            "description": "指标含义\n累计读写用时增量 / 完成操作数；无 I/O 时分母为零，留空。\n\nY 轴单位\nms\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "ms",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "1000 * ((rate(node_disk_read_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and ((time() - timestamp(node_disk_read_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15) and (count_over_time(node_disk_read_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))) and (count_over_time(node_disk_read_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (resets(node_disk_read_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (resets(node_disk_read_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))) / (((rate(node_disk_reads_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and ((time() - timestamp(node_disk_reads_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15) and (count_over_time(node_disk_reads_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))) and (count_over_time(node_disk_reads_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (resets(node_disk_reads_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (resets(node_disk_reads_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))) > 0)",
+                    "seriesNameFormat": "{{node}} · {{device}} · 读",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "1000 * ((rate(node_disk_write_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and ((time() - timestamp(node_disk_write_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15) and (count_over_time(node_disk_write_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))) and (count_over_time(node_disk_write_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (resets(node_disk_write_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (resets(node_disk_write_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))) / (((rate(node_disk_writes_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and ((time() - timestamp(node_disk_writes_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15) and (count_over_time(node_disk_writes_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))) and (count_over_time(node_disk_writes_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (resets(node_disk_writes_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (resets(node_disk_writes_completed_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))) > 0)",
+                    "seriesNameFormat": "{{node}} · {{device}} · 写",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-disk-busy": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "磁盘 I/O 忙碌率",
+            "description": "指标含义\n设备处于 I/O 活动状态的时间比例，不等同于带宽利用率。\n\nY 轴单位\n%\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(node_disk_io_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and ((time() - timestamp(node_disk_io_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15) and (count_over_time(node_disk_io_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))) and (count_over_time(node_disk_io_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (resets(node_disk_io_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (resets(node_disk_io_time_seconds_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))))) * 100",
+                    "seriesNameFormat": "{{node}} · {{device}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-net-errors": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "网络错误与丢包",
+            "description": "指标含义\n网卡接收/发送错误及丢包计数速率。\n\nY 轴单位\n次 / 秒\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "次 / 秒",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(node_network_receive_errs_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and ((time() - timestamp(node_network_receive_errs_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15) and (count_over_time(node_network_receive_errs_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))) and (count_over_time(node_network_receive_errs_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (resets(node_network_receive_errs_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (resets(node_network_receive_errs_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))",
+                    "seriesNameFormat": "{{node}} · {{device}} · 接收错误",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(node_network_transmit_errs_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and ((time() - timestamp(node_network_transmit_errs_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15) and (count_over_time(node_network_transmit_errs_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))) and (count_over_time(node_network_transmit_errs_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (resets(node_network_transmit_errs_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (resets(node_network_transmit_errs_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))",
+                    "seriesNameFormat": "{{node}} · {{device}} · 发送错误",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(node_network_receive_drop_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and ((time() - timestamp(node_network_receive_drop_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15) and (count_over_time(node_network_receive_drop_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))) and (count_over_time(node_network_receive_drop_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (resets(node_network_receive_drop_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (resets(node_network_receive_drop_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))",
+                    "seriesNameFormat": "{{node}} · {{device}} · 接收丢包",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(node_network_transmit_drop_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) and ((time() - timestamp(node_network_transmit_drop_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}) < 15) and (count_over_time(node_network_transmit_drop_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))) and (count_over_time(node_network_transmit_drop_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) >= 12) and (resets(node_network_transmit_drop_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[1m]) == 0) and (resets(node_network_transmit_drop_total{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))",
+                    "seriesNameFormat": "{{node}} · {{device}} · 发送丢包",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-tcp-retrans": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "TCP 重传速率",
+            "description": "指标含义\n主机 TCP 重传段速率，作为网络异常排查线索。\n\nY 轴单位\n段 / 秒\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "段 / 秒",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(node_netstat_Tcp_RetransSegs{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) and ((time() - timestamp(node_netstat_Tcp_RetransSegs{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (count_over_time(node_netstat_Tcp_RetransSegs{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))) and (count_over_time(node_netstat_Tcp_RetransSegs{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= 12) and (resets(node_netstat_Tcp_RetransSegs{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (resets(node_netstat_Tcp_RetransSegs{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))",
+                    "seriesNameFormat": "{{node}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-clock-offset": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "系统时钟偏移",
+            "description": "指标含义\n内核 timex 报告的时钟偏移。\n\nY 轴单位\nms\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "ms"
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(node_timex_offset_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} and ((time() - timestamp(node_timex_offset_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (count_over_time(node_timex_offset_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15))))) * 1000",
+                    "seriesNameFormat": "{{node}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-clock-sync": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "系统时钟同步状态",
+            "description": "指标含义\n内核 timex 同步状态；零表示未同步，采集缺失留空。\n\nY 轴单位\n1 = 已同步\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "1 = 已同步",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(node_timex_sync_status{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} and ((time() - timestamp(node_timex_sync_status{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (count_over_time(node_timex_sync_status{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"a3-vllm\",job=\"node-a3\",node=~\"$node\"}) < 15)))))",
+                    "seriesNameFormat": "{{node}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "npu-utilization": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "NPU 利用率",
+            "description": "AI Core 利用率，按 exporter 原始芯片 ID 分线；不与 DCU HCU 的硬件执行单元定义等同。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0,
+                "max": 100
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} and ((npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} >= 0) and (npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} < +Inf) and (npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} <= 100)) and (time() - timestamp(npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) >= 0) and (time() - timestamp(npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5))))",
+                    "seriesNameFormat": "{{node}} · NPU {{id}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "npu-memory-used": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "NPU 显存已用",
+            "description": "芯片 HBM 已用容量；源单位 MiB，除以 1024 转为 GiB。不是 vLLM KV Cache 占用。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "GiB",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(((npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} and ((npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} >= 0) and (npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5))))) <= ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} and ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} >= 0) and (npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)))))) / 1024",
+                    "seriesNameFormat": "{{node}} · NPU {{id}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "npu-temperature": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "NPU 温度",
+            "description": "exporter 上报的芯片温度。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "°C",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(npu_chip_info_temperature{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} and ((npu_chip_info_temperature{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} >= 0) and (npu_chip_info_temperature{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} < +Inf)) and (time() - timestamp(npu_chip_info_temperature{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) >= 0) and (time() - timestamp(npu_chip_info_temperature{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5))))",
+                    "seriesNameFormat": "{{node}} · NPU {{id}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "npu-power": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "NPU 功耗",
+            "description": "exporter 按芯片 ID 上报的功耗读数，保留原始粒度，不跨芯片相加为整机功耗。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "W",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(npu_chip_info_power{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} and ((npu_chip_info_power{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} >= 0) and (npu_chip_info_power{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} < +Inf)) and (time() - timestamp(npu_chip_info_power{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) >= 0) and (time() - timestamp(npu_chip_info_power{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5))))",
+                    "seriesNameFormat": "{{node}} · NPU {{id}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "npu-memory-total": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "NPU 显存总量",
+            "description": "芯片 HBM 总容量；源单位 MiB，除以 1024 转为 GiB。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "GiB",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} and ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} >= 0) and (npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5))))) > 0) / 1024",
+                    "seriesNameFormat": "{{node}} · NPU {{id}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "npu-memory-ratio": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "NPU 显存占用比例",
+            "description": "同一节点、同一芯片 HBM 已用 / 总量；总量必须大于零且已用量不能超过总量。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0,
+                "max": 100
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "100 * ((((npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} and ((npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} >= 0) and (npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5))))) <= ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} and ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} >= 0) and (npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5))))))) / (((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} and ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} >= 0) and (npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\"}[$__interval]) >= ($__interval / 5))))) > 0)",
+                    "seriesNameFormat": "{{node}} · NPU {{id}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p0"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p1"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p2"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p3"
+              }
+            },
+            {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p4"
+              }
+            },
+            {
+              "x": 12,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/npu-utilization"
+              }
+            },
+            {
+              "x": 0,
+              "y": 24,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/npu-memory-used"
+              }
+            },
+            {
+              "x": 12,
+              "y": 24,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/npu-temperature"
+              }
+            },
+            {
+              "x": 0,
+              "y": 32,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/npu-power"
+              }
+            },
+            {
+              "x": 12,
+              "y": 32,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/npu-memory-total"
+              }
+            },
+            {
+              "x": 0,
+              "y": 40,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/npu-memory-ratio"
+              }
+            },
+            {
+              "x": 12,
+              "y": 40,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-load"
+              }
+            },
+            {
+              "x": 0,
+              "y": 48,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-iowait"
+              }
+            },
+            {
+              "x": 12,
+              "y": 48,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-memory-ratio"
+              }
+            },
+            {
+              "x": 0,
+              "y": 56,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-swap"
+              }
+            },
+            {
+              "x": 12,
+              "y": 56,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-fs-free"
+              }
+            },
+            {
+              "x": 0,
+              "y": 64,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-iops"
+              }
+            },
+            {
+              "x": 12,
+              "y": 64,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-disk-latency"
+              }
+            },
+            {
+              "x": 0,
+              "y": 72,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-disk-busy"
+              }
+            },
+            {
+              "x": 12,
+              "y": 72,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-net-errors"
+              }
+            },
+            {
+              "x": 0,
+              "y": 80,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-tcp-retrans"
+              }
+            },
+            {
+              "x": 12,
+              "y": 80,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-clock-offset"
+              }
+            },
+            {
+              "x": 0,
+              "y": 88,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-clock-sync"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "1h",
+    "refreshInterval": "15s"
+  }
+}

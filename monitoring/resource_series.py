@@ -29,13 +29,11 @@ def resource_values(telemetry, metric):
         except (TypeError, ValueError):
             ratio = None
         add('gpu_memory_ratio', device, ratio)
-    add('service_requests', '累计请求数', metric.get('requests') if metric.get('request_scope') == 'streaming' else None)
+    add('service_requests', '累计请求数', metric.get('requests') if metric.get('request_scope') == 'all' else None)
     for row in (metric.get('rank_gauges') or [])[:256]:
         name = row.get('name', '').removeprefix('sglang:')
         group = {'num_running_reqs': 'queue', 'num_queue_reqs': 'queue', 'token_usage': 'token_usage', 'cache_hit_rate': 'rank_cache', 'hicache_host_used_tokens': 'hicache_tokens', 'hicache_host_total_tokens': 'hicache_tokens'}.get(name)
         if not group:
-            continue
-        if group == 'queue' and (row.get('labels') or {}).get('is_streaming') != 'true':
             continue
         label = {'num_running_reqs': '运行', 'num_queue_reqs': '排队', 'hicache_host_used_tokens': '已用', 'hicache_host_total_tokens': '总量'}.get(name, '')
         ranks = ' / '.join(k + '=' + str(v) for k, v in sorted((row.get('labels') or {}).items()) if k != 'model_name')

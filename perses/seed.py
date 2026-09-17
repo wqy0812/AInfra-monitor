@@ -1,3 +1,9 @@
+# Project-aware CLI routing; legacy helpers below remain importable.
+if __name__ == "__main__":
+    from project_seed import main
+    main()
+    raise SystemExit(0)
+
 """Create missing initial resources through the API. Never overwrite UI edits."""
 import json,urllib.request,urllib.error,time
 from pathlib import Path

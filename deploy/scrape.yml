@@ -89,6 +89,17 @@ scrape_configs:
   - source_labels: [__name__]
     regex: 'node_.*'
     action: keep
+- job_name: npu-a3
+  honor_timestamps: true
+  static_configs:
+  - targets: ['122.209.21.24:8082']
+    labels: {environment: a3-vllm, node: a3-1, service: npu}
+  - targets: ['122.209.21.25:8082']
+    labels: {environment: a3-vllm, node: a3-2, service: npu}
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: '(npu_.*|machine_npu_nums)'
+    action: keep
 - job_name: aigate-a3
   bearer_token_file: /config/aigate-a3-profile-key
   static_configs:

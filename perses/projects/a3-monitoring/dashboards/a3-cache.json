@@ -1,0 +1,356 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "a3-cache",
+    "project": "a3-monitoring"
+  },
+  "spec": {
+    "display": {
+      "name": "A3 · 缓存",
+      "description": "数据源：test4 VictoriaMetrics。缺失或无效观测留空；默认 1 小时 / 15 秒刷新。"
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "display": {
+            "name": "角色",
+            "hidden": false
+          },
+          "defaultValue": ".*",
+          "allowAllValue": false,
+          "allowMultiple": false,
+          "plugin": {
+            "kind": "StaticListVariable",
+            "spec": {
+              "values": [
+                {
+                  "label": "全部",
+                  "value": ".*"
+                },
+                {
+                  "label": "Prefill / A3-1",
+                  "value": "prefill"
+                },
+                {
+                  "label": "Decode / A3-2",
+                  "value": "decode"
+                }
+              ]
+            }
+          },
+          "name": "role"
+        }
+      }
+    ],
+    "panels": {
+      "p0": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "实例 KV 缓存占用",
+            "description": "指标含义\nvLLM 实例已分配 KV Cache 的占用比例乘以 100。按实例/角色区分；分母是该实例的 KV Cache 容量，不是整张 NPU 的显存容量。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 派生指标须满足 monitoring_chart_valid=1；原始数值存在但标记无效时也不显示。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.resources.kv_usage..*\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.resources.kv_usage..*\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.resources.kv_usage..*\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.resources.kv_usage..*\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.resources.kv_usage..*\"}) < 15)) * 100",
+                    "seriesNameFormat": "{{path}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p1": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "本地前缀缓存命中率",
+            "description": "指标含义\n最近约 60 秒本地前缀缓存命中 Token ÷ 查询 Token × 100%。合并实例时按 Token 加权，不能直接平均各实例百分比。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n约 60 秒的连续有效观测窗口，由源监控计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 派生指标须满足 monitoring_chart_valid=1；原始数值存在但标记无效时也不显示。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"}) < 15)) * 100",
+                    "seriesNameFormat": "{{path}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p2": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "外部前缀缓存命中率",
+            "description": "指标含义\n最近约 60 秒跨实例共享的外部前缀缓存命中 Token ÷ 查询 Token × 100%。这是外部 KV 共享口径，不表示 HiCache CPU、Mooncake Store 或 SSD 命中。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n约 60 秒的连续有效观测窗口，由源监控计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 派生指标须满足 monitoring_chart_valid=1；原始数值存在但标记无效时也不显示。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "label": "%",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.cache_60s.external_ratio\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.cache_60s.external_ratio\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.cache_60s.external_ratio\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.cache_60s.external_ratio\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.cache_60s.external_ratio\"}) < 15)) * 100",
+                    "seriesNameFormat": "{{path}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-prefix_cache_": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "本地前缀缓存查询与命中",
+            "description": "指标含义\n前缀缓存按 Token 统计的查询/命中速率；外部缓存指跨实例 KV 共享。\n\nY 轴单位\nToken / 秒\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "Token / 秒",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) and ((time() - timestamp(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (count_over_time(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= 12) and (resets(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 0) and (resets(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "{{node}} · {{engine}} · 查询",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) and ((time() - timestamp(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (count_over_time(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= 12) and (resets(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 0) and (resets(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "{{node}} · {{engine}} · 命中",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-external_prefix_cache_": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "外部前缀缓存查询与命中",
+            "description": "指标含义\n前缀缓存按 Token 统计的查询/命中速率；外部缓存指跨实例 KV 共享。\n\nY 轴单位\nToken / 秒\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "label": "Token / 秒",
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) and ((time() - timestamp(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (count_over_time(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= 12) and (resets(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 0) and (resets(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "{{node}} · {{engine}} · 查询",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) and ((time() - timestamp(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (count_over_time(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= 12) and (resets(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 0) and (resets(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "{{node}} · {{engine}} · 命中",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p0"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p1"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/p2"
+              }
+            },
+            {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-prefix_cache_"
+              }
+            },
+            {
+              "x": 12,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-external_prefix_cache_"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "1h",
+    "refreshInterval": "15s"
+  }
+}

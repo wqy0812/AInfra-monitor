@@ -1,3 +1,9 @@
+# Project-aware CLI routing; legacy helpers below remain importable.
+if __name__ == "__main__":
+    from project_release import main
+    main()
+    raise SystemExit(0)
+
 """Explicit operator update of generated dashboards; snapshot existing definitions first."""
 import json,time,urllib.request
 from pathlib import Path

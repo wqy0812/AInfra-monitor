@@ -2,13 +2,14 @@
 import copy
 import json
 from generate import panel
+from metric_scope import gateway_scope
 
 ENVIRONMENTS = [('dcu-pd', 'DCU 主机网关', '#1976D2'), ('a3-vllm', 'A3 主机网关', '#ED6C02')]
 STAGES = {
     'routing_discovery': '路由与模型发现',
     'preparing_upstream': '构造下游请求', 'waiting_upstream_headers': '等待下游响应头',
     'waiting_first_output': '等待首个有效输出', 'streaming': '读取后续流',
-    'reading_response': '读取流式请求的错误响应', 'writing_client': '向客户端写入',
+    'reading_response': '读取完整响应', 'writing_client': '向客户端写入',
     'finishing_stream': '流结束收尾',
 }
 PREFIX = 'live-'
@@ -16,7 +17,7 @@ PREFIX = 'live-'
 
 def selector(metric, environment, extra=''):
     if metric.startswith('aigate_'):
-        extra = 'request_scope="streaming"' + (',' + extra if extra else '')
+        extra = 'request_scope=' + json.dumps(gateway_scope(metric)) + (',' + extra if extra else '')
     return metric + '{job="aigate",environment=' + json.dumps(environment) + (',' + extra if extra else '') + '}'
 
 
@@ -66,7 +67,7 @@ def oldest(environment):
 
 
 def build_panels():
-    common = '仅统计 stream=true。当前在途状态，5 秒采集、15 秒刷新；采集失败、缺样、过期、升级前或跨进程重启窗口留空。正常空闲显示零。'
+    common = '按指标范围统计。当前在途状态，5 秒采集、15 秒刷新；采集失败、缺样、过期、升级前或跨进程重启窗口留空。正常空闲显示零。'
     panels = {}
     def comparison(key, title, make_query, unit, description, legends=None):
         p = panel(title, [(make_query(env), (legends or {}).get(env, name)) for env, name, _ in ENVIRONMENTS], unit, common + description)
@@ -80,14 +81,14 @@ def build_panels():
     for threshold in (5, 15, 30, 60):
         comparison('idle-' + str(threshold), f'流停顿 ≥ {threshold} 秒 · 流数量', lambda e, t=threshold: aggregate('aigate_stream_idle_requests', e, extra=f'threshold_seconds="{t}"'), '流', '仅已经开始有效输出且尚未结束的流；各阈值累计包含，不能相加。心跳、空增量和 usage 不重置时间。')
     comparison('idle-max', '流停顿 · 最长无新内容间隔', lambda e: aggregate('aigate_stream_idle_max_seconds', e, 'max'), '秒', '观察网关收到的下游内容；客户端写入受阻时结合当前阶段判断。')
-    comparison('oldest', '最老在途请求 · 年龄与当前阶段', oldest, '秒', '仅流式请求；每个网关选择最老请求并关联其后端及阶段。阶段变化不跨线连接。', {env: name + ' · {{backend}} · {{stage_name}}' for env, name, _ in ENVIRONMENTS})
+    comparison('oldest', '最老在途请求 · 年龄与当前阶段', oldest, '秒', '流式及非流式请求；每个网关选择最老请求并关联其后端及阶段。阶段变化不跨线连接。', {env: name + ' · {{backend}} · {{stage_name}}' for env, name, _ in ENVIRONMENTS})
     for env, name, _ in ENVIRONMENTS:
         queries = [(f'sum by(environment) ({complete_gauge("aigate_inflight_requests_by_stage", env, "stage=" + json.dumps(stage))})', label) for stage, label in STAGES.items()]
         panels[PREFIX + 'stages-' + env] = panel(name + ' · 在途处理阶段', queries, '请求', common + '一个请求同时只属于一个阶段；流读取与客户端写入会切换阶段。')
     comparison('unknown', '有效输出观察未知 · 流数量', lambda e: aggregate('aigate_stream_observation_unknown', e), '流', '解析异常或超过观察上限的在途流；退出无法可靠判断的等待/停顿分类，但仍计入年龄与阶段。')
     from gateway_generation import complete_rate
     p = panel('非流式请求数', [(f'60 * ({complete_rate("aigate_nonstream_requests_total", env)})', name) for env, name, _ in ENVIRONMENTS],
-              '请求', '最近 1 分钟新增非流式请求数，按解析确认 stream=false（含省略 stream）时计数；rate × 60 为窗口估算值。仅此项统计非流式，不进入画像、延迟、错误率或在途阶段。采集缺失、重启或窗口不足留空，正常无请求显示零。两个网关分别计数，同一请求经过两层网关时不可相加去重。')
+              '请求', '最近 1 分钟新增非流式请求数，按解析确认 stream=false（含省略 stream）时计数；rate × 60 为窗口估算值。非流式同时计入请求量、画像、总耗时、错误率及在途状态，不进入首增量或流停顿统计。采集缺失、重启或窗口不足留空，正常无请求显示零。两个网关分别计数，同一请求经过两层网关时不可相加去重。')
     p['spec']['plugin']['spec']['querySettings'] = [
         {'queryIndex': i, 'colorMode': 'fixed', 'colorValue': color}
         for i, (_, _, color) in enumerate(ENVIRONMENTS)]

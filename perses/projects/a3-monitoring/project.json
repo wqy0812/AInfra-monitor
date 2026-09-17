@@ -1,0 +1,11 @@
+{
+  "kind": "Project",
+  "metadata": {
+    "name": "a3-monitoring"
+  },
+  "spec": {
+    "display": {
+      "name": "A3 监控"
+    }
+  }
+}

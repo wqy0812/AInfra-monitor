@@ -1,0 +1,2 @@
+# Unified diff context includes a leading space before Go tabs and blank lines.
+perses/performance/endpoint.patch whitespace=-blank-at-eol,-space-before-tab

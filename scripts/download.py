@@ -1,6 +1,7 @@
 """Download pinned upstream archives; verify official per-binary/archive SHA256."""
 import hashlib,json,pathlib,tarfile,urllib.request,concurrent.futures
 root=pathlib.Path(__file__).resolve().parents[1]/'vendor'
+(root/'bin').mkdir(parents=True,exist_ok=True)
 releases=json.loads((root/'releases.json').read_text())
 def fetch(spec):
  url=spec['browser_download_url'];p=root/spec['name']

@@ -6,7 +6,7 @@ from monitoring import a3
 from monitoring.api import Service, encode
 
 
-def fixture(drop=None, reset=None, idle=False, streaming=True):
+def fixture(drop=None, reset=None, idle=False, streaming=False):
     groups = {}
     for node, host in a3.NODES.values():
         for engine in range(4):
@@ -114,7 +114,8 @@ async def test_environments_have_independent_watermarks_queries_and_history(tmp_
     monkeypatch.setattr(api, 'STATE', tmp_path)
     (tmp_path/'watermark.json').write_text('{"ts":100}')
     dcu, asc = Service(), Service('a3-vllm')
-    assert dcu.watermark == 100 and asc.watermark == 0
+    assert dcu.watermark == 0 and asc.watermark == 0
+    assert (tmp_path/'watermark.json').read_text() == '{"ts":100}'
     assert asc.watermark_file != dcu.watermark_file
     exprs = []
     async def query(expr, *args):

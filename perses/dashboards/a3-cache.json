@@ -48,7 +48,7 @@
         "spec": {
           "display": {
             "name": "实例 KV 缓存占用",
-            "description": "vLLM KV-cache usage；不是 NPU 显存总使用率。"
+            "description": "指标含义\nvLLM 实例已分配 KV Cache 的占用比例乘以 100。按实例/角色区分；分母是该实例的 KV Cache 容量，不是整张 NPU 的显存容量。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 派生指标须满足 monitoring_chart_valid=1；原始数值存在但标记无效时也不显示。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -93,7 +93,7 @@
         "spec": {
           "display": {
             "name": "本地前缀缓存命中率",
-            "description": "最近约 60 秒；按 Token 加权，无查询留空。本地前缀命中 Token / 查询 Token。"
+            "description": "指标含义\n最近约 60 秒本地前缀缓存命中 Token ÷ 查询 Token × 100%。合并实例时按 Token 加权，不能直接平均各实例百分比。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n约 60 秒的连续有效观测窗口，由源监控计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 派生指标须满足 monitoring_chart_valid=1；原始数值存在但标记无效时也不显示。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -138,7 +138,7 @@
         "spec": {
           "display": {
             "name": "外部前缀缓存命中率",
-            "description": "最近约 60 秒；按 Token 加权，无查询留空。跨实例 KV 共享命中 Token / 查询 Token；不表示 HiCache CPU、Mooncake Store 或 SSD 命中。"
+            "description": "指标含义\n最近约 60 秒跨实例共享的外部前缀缓存命中 Token ÷ 查询 Token × 100%。这是外部 KV 共享口径，不表示 HiCache CPU、Mooncake Store 或 SSD 命中。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n约 60 秒的连续有效观测窗口，由源监控计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 派生指标须满足 monitoring_chart_valid=1；原始数值存在但标记无效时也不显示。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",

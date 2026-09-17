@@ -6,7 +6,7 @@ import httpx
 from fastapi import FastAPI,HTTPException,Request
 from .replay import decode_export,replay
 from .resource_series import resource_paths
-from . import a3
+from . import a3, gateway_live, host_cpu
 from .latency import PATHS as LATENCY_PATHS
 from .request_scope import PATH_REGEX as REQUEST_PATH_REGEX, SCHEMA as REQUEST_SCHEMA, is_request_path
 ENVIRONMENTS=("dcu-pd", "a3-vllm")
@@ -36,15 +36,18 @@ def put(obj,path,value):
 def encode(points,environment="dcu-pd",latency_only=False):
  validate_environment(environment)
  lines=[]
- paths=sorted(set(PATHS+(["nodes."+r+".cache_60s.external_ratio" for r in ("prefill","decode")] if environment=="a3-vllm" else [])).union(*(resource_paths(p) for p in points)))
+ paths=sorted(set(PATHS+(["nodes."+r+".cache_60s.external_ratio" for r in ("prefill","decode")]+list(host_cpu.PATHS) if environment=="a3-vllm" else [])).union(*(resource_paths(p) for p in points)))
  if latency_only:
   assert environment=="dcu-pd"
   paths=LATENCY_PATHS
  for p in points:
   for path in paths:
    value=get(p,path);valid=isinstance(value,(int,float)) and math.isfinite(value)
-   schema=REQUEST_SCHEMA if is_request_path(path) else 'v1'
-   label='{path='+json.dumps(path)+',environment='+json.dumps(environment)+',schema='+json.dumps(schema)+'}'
+   cpu=environment=='a3-vllm' and path in host_cpu.PATHS
+   schema=host_cpu.SCHEMA if cpu else REQUEST_SCHEMA if is_request_path(path) else 'v1'
+   label='{path='+json.dumps(path)+',environment='+json.dumps(environment)+',schema='+json.dumps(schema)
+   if cpu:label+=',node='+json.dumps(host_cpu.PATHS[path])
+   label+='}'
    lines.append('monitoring_chart_value'+label+' '+str(value if valid else 0)+' '+str(int(p['ts']*1000)))
    lines.append('monitoring_chart_valid'+label+' '+str(int(valid))+' '+str(int(p['ts']*1000)))
  return '\n'.join(lines)+'\n'
@@ -53,6 +56,9 @@ def history_expression(environment,kind,step):
  scope='environment='+json.dumps(environment)
  bases=['{'+scope+',schema="v1",path!~'+json.dumps(REQUEST_PATH_REGEX)+'}',
         '{'+scope+',schema='+json.dumps(REQUEST_SCHEMA)+',path=~'+json.dumps(REQUEST_PATH_REGEX)+'}']
+ if environment=='a3-vllm':
+  bases[0]=bases[0][:-1]+',path!~'+json.dumps(host_cpu.PATH_REGEX)+'}'
+  bases.append('{'+scope+',schema='+json.dumps(host_cpu.SCHEMA)+',path=~'+json.dumps(host_cpu.PATH_REGEX)+'}')
  def expression(base):
   metric='monitoring_chart_'+('value' if kind=='value' else 'valid')+base
   if kind!='gaps':return 'default_rollup('+metric+'[5s])'
@@ -62,12 +68,12 @@ def history_expression(environment,kind,step):
 class Service:
  def __init__(self,environment="dcu-pd"):
   self.environment=validate_environment(environment)
-  self.paths=PATHS+(["nodes."+role+".cache_60s.external_ratio" for role in ("prefill","decode")] if environment=="a3-vllm" else [])
-  self.watermark_file=STATE/("watermark.json" if environment=="dcu-pd" else "watermark-a3-vllm.json")
+  self.paths=sorted(set(PATHS+(["nodes."+role+".cache_60s.external_ratio" for role in ("prefill","decode")]+list(host_cpu.PATHS) if environment=="a3-vllm" else [])))
+  self.watermark_file=STATE/("watermark-"+REQUEST_SCHEMA+"-"+environment+".json")
   self.replay=a3.replay if environment=="a3-vllm" else replay
   self.client=httpx.AsyncClient(trust_env=False,timeout=10,limits=httpx.Limits(max_connections=8))
   self.latest={'environment':self.environment,'ts':None,'nodes':{},'enabled':True,'source':'victoriametrics'};self.error=None;self.slots=asyncio.Semaphore(2)
-  self.latest_point=None;self.watermark=0;self.started=time.time();self.cache={}
+  self.latest_point=None;self.watermark=0;self.started=time.time();self.cache={};self.host_cpu_status=None
   if self.watermark_file.exists():self.watermark=json.loads(self.watermark_file.read_text())['ts']
  async def raw(self,start,end):
   selector='{job=~"sglang-prefill|sglang-decode|node-prefill|node-decode|dcu-prefill|dcu-decode|mooncake"}'
@@ -76,12 +82,17 @@ class Service:
   return (a3.decode_export if self.environment=='a3-vllm' else decode_export)(json.loads(line) for line in r.text.splitlines() if line)
  async def cycle(self):
   end=int((time.time()-3)//5)*5
-  if not self.watermark:self.watermark=end-80 if self.environment=="dcu-pd" else end-5
+  if not self.watermark:self.watermark=end-5
   start=max(self.watermark-80,end-30*86400)
   until=min(end,self.watermark+300)
   groups=await self.raw(start,until)
   replay_options={"emit_start":self.watermark+5} if self.environment=="a3-vllm" else {}
-  snaps,points=await asyncio.to_thread(self.replay,groups,start,until,**replay_options)
+  replay_task=asyncio.to_thread(self.replay,groups,start,until,**replay_options)
+  if self.environment=='a3-vllm':
+   (snaps,points),(cpu_values,cpu_status)=await asyncio.gather(replay_task,host_cpu.collect(self.client,VM,self.watermark+5,until))
+   host_cpu.attach(snaps,points,cpu_values,cpu_status)
+   self.host_cpu_status=cpu_status
+  else:snaps,points=await replay_task
   selected=[p for p in points if p['ts']>self.watermark]
   if selected:
    r=await self.client.post(VM+'/api/v1/import/prometheus',content=encode(selected,self.environment));r.raise_for_status()
@@ -118,10 +129,12 @@ class Service:
   cached=self.cache.get(key)
   if cached and time.time()-cached[0]<5:return cached[1]
   async with self.slots:
-   values,valid,gaps=await asyncio.gather(*(self.query(history_expression(self.environment,kind,step),start,end,step) for kind in ('value','valid','gaps')))
+   values,valid,gaps,gateway_result=await asyncio.gather(*(self.query(history_expression(self.environment,kind,step),start,end,step) for kind in ('value','valid','gaps')),gateway_live.history(self.query,self.environment,start,end,step))
+  gateway,gateway_status=gateway_result
   def index(series):return {(s['metric']['path'],float(ts)):float(v) for s in series for ts,v in s['values']}
   vals,oks,mins=index(values),index(valid),index(gaps);points=[]
-  timestamps=sorted({ts for path,ts in vals})
+  backend_timestamps={ts for path,ts in vals}
+  timestamps=sorted(backend_timestamps|set(gateway))
   paths=sorted(set(self.paths)|{path for path,ts in vals if any(path.startswith(root+'.resources.') for root in ('nodes.prefill','nodes.decode','mooncake'))})
   for ts in timestamps:
    p={'environment':self.environment,'ts':ts,'nodes':{'prefill':{},'decode':{}},'source':'victoriametrics'}
@@ -129,6 +142,7 @@ class Service:
    for role in ('prefill','decode'):
     node=p['nodes'][role];node['cache_60s']['semantics']='vllm-prefix-token-v1' if self.environment=='a3-vllm' else ('prefill-effective-v1' if role=='prefill' else 'request-accounting-v1')
     fields={'requests':'requests','output_tokens':'output_tokens','decode_tokens':'decode_tokens','cpu':'cpu','cache':'cache_60s.ratio','hicache':'hicache.representative.ratio',**{k:'percentiles.'+k+'.p95' for k in ('ttft','itl','e2e')}}
+    if self.environment=='a3-vllm':fields['cpu_iowait']='cpu_iowait'
     node['gap_before']=[k for k,path in fields.items() if mins.get(('nodes.'+role+'.'+path,ts))!=1]
    p['mooncake']['gap_before']=[key for key,path in STORE_GAPS.items() if mins.get(('mooncake.'+path,ts))!=1]
    p['mooncake']['tier_query_60s']['semantics']='store-replica-query-v1'
@@ -136,15 +150,17 @@ class Service:
     obj=get(p,root)
     obj['gap_before'] += [path[len(root)+1:] for path in paths if path.startswith(root+'.resources.') and mins.get((path,ts))!=1]
    points.append(p)
-  if self.latest_point and start<=self.latest_point['ts']<=end and (not points or self.latest_point['ts']>points[-1]['ts']):
+  if self.latest_point and start<=self.latest_point['ts']<=end and (not backend_timestamps or self.latest_point['ts']>max(backend_timestamps)):
    import copy
    p=copy.deepcopy(self.latest_point);p['source']='victoriametrics';p['environment']=self.environment
-   for node in p['nodes'].values():node['gap_before']=['requests','output_tokens','decode_tokens','cpu','cache','hicache','ttft','itl','e2e']
+   for node in p['nodes'].values():node['gap_before']=['requests','output_tokens','decode_tokens','cpu','cache','hicache','ttft','itl','e2e']+(['cpu_iowait'] if self.environment=='a3-vllm' else [])
    p.setdefault('mooncake',{})['gap_before']=list(STORE_GAPS)
    for root in ('nodes.prefill','nodes.decode','mooncake'):
     get(p,root)['gap_before'] += [path[len(root)+1:] for path in resource_paths(p) if path.startswith(root+'.')]
-   points.append(p)
-  value={'environment':self.environment,'hours':hours,'stride':step//5,'points':points,'source':'victoriametrics','retention_hours':720}
+   points=[x for x in points if x['ts']!=p['ts']]+[p]
+   points.sort(key=lambda x:x['ts'])
+  gateway_live.attach(points,gateway,step)
+  value={'environment':self.environment,'hours':hours,'stride':step//5,'points':points,'source':'victoriametrics','retention_hours':720,'gateway_status':gateway_status}
   self.cache={key:(time.time(),value)};return value
 
 @asynccontextmanager
@@ -168,7 +184,11 @@ async def health(request:Request):
  s=request.app.state.service
  sources={r: n.get('metrics',{}).get('status')=='ok' and n.get('telemetry',{}).get('status')=='ok' and len(n.get('telemetry',{}).get('data',{}).get('gpus',[]))==8 for r,n in s.latest.get('nodes',{}).items()}
  good=len(sources)==2 and all(sources.values()) and s.latest.get('mooncake',{}).get('status')=='ok'
- return {'status':'ok' if good and not s.error and s.watermark>time.time()-20 else 'degraded','error':s.error,'sources':sources,'processed_at':s.watermark,'started_at':s.started,'environments':{env:{'error':v.error,'processed_at':v.watermark,'sources':{role:n.get('metrics',{}).get('status') for role,n in v.latest.get('nodes',{}).items()}} for env,v in request.app.state.services.items()}}
+ environments={env:{'error':v.error,'processed_at':v.watermark,'sources':{role:n.get('metrics',{}).get('status') for role,n in v.latest.get('nodes',{}).items()}} for env,v in request.app.state.services.items()}
+ a3_service=request.app.state.services.get('a3-vllm')
+ if a3_service:
+  environments['a3-vllm']['host_cpu']={'query_status':a3_service.host_cpu_status,'sources':{role:n.get('host_cpu',{}).get('status') for role,n in a3_service.latest.get('nodes',{}).items()}}
+ return {'status':'ok' if good and not s.error and s.watermark>time.time()-20 else 'degraded','error':s.error,'sources':sources,'processed_at':s.watermark,'started_at':s.started,'environments':environments}
 def selected_service(request,environment):
  validate_environment(environment)
  return request.app.state.services[environment]

@@ -18,7 +18,7 @@
         "spec": {
           "display": {
             "name": "在途请求",
-            "description": ""
+            "description": "指标含义\n当前已纳入画像且尚未结束的流式请求数量。它是同时在途数量，不是累计请求数；路由、模型发现、等待下游及向客户端写入等阶段都可能占用在途请求。\n\nY 轴单位\n请求数。\n\n曲线与范围\n当前查询显示 DCU 主机网关，且只统计流式请求画像；它不是 DCU/A3 两网关的合计，也不等于下游硬件归属。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -48,7 +48,7 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "(aigate_requests_inflight{job=\"aigate\",request_scope=\"streaming\"}) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
+                    "query": "(aigate_requests_inflight{job=\"aigate\",request_scope=\"all\"}) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
                     "seriesNameFormat": "在途",
                     "minStep": "5s"
                   }
@@ -63,7 +63,7 @@
         "spec": {
           "display": {
             "name": "请求到达速率",
-            "description": "1 分钟窗口；生命周期变化、计数重置和采集断档留空。"
+            "description": "指标含义\n网关解析确认 stream=true、进入请求画像时累计一次到达。曲线为最近 1 分钟请求计数增量除以时间，即平均到达速率；0.1 请求/秒约等于每分钟 6 个请求。它不代表成功率或生成完成速率。\n\nY 轴单位\n请求 / 秒；表示每秒的平均变化量。\n\n曲线与范围\n当前查询显示 DCU 主机网关，且只统计流式请求画像；它不是 DCU/A3 两网关的合计，也不等于下游硬件归属。\n\n时间口径\n速率使用最近 1 分钟滚动窗口；比例使用同一窗口的分子和分母。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 速率窗口的采样、生命周期或计数重置检查不通过时留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -93,7 +93,7 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "(rate(aigate_requests_started_total{job=\"aigate\",request_scope=\"streaming\"}[1m]) and (resets(aigate_requests_started_total{job=\"aigate\",request_scope=\"streaming\"}[1m]) == 0) and (count_over_time(aigate_requests_started_total{job=\"aigate\",request_scope=\"streaming\"}[1m]) >= 12)) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15)) and on(job,instance) ((changes(aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"streaming\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"streaming\"}[1m]) >= 12) and (time() - aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"streaming\"} >= 60) and (min_over_time(up{job=\"aigate\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\"}[1m]) >= 12))",
+                    "query": "(rate(aigate_requests_started_total{job=\"aigate\",request_scope=\"all\"}[1m]) and (resets(aigate_requests_started_total{job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_requests_started_total{job=\"aigate\",request_scope=\"all\"}[1m]) >= 12)) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15)) and on(job,instance) ((changes(aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"all\"}[1m]) >= 12) and (time() - aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"all\"} >= 60) and on(job,instance) (min_over_time(up{job=\"aigate\"}[1m]) == 1) and on(job,instance) (count_over_time(up{job=\"aigate\"}[1m]) >= 12))",
                     "seriesNameFormat": "到达",
                     "minStep": "5s"
                   }
@@ -108,7 +108,7 @@
         "spec": {
           "display": {
             "name": "画像队列",
-            "description": ""
+            "description": "指标含义\n等待画像后台写入的事件队列长度。一个请求可产生多个事件，因此不能把事件数当作请求数。持续增长提示画像写入跟不上事件产生速度。\n\nY 轴单位\n事件数。\n\n曲线与范围\n当前查询显示 DCU 主机网关，且只统计流式请求画像；它不是 DCU/A3 两网关的合计，也不等于下游硬件归属。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -138,7 +138,7 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "(aigate_profile_queue_events{job=\"aigate\",request_scope=\"streaming\"}) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
+                    "query": "(aigate_profile_queue_events{job=\"aigate\",request_scope=\"all\"}) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
                     "seriesNameFormat": "画像队列",
                     "minStep": "5s"
                   }
@@ -153,7 +153,7 @@
         "spec": {
           "display": {
             "name": "画像索引条目",
-            "description": ""
+            "description": "指标含义\n当前内存画像索引条目数，用于近期请求特征分析。条目与业务请求不一定一一对应，也不表示 KV Cache 条目或命中数。\n\nY 轴单位\n条目数。\n\n曲线与范围\n当前查询显示 DCU 主机网关，且只统计流式请求画像；它不是 DCU/A3 两网关的合计，也不等于下游硬件归属。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -183,7 +183,7 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "(aigate_profile_index_entries{job=\"aigate\",request_scope=\"streaming\"}) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
+                    "query": "(aigate_profile_index_entries{job=\"aigate\",request_scope=\"all\"}) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
                     "seriesNameFormat": "画像索引条目",
                     "minStep": "5s"
                   }
@@ -198,7 +198,7 @@
         "spec": {
           "display": {
             "name": "画像索引就绪",
-            "description": ""
+            "description": "指标含义\n画像索引的就绪标志。1 表示距索引重建或重置已满 1 小时，0 表示仍在准备；此标志不保证期间没有画像丢弃或写入错误；它不表示模型推理服务是否可用。\n\nY 轴单位\n状态值；1 = 就绪，0 = 尚未就绪。\n\n曲线与范围\n当前查询显示 DCU 主机网关，且只统计流式请求画像；它不是 DCU/A3 两网关的合计，也不等于下游硬件归属。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -228,7 +228,7 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "(aigate_profile_index_ready{job=\"aigate\",request_scope=\"streaming\"}) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
+                    "query": "(aigate_profile_index_ready{job=\"aigate\",request_scope=\"all\"}) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
                     "seriesNameFormat": "画像索引就绪",
                     "minStep": "5s"
                   }
@@ -243,7 +243,7 @@
         "spec": {
           "display": {
             "name": "画像写入错误速率",
-            "description": ""
+            "description": "指标含义\n最近 1 分钟画像写入错误计数的平均增长速率。统计对象是画像记录的写入错误，不是下游推理失败或 HTTP 错误。\n\nY 轴单位\n事件 / 秒；表示每秒的平均变化量。\n\n曲线与范围\n当前查询显示 DCU 主机网关，且只统计流式请求画像；它不是 DCU/A3 两网关的合计，也不等于下游硬件归属。\n\n时间口径\n速率使用最近 1 分钟滚动窗口；比例使用同一窗口的分子和分母。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 速率窗口的采样、生命周期或计数重置检查不通过时留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -273,7 +273,7 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "(rate(aigate_profile_write_errors_total{job=\"aigate\",request_scope=\"streaming\"}[1m]) and (resets(aigate_profile_write_errors_total{job=\"aigate\",request_scope=\"streaming\"}[1m]) == 0) and (count_over_time(aigate_profile_write_errors_total{job=\"aigate\",request_scope=\"streaming\"}[1m]) >= 12)) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15)) and on(job,instance) ((changes(aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"streaming\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"streaming\"}[1m]) >= 12) and (time() - aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"streaming\"} >= 60) and (min_over_time(up{job=\"aigate\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\"}[1m]) >= 12))",
+                    "query": "(rate(aigate_profile_write_errors_total{job=\"aigate\",request_scope=\"all\"}[1m]) and (resets(aigate_profile_write_errors_total{job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_write_errors_total{job=\"aigate\",request_scope=\"all\"}[1m]) >= 12)) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15)) and on(job,instance) ((changes(aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"all\"}[1m]) >= 12) and (time() - aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"all\"} >= 60) and on(job,instance) (min_over_time(up{job=\"aigate\"}[1m]) == 1) and on(job,instance) (count_over_time(up{job=\"aigate\"}[1m]) >= 12))",
                     "seriesNameFormat": "画像写入错误速率",
                     "minStep": "5s"
                   }
@@ -288,7 +288,7 @@
         "spec": {
           "display": {
             "name": "画像事件丢弃速率",
-            "description": ""
+            "description": "指标含义\n最近 1 分钟画像丢弃事件计数的平均增长速率。队列满或事件超过记录大小限制等情况可导致丢弃；它说明画像证据不完整，不等于业务请求被丢弃。\n\nY 轴单位\n事件 / 秒；表示每秒的平均变化量。\n\n曲线与范围\n当前查询显示 DCU 主机网关，且只统计流式请求画像；它不是 DCU/A3 两网关的合计，也不等于下游硬件归属。\n\n时间口径\n速率使用最近 1 分钟滚动窗口；比例使用同一窗口的分子和分母。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 速率窗口的采样、生命周期或计数重置检查不通过时留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -318,7 +318,7 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "(rate(aigate_profile_dropped_events_total{job=\"aigate\",request_scope=\"streaming\"}[1m]) and (resets(aigate_profile_dropped_events_total{job=\"aigate\",request_scope=\"streaming\"}[1m]) == 0) and (count_over_time(aigate_profile_dropped_events_total{job=\"aigate\",request_scope=\"streaming\"}[1m]) >= 12)) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15)) and on(job,instance) ((changes(aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"streaming\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"streaming\"}[1m]) >= 12) and (time() - aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"streaming\"} >= 60) and (min_over_time(up{job=\"aigate\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\"}[1m]) >= 12))",
+                    "query": "(rate(aigate_profile_dropped_events_total{job=\"aigate\",request_scope=\"all\"}[1m]) and (resets(aigate_profile_dropped_events_total{job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_dropped_events_total{job=\"aigate\",request_scope=\"all\"}[1m]) >= 12)) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15)) and on(job,instance) ((changes(aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"all\"}[1m]) >= 12) and (time() - aigate_profile_counter_start_time_seconds{job=\"aigate\",request_scope=\"all\"} >= 60) and on(job,instance) (min_over_time(up{job=\"aigate\"}[1m]) == 1) and on(job,instance) (count_over_time(up{job=\"aigate\"}[1m]) >= 12))",
                     "seriesNameFormat": "画像事件丢弃速率",
                     "minStep": "5s"
                   }
@@ -333,7 +333,7 @@
         "spec": {
           "display": {
             "name": "画像存储量",
-            "description": ""
+            "description": "指标含义\n当前画像记录占用的存储字节数除以 2^20。表示画像文件空间，不是模型权重、KV Cache 或进程内存大小。\n\nY 轴单位\nMiB；1 MiB = 2^20 字节。\n\n曲线与范围\n当前查询显示 DCU 主机网关，且只统计流式请求画像；它不是 DCU/A3 两网关的合计，也不等于下游硬件归属。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -363,7 +363,7 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "(aigate_profile_stored_bytes{job=\"aigate\",request_scope=\"streaming\"} / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
+                    "query": "(aigate_profile_stored_bytes{job=\"aigate\",request_scope=\"all\"} / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"aigate\"}) < 15))",
                     "seriesNameFormat": "存储",
                     "minStep": "5s"
                   }

@@ -2,11 +2,11 @@
 
 ## 仓库范围
 
-本仓库保存监控服务源码、测试、部署及校验脚本、采集配置、Perses 看板定义和上游版本校验清单。`perses/dashboards/*.json` 是需要发布的看板定义，`vendor/releases.json`、`vendor/manifest.json`、校验和与 `perses/image-lock.json` 用于固定及校验依赖，均应入库。
+本仓库保存监控服务源码、测试、部署及校验脚本、采集配置、Perses 看板定义和上游版本校验清单。`perses/projects/<project>/dashboards/*.json` 是现行需要发布的看板定义，顶层 `perses/dashboards/` 保留历史基线；`vendor/releases.json`、`vendor/manifest.json`、校验和与 `perses/image-lock.json` 用于固定及校验依赖，均应入库。
 
 下载的二进制与镜像归档、镜像检查快照、运行数据、凭据、缓存、`evidence/`、`work/` 和跨项目临时补丁不入库。`tests/fixtures/e2e-20260914-1759.json` 仅包含时延直方图标签、计数及边界时间，用于复现桶混合错误；它不包含请求正文、响应正文或凭据，应随测试保留。`tests/browser_request_rate.cjs` 依赖被忽略的历史回放证据及同级 Web 文件，是本地验收工作记录，不属于检出后可运行的回归测试集。
 
-下文带日期的发布记录描述当时状态，`evidence/` 及跨项目工作记录路径仅供本地查阅，不随仓库提供。历史发布脚本中的镜像标签、检查点、验收文件和统计口径有版本约束；提交源码不表示当前候选已经部署或经过线上验收。当前流式候选的边界见本文末节。
+下文带日期的发布记录描述当时状态，`evidence/` 及跨项目工作记录路径仅供本地查阅，不随仓库提供。历史发布脚本中的镜像标签、检查点、验收文件和统计口径有版本约束；提交源码不表示当前候选已经部署或经过线上验收。当前原生指标口径见本文末节。
 
 ## 项目结构与运行
 
@@ -32,10 +32,18 @@ test4 查询地址为 `http://122.247.53.162:18430`；评测平台 Web 和引擎
 
 ## 查询与统计
 
+A3 主机 CPU 与 CPU I/O 等待由 monitoring-api 按 5 秒周期计算新增聚合点，Perses 和历史 API 直接读取 VM 中的 `host-cpu-v1`，详情见 [CPU 聚合设计与验证](docs/host-cpu-materialization-20260916.md)。已于 2026-09-16 发布至 test4；新聚合历史从上线后积累，原始历史保留。
+
 - `/api/monitoring/latest`：返回兼容页面的快照、源观测时间、rank 明细、DCU/主机及缓存数据，并提供存储余量和发送积压。
 - `/api/monitoring/history?hours=1`：支持大于 0、最多 720 小时，约 720 个展示点。新部署的 30 天查询只显示已经积累的数据，不代表已有 30 天观测。
 - `/health`：报告处理进度、核心来源状态及错误。
 - 查询不通返回不可用，不自动恢复 SSH 或读取旧 SQLite。
+
+`/api/monitoring/history` 同时按所选 `environment` 查询网关原始时序，新增 `points[].gateway`：`stream_idle_max_seconds`（流式输出停顿）、`oldest_age_seconds`（所有在途请求的最大年龄）、该请求的 `backend` / `stage` / `stage_name`，以及 `gap_before`。按当前 Perses 网关生成监控的完整性、新鲜度和生命周期校验读取；有效空闲为零，无效观测为 null。网关时间点与原有派生时间点合并，后端数据缺失不抹掉有效网关点；阶段、后端切换或缺样断线。
+
+两项网关查询分别限时 4 秒，失败时通过响应顶层 `gateway_status` 标记对应字段为 `unavailable`，不丢弃其他成功的监控曲线。正常查询状态为 `ok`，仍可能没有有效观测。沿用历史步长、5 秒缓存和并发上限，不引入持久化回填或新的采集任务；请求速率及 E2E API 字段不变。
+
+网关回归包含 `tests/test_gateway_history.py`；`tests/test_gateway_live_vm.py` 通过 `GATEWAY_TEST_VM_URL=http://127.0.0.1:<端口>` 在独立临时 VictoriaMetrics 中注入合成数据，核对真实查询与现有看板结果。该地址必须属于可丢弃的本地测试实例。
 
 `calculator.py`、`cache_metrics.py`、`monitor_series.py` 的统计算法来自迁移时 code-eval 基线，独立维护。保留 DP/TP/PP 去重、缓存分层分母、55–65 秒窗口、拓扑变化、计数重置和无流量留空。`replay.py` 重放原始抓取时间，不插值原始计数。派生曲线以数值及有效性标志写回 VM，历史降采样保留断档标记。
 
@@ -44,7 +52,7 @@ test4 查询地址为 `http://122.247.53.162:18430`；评测平台 Web 和引擎
 1. `python3 scripts/download.py` 按 `vendor/releases.json` 下载固定版本，并校验官方 SHA256；`vendor/manifest.json` 保存二进制摘要。离线环境传输已校验的 `vendor/bin`。
 2. 将本项目同步到目标机 `/data2/monitoring/release`，在 test4 中央机执行 `python3 deploy/start_test4.py`，节点执行 `python3 deploy/start.py node --bind <节点地址>`。脚本只在本机管理容器，不自行 SSH。
 3. test4 使用 Docker 28.5.2 静态发行版和 `monitoring-api:test4-20260914`；API 的 Python 3.11.16、依赖及代码来自 test2 发布镜像，迁移时已验证导入。节点继续使用已有 DTK 镜像。重建中央机前需加载迁移镜像或准备兼容运行时。`requirements.txt` 对齐实际部署的 Python 包版本。
-4. 已存在服务不会被 `start.py` 覆盖。升级先构建新标签、验证 `/health` 和数据，再用 `deploy/replace.py <本项目容器名> <新镜像>` 替换；成功后删除本次临时旧容器。操作仅针对 `monitoring.owner=independent`。
+4. 已存在服务不会被 `start.py` 覆盖。升级先构建新标签、验证 `/health` 和数据，再用 `deploy/replace.py <本项目容器名> <新镜像>` 替换。工具与 `deploy/container_validation.py` 一起提供：在停服前验证所有权、支持的组件、监听地址、镜像和备份名；启动后在最多 90 秒内要求容器身份、运行状态、重启次数与组件数据连续正常至少 10 秒，之后才删除临时旧容器。失败按原容器 ID 恢复。支持独立 API、VM、vmagent、node/DCU exporter；未知组件或非 host 网络在停服前拒绝。API 要求两环境数据新鲜，VM 验证真实查询，vmagent 验证采集计数推进，exporter 验证必要指标和设备观测。操作仅针对 `monitoring.owner=independent`，保留原 `--driver-readonly` / `--loadavg` 参数。
 5. 修改采集配置后调用本机 `POST http://127.0.0.1:18429/-/reload`，检查全部目标 `up` 和源数据。
 
 代码需要 Python 3.11+；节点 exporter 使用 Python 3.10 标准库。当前没有外部通知或 Grafana；已新增 Perses 看板，见 [Perses 部署与运维](perses/README.md)。
@@ -55,11 +63,13 @@ test4 查询地址为 `http://122.247.53.162:18430`；评测平台 Web 和引擎
 PYTHONPATH=.:../code-eval python -m pytest tests
 ```
 
-可将 `python` 替换为已准备好的 `../code-eval/.venv/bin/python`。仅设置 `PYTHONPATH=.` 会导致跨项目用例无法导入 `app` 或 `deploy.cache_monitor_host`。补充运行 `python -m pytest perses/test_gateway_live.py` 可覆盖网关看板合并及布局测试。
+可将 `python` 替换为已准备好的 `../code-eval/.venv/bin/python`。仅设置 `PYTHONPATH=.` 会导致跨项目用例无法导入 `app` 或 `deploy.cache_monitor_host`。执行 `PYTHONPATH=.:../code-eval python -m pytest -q` 可一次收集后端、Perses 看板和发布工具的全部 pytest 回归。测试时将 `DATA_DIR`、`HOST_DATA_DIR`、`STATE_DIR` 指向独立临时目录，避免使用实际运行数据。
+
+部署校验工具另需 `python -m pip install -r requirements-tools.txt`（PyYAML，仅用于采集配置解析，不加入 monitoring-api 运行依赖）。`deploy/gateway_monitor_release.py` 的发布目录必须同时包含本仓库的 `deploy/check_gateway_monitor_candidate.py`，放在发布根目录并调用 `api` 模式；该校验只允许 VM 的 GET 查询，不依赖 code-eval 或写入 VM。
 
 ## 验证与故障处理
 
-`python3 scripts/validate_live.py` 验证 20 个目标、两节点共 16 张卡、数据年龄以及 1/6/24/720 小时查询。`scripts/fault_check.py` 在独立临时目录和 18528/18529/18531 回环端口运行真实 VM/vmagent，验证存储中断后的补传，最后回收临时进程，不停止生产服务。
+`python3 scripts/validate_live.py` 按同一发布目录的 `deploy/scrape.yml` 验证目标集合（当前配置为 23 个）、两节点共 16 张 DCU 卡、数据年龄以及 1/6/24/720 小时查询。目标以重标记后的 job、instance、environment 匹配，检查重复、缺失、多余、失败及过期观测；当前支持 static_configs 和 replace 重标记，不支持的发现/重标记方式会显式拒绝。`scripts/fault_check.py` 在独立临时目录和 18528/18529/18531 回环端口运行真实 VM/vmagent，验证存储中断后的补传，最后回收临时进程，不停止生产服务。
 
 页面显示源不可用、待发送字节和 VM 存储余量。VM 在空闲空间不足 20 GiB 时停止写入，vmagent 缓冲有上限；缓冲耗尽会丢失较旧待发送数据，需要按实测增长预留容量。短时实测资源和容量不等于 24 小时稳定性结论。
 
@@ -120,12 +130,22 @@ DCU 的 E2E、TTFT、ITL 改为保留完整来源和流式标签，逐序列校�
 
 发布与验收详情位于本地 `evidence/latency-v2-20260914/README.md`（不入库）。
 
-## 请求监控仅统计流式（2026-09-15，本地候选，未部署）
+## 原生请求指标（2026-09-15，已部署）
 
-请求画像、生成/错误指标、请求速率、Token 吞吐、延迟及请求队列采用流式口径。非流式只在网关看板的 **非流式请求数** 面板显示最近 1 分钟新增请求数（窗口估算值）。网关流式指标使用 `request_scope="streaming"`，唯一独立非流式计数使用 `request_scope="nonstreaming"`。
+正常业务以流式为主，后端监控直接使用原生指标，不强制筛选 `is_streaming=true`。接受精度测试的非流式请求混入并影响延迟分布。A3 无流式标签的指标正常使用；DCU TTFT、ITL、E2E 都保留源端的完整样本。DCU ITL 按输出批次间隔及新增 Token 数平均。
 
-后端请求指标严格筛选 `is_streaming="true"`。无标签、false、未知值均不参与；不将无标签总量视作流式。当前本地 A3/vLLM 样例没有该标签，对应请求数、Token、延迟和队列会留空。主机/DCU/KV 容量、后端缓存命中及存储观测仍表示共享资源或缓存层自身的统计，不解释为流式请求性能。
+计数和直方图保留完整来源身份，先逐序列验证重置、缺失、桶与 count 一致性，再合并互斥的流式分组。复制 rank 不直接相加；未知采样或计数异常仍留空，无请求窗口的样本数为零、分位数为空。
 
-两种后端的请求派生曲线（含动态累计请求/队列字段）使用 `schema="request-streaming-v1"`，查询排除旧 `v1`/`latency-v2` 请求字段；资源/缓存仍用 `v1`。历史原始数据不修改，未重建新口径的历史请求曲线留空。画像查询同时筛选新的 scope 标签。历史延迟回放工具随当前代码写入新 schema，必须使用独立检查点，不能沿用之前的 latency-v2 发布脚本或验收预期。
+请求派生字段使用 `schema="request-metrics-v2"`，资源和缓存维持 `v1`。使用独立派生水位，从新口径上线时开始写入，不迁移、不重建旧请求历史，也不回退读取旧口径。
 
-跨项目工作记录位于本地 `docs/streaming-scope-20260915.md`（不入库）；本文末节保留本仓库所需的统计及升级边界。
+网关一般请求指标使用 `request_scope="all"`；首增量和流观察指标保留 `streaming`；独立非流式到达数保留 `nonstreaming`。画像查询以新的 all-request 计数起点隔离升级前的旧首增量序列。
+
+完整口径、测试、部署与回退说明见 [metric-scope-v2-20260915.md](docs/metric-scope-v2-20260915.md)。前次仅流式发布记录保存在 [local-latest-20260915.md](docs/local-latest-20260915.md)，不代表当前口径。
+
+## A3 NPU 硬件监控（2026-09-16）
+
+复用 A3-1 `122.209.21.24:8082/metrics` 和 A3-2 `122.209.21.25:8082/metrics` 的既有 `npu-exporter`，以 `job=npu-a3`、`environment=a3-vllm` 每 5 秒采集。保留 exporter 自带时间戳，采集 `npu_.*` 和 `machine_npu_nums`，每节点 16 个芯片 ID。
+
+[A3 · 主机与 NPU](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/a3-hosts) 对齐 DCU 六项硬件图表：利用率、显存已用、温度、功耗、显存总量和显存占比。支持节点与 NPU 芯片筛选；HBM 的 MiB 转为 GiB，不使用 KV Cache 代替整芯片显存。功耗按 exporter 原始芯片 ID 展示，不相加为整机功耗。有效零保留，超过 15 秒的源观测、失败抓取及非法值留空。
+
+本次只热加载 vmagent 采集配置并更新 A3 主机看板；没有重启中央监控、推理或网关服务。实现与回退见 [NPU 发布说明](docs/npu-20260916.md)。

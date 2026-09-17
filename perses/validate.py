@@ -1,3 +1,11 @@
+# Project-aware CLI routing; legacy helpers below remain importable.
+if __name__ == "__main__":
+    import sys
+    from project_release import main
+    sys.argv.insert(1, "audit-published")
+    main()
+    raise SystemExit(0)
+
 """Read-only validation of all chart queries and protected services on test4."""
 import json,time,urllib.request,urllib.parse,subprocess
 from pathlib import Path

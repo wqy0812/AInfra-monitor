@@ -1,3 +1,9 @@
+# Project-aware CLI routing; legacy helpers below remain importable.
+if __name__ == "__main__":
+    from project_split import main
+    main()
+    raise SystemExit(0)
+
 """Add A3 dashboards without regenerating or overwriting any DCU dashboard."""
 from generate import dashboard, panel, variable, derived_schema
 import json

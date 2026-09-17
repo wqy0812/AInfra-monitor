@@ -1,7 +1,14 @@
+# Project-aware CLI routing; legacy helpers below remain importable.
+if __name__ == "__main__":
+    from project_split import main
+    main()
+    raise SystemExit(0)
+
 """Two gateway series per chart, with conservative counter coverage gates."""
 import json
 from pathlib import Path
 from generate import panel
+from metric_scope import gateway_scope
 
 ROOT = Path(__file__).resolve().parent
 ENVIRONMENTS = [('dcu-pd', 'DCU 主机网关', '#1976D2'), ('a3-vllm', 'A3 主机网关', '#ED6C02')]
@@ -12,8 +19,7 @@ ORIGIN = 'aigate_error_metrics_start_time_seconds'
 
 def selector(metric, environment, extra=''):
     if metric.startswith('aigate_'):
-        scope = 'nonstreaming' if metric == 'aigate_nonstream_requests_total' else 'streaming'
-        extra = 'request_scope=' + json.dumps(scope) + (',' + extra if extra else '')
+        extra = 'request_scope=' + json.dumps(gateway_scope(metric)) + (',' + extra if extra else '')
     return metric + '{job="aigate",environment=' + json.dumps(environment) + (',' + extra if extra else '') + '}'
 
 
@@ -56,7 +62,7 @@ def queries(environment):
 
 
 def build_dashboard():
-    common = '仅统计流式生成请求。1 分钟窗口；无样本、分母为零、采集断档或计数重置留空。未出现的类别不补零，已有有效空闲序列显示零。'
+    common = '统计流式及非流式生成请求。1 分钟窗口；无样本、分母为零、采集断档或计数重置留空。未出现的类别不补零，已有有效空闲序列显示零。'
     titles = [('生成结束速率', '请求 / 秒'), ('后端错误速率', '次 / 秒'), ('后端错误率', '%'),
               ('客户端取消占比', '%'), ('客户端断开占比', '%'), ('未知结果占比', '%')]
     expressions = [queries(env) for env, _, _ in ENVIRONMENTS]

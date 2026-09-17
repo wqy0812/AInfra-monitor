@@ -48,8 +48,17 @@ def epoch(value):
 
 
 def metric_selector(labels, names):
-    labels = dict(labels, request_scope='streaming')
+    labels = dict(labels)
+    labels.pop('request_scope', None)
+    # First-increment histograms share the new all-request counter lifetime.
+    # General metrics use all; only this histogram uses streaming.
+    ordinary = [n for n in names if not n.startswith('first_increment_seconds_')]
+    streaming = [n for n in names if n.startswith('first_increment_seconds_')]
     parts = ['__name__=~' + json.dumps('aigate_(' + '|'.join(names) + ')')]
+    if ordinary and streaming:
+        parts.append('request_scope=~"all|streaming"')
+    else:
+        labels['request_scope'] = 'streaming' if streaming else 'all'
     parts += [k + '=' + json.dumps(v, ensure_ascii=False) for k, v in sorted(labels.items())]
     return '{' + ','.join(parts) + '}'
 
@@ -58,6 +67,9 @@ def summary_rows(rows):
     result = {}
     for row in rows:
         labels = dict(row['metric'])
+        expected = 'streaming' if labels.get('__name__', '').startswith('aigate_first_increment_seconds_') else 'all'
+        if labels.get('request_scope') != expected:
+            continue
         rollup = labels.pop('rollup')
         result.setdefault(key(labels), {})[rollup] = number(row['value'][1])
     return result
@@ -137,7 +149,7 @@ class CounterWindow:
         groups = defaultdict(set)
         for row in await self.query(expression, self.end):
             labels = dict(row['metric'])
-            if labels.get('environment') != self.environment or labels.get('request_scope') != 'streaming':
+            if labels.get('environment') != self.environment or labels.get('request_scope') != 'all':
                 continue
             birth = epoch(labels.pop('profile_epoch'))
             name = labels.pop('__name__')
@@ -221,16 +233,27 @@ class CounterWindow:
     async def read(self):
         await self.discover()
         await asyncio.gather(*(self.segment(*life) for life in self.lifetimes))
+        # The all-request origin also marks the start of this population policy.
+        # First-increment names/scope existed before that origin; those legacy
+        # samples must not poison a query spanning the policy change.
+        source_key = lambda labels: key({k:v for k,v in labels.items()
+                                        if k not in ('backend', 'model', 'request_scope')})
+        policy_starts = {}
+        for labels, names, birth, _ in self.lifetimes:
+            if names == NAMES and not labels.get('backend') and not labels.get('model'):
+                source = source_key(labels)
+                policy_starts[source] = min(policy_starts.get(source, birth), birth)
         # Data predating the first recorded lifetime is not known to start at zero.
         first = {}
         for labels, names, birth, _ in self.lifetimes:
             identity = (key(labels), names)
             first[identity] = min(first.get(identity, birth), birth)
         async def check_unassigned(identity, birth):
-            if birth <= self.start:
-                return
             labels, names = identity
-            for series in await self.summaries(dict(labels), names, self.start, birth-.001):
+            left = max(self.start, policy_starts.get(source_key(dict(labels)), self.start))
+            if birth <= left:
+                return
+            for series in await self.summaries(dict(labels), names, left, birth-.001):
                 self.totals[series] = None
                 self.issues.add((dict(series)['__name__'].removeprefix('aigate_'), 'missing_lifecycle'))
         await asyncio.gather(*(check_unassigned(identity, birth) for identity,birth in first.items()))
@@ -251,8 +274,12 @@ class CounterWindow:
                 groups[group] += value
         return [{'labels': dict(k), 'value': v} for k, v in sorted(groups.items())]
 
-    def trend_valid(self, at, width):
-        if any(issue for name, issue in self.issues if name in COUNTERS):
+    def trend_valid(self, at, width, metric):
+        # Summary issues are metric-specific: an ended/outcome counter missing
+        # its baseline must not hide healthy routed-request or token rates.
+        # Keep the conservative guard for the requested counter itself because
+        # summary issues do not carry timestamps that would localize the fault.
+        if any(name == metric for name, _ in self.issues):
             return False
         lives = [life for life in self.lifetimes if life[0].get('backend')]
         return (any(birth <= at <= end for _,_,birth,end in lives)

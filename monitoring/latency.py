@@ -4,7 +4,7 @@ import json
 import math
 
 LATENCIES = {'ttft': 'time_to_first_token_seconds', 'itl': 'inter_token_latency_seconds', 'e2e': 'e2e_request_latency_seconds'}
-from .request_scope import SCHEMA, streaming_rows
+from .request_scope import SCHEMA, compatible_identities
 PATHS = tuple('nodes.' + role + '.' + field for role in ('prefill', 'decode')
               for field in ['latency_window_seconds'] + ['percentiles.' + k + '.' + q for k in LATENCIES for q in ('p50', 'p95', 'p99', 'samples')])
 PATH_REGEX = r'nodes\.(prefill|decode)\.(latency_window_seconds|percentiles\.(ttft|itl|e2e)\.(p50|p95|p99|samples))'
@@ -45,10 +45,10 @@ def quantile_buckets(current, before, q):
 
 
 def snapshot(rows, name):
-    """Require one streaming tokenizer identity with consistent buckets/count."""
+    """Use the native population, preserving each source before merging."""
     buckets, counts = {}, {}
     seen = {}
-    for row in streaming_rows(rows):
+    for row in rows:
         if row['name'] not in (name + '_bucket', name + '_count'):
             continue
         labels = dict(row.get('source_labels', row['labels']))
@@ -80,7 +80,7 @@ def snapshot(rows, name):
             group[edge] = value
     if not buckets or buckets.keys() != counts.keys():
         return None, 'missing_series'
-    if len(buckets) != 1:
+    if not compatible_identities(buckets):
         return None, 'ambiguous_identity'
     edges = next(iter(buckets.values())).keys()
     for identity, group in buckets.items():

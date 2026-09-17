@@ -1,0 +1,36 @@
+{
+  "perses_commit": "4c719fc19fa21d333797e84c4fe7e3d81c25f4f5",
+  "perses_version": "0.54.0",
+  "files": {
+    "plugin-system/runtime/TimeRangeProvider/TimeRangeProvider.tsx": {
+      "original_map_sha256": "1277a0cbb099c97dc275aac34114b1f0edbb9d97fb022f579e50735aaa532878",
+      "target": "ui/node_modules/@perses-dev/plugin-system/dist/runtime/TimeRangeProvider/TimeRangeProvider"
+    },
+    "plugin-system/runtime/plugin-registry.ts": {
+      "original_map_sha256": "77113e12ddb015e81f1264d1b3cf3e92f84dda88ea7c792b1b6e681bb5f1f9b1",
+      "target": "ui/node_modules/@perses-dev/plugin-system/dist/runtime/plugin-registry"
+    },
+    "plugin-system/runtime/time-series-queries.ts": {
+      "original_map_sha256": "eb773d41c865488b8b2de074c683248ba48eecf919235a7223c218e96da25daa",
+      "target": "ui/node_modules/@perses-dev/plugin-system/dist/runtime/time-series-queries"
+    },
+    "plugin-system/remote/remotePluginLoader.ts": {
+      "original_map_sha256": "898517e46fec3d3b799fa8a7b6d2820eb68812d8471475d6f6cfa00e1f60e0b1",
+      "target": "ui/node_modules/@perses-dev/plugin-system/dist/remote/remotePluginLoader"
+    },
+    "plugin-system/components/PluginRegistry/PluginRegistry.tsx": {
+      "original_map_sha256": "c3f47deeed8e2c97da474e89ad3b8272bee3846fa022676fc353bc5d66b88196",
+      "target": "ui/node_modules/@perses-dev/plugin-system/dist/components/PluginRegistry/PluginRegistry"
+    },
+    "plugin-system/model/plugin-loading.ts": {
+      "original_map_sha256": "615b4a9dc3918684e674e1ccc997e2a60d2effa8883ffe1738f687440f3de703",
+      "target": "ui/node_modules/@perses-dev/plugin-system/dist/model/plugin-loading"
+    },
+    "dashboards/views/ViewDashboard/ViewDashboard.tsx": {
+      "original_map_sha256": "bfc529f51b6beab84bdd40a7aec534c8c25144ea54dc6d0d880762383db6dd33",
+      "target": "ui/node_modules/@perses-dev/dashboards/dist/views/ViewDashboard/ViewDashboard"
+    }
+  },
+  "source_archive_sha256": "8b69b683288c9917b4b79dff3c4bbfdd5e7df4d2571deeb1318201ebd9e04f0d",
+  "npm_lock_sha256": "d0fe0e2257bb9a5d3d2345805f9737fd847a3f3d68ec512b5e29e23ed2bf8bef"
+}

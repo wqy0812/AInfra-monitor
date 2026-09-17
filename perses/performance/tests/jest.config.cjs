@@ -1,0 +1,2 @@
+const root=process.env.PERSES_SOURCE+'/ui/node_modules';
+module.exports={setupFiles:["<rootDir>/setup.cjs"],moduleNameMapper:{'\\.css$':'<rootDir>/style.cjs'},rootDir:__dirname,testEnvironment:'jsdom',testEnvironmentOptions:{customExportConditions:['node','node-addons']},testMatch:['**/ui.test.cjs'],moduleDirectories:[root,'node_modules'],testTimeout:10000,transform:{'^.+\\.[cm]?[jt]sx?$':[root+'/@swc/jest',{jsc:{parser:{syntax:'ecmascript',jsx:true}},module:{type:'commonjs'}}]},transformIgnorePatterns:['node_modules/(?!echarts|zrender|d3-|internmap)']};
