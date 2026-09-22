@@ -152,286 +152,6 @@
           ]
         }
       },
-      "live-idle-5": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "流停顿 ≥ 5 秒 · 流数量",
-            "description": "指标含义\n当前已出现有效输出、尚未结束且连续至少 5 秒没有新有效内容的流数量。有效内容包含正文、推理、拒绝或工具增量；心跳、空事件和 usage 不重置停顿时钟。阈值为累计包含：≥60 秒的流也计入 ≥30/15/5 秒，四图不能相加。\n\nY 轴单位\n流数量，每条流对应一个在途流式请求。\n\n曲线与范围\n蓝色为 DCU 主机网关，橙色为 A3 主机网关；阶段图的颜色区分处理阶段。按网关所在环境归属，DCU 网关转发至 A3 时仍计入 DCU 曲线。同一请求经两层网关会分别计数，不可相加当作全局去重请求量。\n\n时间口径\n当前在途状态，5 秒采集；不是最近窗口累计次数。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 未出现的错误类别可能没有序列；占比分母为零时不定义比例。实时阶段切换也可能出现间断。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "流",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 2,
-                "connectNulls": false
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "querySettings": [
-                {
-                  "queryIndex": 0,
-                  "colorMode": "fixed",
-                  "colorValue": "#1976D2"
-                },
-                {
-                  "queryIndex": 1,
-                  "colorMode": "fixed",
-                  "colorValue": "#ED6C02"
-                }
-              ]
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "query": "sum by(environment) ((aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"5\",request_scope=\"streaming\"} and ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"5\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"5\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"5\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"5\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"dcu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"dcu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))) unless on(environment) (count by(environment) ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"5\",request_scope=\"streaming\"}[$__interval]) unless ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"5\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"5\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"5\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"5\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"dcu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"dcu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))))))",
-                    "seriesNameFormat": "DCU 主机网关",
-                    "minStep": "5s"
-                  }
-                }
-              }
-            },
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "query": "sum by(environment) ((aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"5\",request_scope=\"streaming\"} and ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"5\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"5\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"5\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"5\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))) unless on(environment) (count by(environment) ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"5\",request_scope=\"streaming\"}[$__interval]) unless ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"5\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"5\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"5\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"5\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))))))",
-                    "seriesNameFormat": "A3 主机网关",
-                    "minStep": "5s"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "live-idle-15": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "流停顿 ≥ 15 秒 · 流数量",
-            "description": "指标含义\n当前已出现有效输出、尚未结束且连续至少 15 秒没有新有效内容的流数量。有效内容包含正文、推理、拒绝或工具增量；心跳、空事件和 usage 不重置停顿时钟。阈值为累计包含：≥60 秒的流也计入 ≥30/15/5 秒，四图不能相加。\n\nY 轴单位\n流数量，每条流对应一个在途流式请求。\n\n曲线与范围\n蓝色为 DCU 主机网关，橙色为 A3 主机网关；阶段图的颜色区分处理阶段。按网关所在环境归属，DCU 网关转发至 A3 时仍计入 DCU 曲线。同一请求经两层网关会分别计数，不可相加当作全局去重请求量。\n\n时间口径\n当前在途状态，5 秒采集；不是最近窗口累计次数。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 未出现的错误类别可能没有序列；占比分母为零时不定义比例。实时阶段切换也可能出现间断。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "流",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 2,
-                "connectNulls": false
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "querySettings": [
-                {
-                  "queryIndex": 0,
-                  "colorMode": "fixed",
-                  "colorValue": "#1976D2"
-                },
-                {
-                  "queryIndex": 1,
-                  "colorMode": "fixed",
-                  "colorValue": "#ED6C02"
-                }
-              ]
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "query": "sum by(environment) ((aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"15\",request_scope=\"streaming\"} and ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"15\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"15\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"15\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"15\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"dcu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"dcu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))) unless on(environment) (count by(environment) ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"15\",request_scope=\"streaming\"}[$__interval]) unless ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"15\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"15\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"15\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"15\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"dcu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"dcu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))))))",
-                    "seriesNameFormat": "DCU 主机网关",
-                    "minStep": "5s"
-                  }
-                }
-              }
-            },
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "query": "sum by(environment) ((aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"15\",request_scope=\"streaming\"} and ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"15\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"15\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"15\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"15\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))) unless on(environment) (count by(environment) ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"15\",request_scope=\"streaming\"}[$__interval]) unless ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"15\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"15\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"15\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"15\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))))))",
-                    "seriesNameFormat": "A3 主机网关",
-                    "minStep": "5s"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "live-idle-30": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "流停顿 ≥ 30 秒 · 流数量",
-            "description": "指标含义\n当前已出现有效输出、尚未结束且连续至少 30 秒没有新有效内容的流数量。有效内容包含正文、推理、拒绝或工具增量；心跳、空事件和 usage 不重置停顿时钟。阈值为累计包含：≥60 秒的流也计入 ≥30/15/5 秒，四图不能相加。\n\nY 轴单位\n流数量，每条流对应一个在途流式请求。\n\n曲线与范围\n蓝色为 DCU 主机网关，橙色为 A3 主机网关；阶段图的颜色区分处理阶段。按网关所在环境归属，DCU 网关转发至 A3 时仍计入 DCU 曲线。同一请求经两层网关会分别计数，不可相加当作全局去重请求量。\n\n时间口径\n当前在途状态，5 秒采集；不是最近窗口累计次数。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 未出现的错误类别可能没有序列；占比分母为零时不定义比例。实时阶段切换也可能出现间断。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "流",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 2,
-                "connectNulls": false
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "querySettings": [
-                {
-                  "queryIndex": 0,
-                  "colorMode": "fixed",
-                  "colorValue": "#1976D2"
-                },
-                {
-                  "queryIndex": 1,
-                  "colorMode": "fixed",
-                  "colorValue": "#ED6C02"
-                }
-              ]
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "query": "sum by(environment) ((aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"30\",request_scope=\"streaming\"} and ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"30\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"30\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"30\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"30\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"dcu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"dcu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))) unless on(environment) (count by(environment) ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"30\",request_scope=\"streaming\"}[$__interval]) unless ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"30\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"30\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"30\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"30\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"dcu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"dcu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))))))",
-                    "seriesNameFormat": "DCU 主机网关",
-                    "minStep": "5s"
-                  }
-                }
-              }
-            },
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "query": "sum by(environment) ((aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"30\",request_scope=\"streaming\"} and ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"30\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"30\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"30\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"30\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))) unless on(environment) (count by(environment) ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"30\",request_scope=\"streaming\"}[$__interval]) unless ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"30\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"30\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"30\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"30\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))))))",
-                    "seriesNameFormat": "A3 主机网关",
-                    "minStep": "5s"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "live-idle-60": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "流停顿 ≥ 60 秒 · 流数量",
-            "description": "指标含义\n当前已出现有效输出、尚未结束且连续至少 60 秒没有新有效内容的流数量。有效内容包含正文、推理、拒绝或工具增量；心跳、空事件和 usage 不重置停顿时钟。阈值为累计包含：≥60 秒的流也计入 ≥30/15/5 秒，四图不能相加。\n\nY 轴单位\n流数量，每条流对应一个在途流式请求。\n\n曲线与范围\n蓝色为 DCU 主机网关，橙色为 A3 主机网关；阶段图的颜色区分处理阶段。按网关所在环境归属，DCU 网关转发至 A3 时仍计入 DCU 曲线。同一请求经两层网关会分别计数，不可相加当作全局去重请求量。\n\n时间口径\n当前在途状态，5 秒采集；不是最近窗口累计次数。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 未出现的错误类别可能没有序列；占比分母为零时不定义比例。实时阶段切换也可能出现间断。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "流",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 2,
-                "connectNulls": false
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "querySettings": [
-                {
-                  "queryIndex": 0,
-                  "colorMode": "fixed",
-                  "colorValue": "#1976D2"
-                },
-                {
-                  "queryIndex": 1,
-                  "colorMode": "fixed",
-                  "colorValue": "#ED6C02"
-                }
-              ]
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "query": "sum by(environment) ((aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"60\",request_scope=\"streaming\"} and ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"60\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"60\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"60\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"60\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"dcu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"dcu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))) unless on(environment) (count by(environment) ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"60\",request_scope=\"streaming\"}[$__interval]) unless ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"60\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"60\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"60\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"dcu-pd\",threshold_seconds=\"60\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"dcu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"dcu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"dcu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"dcu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))))))",
-                    "seriesNameFormat": "DCU 主机网关",
-                    "minStep": "5s"
-                  }
-                }
-              }
-            },
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "query": "sum by(environment) ((aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"60\",request_scope=\"streaming\"} and ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"60\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"60\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"60\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"60\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))) unless on(environment) (count by(environment) ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"60\",request_scope=\"streaming\"}[$__interval]) unless ((count_over_time(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"60\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"60\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"60\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_idle_requests{job=\"aigate\",environment=\"a3-vllm\",threshold_seconds=\"60\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))))))",
-                    "seriesNameFormat": "A3 主机网关",
-                    "minStep": "5s"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "live-idle-max": {
         "kind": "Panel",
         "spec": {
@@ -1438,7 +1158,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/live-idle-5"
+                "$ref": "#/spec/panels/live-idle-max"
               }
             },
             {
@@ -1447,48 +1167,12 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/live-idle-15"
-              }
-            },
-            {
-              "x": 0,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/live-idle-30"
-              }
-            },
-            {
-              "x": 12,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/live-idle-60"
-              }
-            },
-            {
-              "x": 0,
-              "y": 24,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/live-idle-max"
-              }
-            },
-            {
-              "x": 12,
-              "y": 24,
-              "width": 12,
-              "height": 8,
-              "content": {
                 "$ref": "#/spec/panels/live-oldest"
               }
             },
             {
               "x": 0,
-              "y": 32,
+              "y": 16,
               "width": 12,
               "height": 8,
               "content": {
@@ -1497,7 +1181,7 @@
             },
             {
               "x": 12,
-              "y": 32,
+              "y": 16,
               "width": 12,
               "height": 8,
               "content": {
@@ -1506,7 +1190,7 @@
             },
             {
               "x": 0,
-              "y": 40,
+              "y": 24,
               "width": 12,
               "height": 8,
               "content": {
@@ -1515,7 +1199,7 @@
             },
             {
               "x": 12,
-              "y": 40,
+              "y": 24,
               "width": 12,
               "height": 8,
               "content": {
@@ -1524,7 +1208,7 @@
             },
             {
               "x": 0,
-              "y": 48,
+              "y": 32,
               "width": 12,
               "height": 8,
               "content": {
@@ -1533,7 +1217,7 @@
             },
             {
               "x": 12,
-              "y": 48,
+              "y": 32,
               "width": 12,
               "height": 8,
               "content": {
@@ -1542,7 +1226,7 @@
             },
             {
               "x": 0,
-              "y": 56,
+              "y": 40,
               "width": 12,
               "height": 8,
               "content": {
@@ -1551,7 +1235,7 @@
             },
             {
               "x": 12,
-              "y": 56,
+              "y": 40,
               "width": 12,
               "height": 8,
               "content": {
@@ -1560,7 +1244,7 @@
             },
             {
               "x": 0,
-              "y": 64,
+              "y": 48,
               "width": 12,
               "height": 8,
               "content": {
@@ -1569,7 +1253,7 @@
             },
             {
               "x": 12,
-              "y": 64,
+              "y": 48,
               "width": 12,
               "height": 8,
               "content": {

@@ -6,21 +6,25 @@ scrape_configs:
   static_configs:
   - targets: ['122.235.251.106:30125']
     labels: {environment: dcu-pd, role: prefill, node: dcu1, service: sglang}
+  - targets: ['122.209.21.34:8501']
+    labels: {environment: xpu-pd, role: prefill, node: xpu-2, service: sglang}
   metric_relabel_configs:
-  - source_labels: [__name__]
-    regex: 'sglang:(num_requests_total|prompt_tokens_total|generation_tokens_total|cached_tokens_total|num_running_reqs|num_queue_reqs|token_usage|cache_hit_rate|hicache_host_used_tokens|hicache_host_total_tokens|prefill_effective_tokens_total|realtime_tokens_total|(time_to_first_token_seconds|inter_token_latency_seconds|e2e_request_latency_seconds)_(bucket|count|sum))'
+  - source_labels: [environment, __name__]
+    regex: '(.*;sglang:(num_requests_total|prompt_tokens_total|generation_tokens_total|cached_tokens_total|num_running_reqs|num_queue_reqs|token_usage|cache_hit_rate|hicache_host_used_tokens|hicache_host_total_tokens|prefill_effective_tokens_total|realtime_tokens_total|(time_to_first_token_seconds|inter_token_latency_seconds|e2e_request_latency_seconds)_(bucket|count|sum))|xpu-pd;sglang:(load_back_tokens_total|evicted_tokens_total|(load_back|eviction)_duration_seconds_(bucket|sum|count)|hicache_scheduler_idle_with_pending(_seconds)?_total|num_used_tokens|max_total_num_tokens))'
     action: keep
 - job_name: sglang-decode
   static_configs:
   - targets: ['122.235.251.182:30127']
     labels: {environment: dcu-pd, role: decode, node: dcu2, service: sglang}
+  - targets: ['122.209.21.33:8501']
+    labels: {environment: xpu-pd, role: decode, node: xpu-1, service: sglang}
   metric_relabel_configs:
   - source_labels: [__name__]
     regex: 'sglang:(num_requests_total|prompt_tokens_total|generation_tokens_total|cached_tokens_total|num_running_reqs|num_queue_reqs|token_usage|cache_hit_rate|hicache_host_used_tokens|hicache_host_total_tokens|prefill_effective_tokens_total|realtime_tokens_total|(time_to_first_token_seconds|inter_token_latency_seconds|e2e_request_latency_seconds)_(bucket|count|sum))'
     action: keep
 - job_name: mooncake
   static_configs:
-  - targets: ['122.235.251.182:9003']
+  - targets: ['122.235.251.182:9004']
     labels: {environment: dcu-pd, node: dcu2, service: mooncake}
   metric_relabel_configs:
   - source_labels: [__name__]
@@ -105,6 +109,19 @@ scrape_configs:
   static_configs:
   - targets: ['122.52.5.131:18082']
     labels: {environment: a3-vllm, node: worker-131, service: aigate}
+  relabel_configs:
+  - target_label: job
+    replacement: aigate
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'aigate_.*'
+    action: keep
+
+- job_name: aigate-xpu
+  bearer_token_file: /config/xpu-profile-key
+  static_configs:
+  - targets: ['122.209.21.33:18082']
+    labels: {environment: xpu-pd, node: xpu-1, service: aigate}
   relabel_configs:
   - target_label: job
     replacement: aigate

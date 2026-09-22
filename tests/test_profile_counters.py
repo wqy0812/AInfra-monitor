@@ -165,6 +165,28 @@ def test_trends_omit_reset_boundaries_and_resume_after_clean_window():
     assert window.trend_valid(1200,60,'requests_routed_total')
 
 
+@pytest.mark.asyncio
+async def test_shutdown_gap_keeps_healthy_trends_but_total_remains_unknown():
+    samples = {identity('requests_routed_total'): [(900,1),(950,3),(1000,5),(1150,2),(1250,4)]}
+    window = await SamplesWindow(901,1251,[(800,1099.999),(1100,1251)],samples).read()
+    assert window.aggregate('requests_routed_total') == [{'labels':{},'value':None}]
+    assert ('requests_routed_total','unobserved_lifecycle_tail') in window.issues
+    assert window.trend_valid(980,60,'requests_routed_total')
+    assert not window.trend_valid(1050,60,'requests_routed_total')
+    assert not window.trend_valid(1150,60,'requests_routed_total')
+    assert window.trend_valid(1200,60,'requests_routed_total')
+
+
+@pytest.mark.asyncio
+async def test_reset_fault_does_not_hide_later_clean_lifetime():
+    samples = {identity('requests_routed_total'): [(900,5),(950,2),(1000,3),(1150,2),(1250,4)]}
+    window = await SamplesWindow(901,1251,[(800,1001),(1100,1251)],samples).read()
+    assert ('requests_routed_total','unexplained_counter_reset') in window.issues
+    assert not window.trend_valid(980,60,'requests_routed_total')
+    assert window.trend_valid(1200,60,'requests_routed_total')
+    assert window.aggregate('requests_routed_total')[0]['value'] is None
+
+
 def test_selector_escapes_values_and_epoch_uses_milliseconds():
     assert '\\"' in metric_selector(dict(LABELS,model='x"} or up'), NAMES)
     assert epoch(1789267347.8220465)==epoch(1789267347.8220468)

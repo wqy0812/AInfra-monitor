@@ -24,7 +24,7 @@ class ProjectSplitTest(unittest.TestCase):
 
     def test_resource_structure_and_no_request_filters(self):
         split.validate(self.resources)
-        self.assertEqual(len(self.resources["dashboards"]), 16)
+        self.assertEqual(len(self.resources["dashboards"]), 24)
         self.assertEqual(split.no_request_filter(
             'm{request_scope="streaming",a="b"} + m{a="b",is_streaming!="false"} + m{stream="true"}'),
             'm{a="b"} + m{a="b"} + m{}')
@@ -34,7 +34,7 @@ class ProjectSplitTest(unittest.TestCase):
             if d["metadata"]["name"] == "gateway-generation":
                 env = split.PROJECTS[d["metadata"]["project"]]
                 self.assertIn("live-stages-" + env, d["spec"]["panels"])
-                self.assertEqual(len(d["spec"]["panels"]), 17)
+                self.assertEqual(len(d["spec"]["panels"]), 13)
                 self.assertEqual(len(d["spec"]["panels"]["generation-0"]["spec"]["queries"]), 1)
                 setting = d["spec"]["panels"]["generation-0"]["spec"]["plugin"]["spec"]["querySettings"]
                 self.assertEqual(setting[0]["queryIndex"], 0)
@@ -51,6 +51,27 @@ class ProjectSplitTest(unittest.TestCase):
         expression = Queries("a3-vllm", "vllm-a3").histogram("latency", ["1", "2", "+Inf"], .95, "environment,node")
         for required in ("count without(le)", "ignoring(le)", "resets(", "unless on(environment,node)", "sum by(le,environment,node)"):
             self.assertIn(required, expression)
+
+    def test_validation_rejects_wrong_environment_even_for_xpu(self):
+        resources = copy.deepcopy(self.resources)
+        dashboard = next(d for d in resources['dashboards'] if
+                         d['metadata']['project'] == 'xpu-monitoring' and d['metadata']['name'] == 'overview')
+        query = next(iter(dashboard['spec']['panels'].values()))['spec']['queries'][0]['spec']['plugin']['spec']
+        query['query'] = query['query'].replace('environment="xpu-pd"', 'environment="dcu-pd"')
+        with self.assertRaises(AssertionError):
+            split.validate(resources)
+        query['query'] = 'vector(0) unless on() vector(0)'
+        with self.assertRaises(AssertionError):
+            split.validate(resources)
+
+    def test_legacy_two_project_generation_and_retired_panels(self):
+        resources = {kind: [d for d in docs if d['metadata'].get('project', d['metadata']['name']) != 'xpu-monitoring']
+                     for kind, docs in self.resources.items()}
+        generated = split.build(resources)
+        split.validate(generated)
+        self.assertEqual(len(generated['dashboards']), 16)
+        for d in generated['dashboards']:
+            self.assertFalse(set(d['spec']['panels']) & {'live-idle-5', 'live-idle-15', 'live-idle-30', 'live-idle-60'})
 
     def test_rollback_restores_updated_spec(self):
         import project_release as release

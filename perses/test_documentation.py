@@ -31,7 +31,7 @@ def test_docs_only_is_complete_stable_and_preserves_historical_inventory(tmp_pat
         for key, panel in d['spec']['panels'].items():
             assert descriptions[d['metadata']['project']][d['metadata']['name']][key] == panel['spec']['display']['description']
             count += 1
-    assert count == 178
+    assert count == 250
     assert '不代表当前在线目标' in first['METRIC_COVERAGE.md'].decode()
     assert '当前沿用线上 v1/latency-v2' not in first['METRIC_COVERAGE.md'].decode()
 
@@ -46,7 +46,7 @@ def test_current_gateway_descriptions_match_populations_and_keep_all_panels():
                 '非流式仅在此图统计', '尚未结束的流式请求数量', '解析确认 stream=true、进入请求画像', '读取流式请求的错误响应'))
             if key == 'live-nonstream-count':assert '子集' in description and '也计入' in description
             if key == 'live-waiting':assert '流式' in description
-        if d['metadata']['name'] == 'gateway-generation':assert len(d['spec']['panels']) == 17
+        if d['metadata']['name'] == 'gateway-generation':assert len(d['spec']['panels']) == 13
 
 
 def test_description_migration_is_idempotent_and_does_not_change_stream_only_meanings():

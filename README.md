@@ -57,19 +57,19 @@ A3 主机 CPU 与 CPU I/O 等待由 monitoring-api 按 5 秒周期计算新增�
 
 代码需要 Python 3.11+；节点 exporter 使用 Python 3.10 标准库。当前没有外部通知或 Grafana；已新增 Perses 看板，见 [Perses 部署与运维](perses/README.md)。
 
-本地测试需保留 `monitoring/` 与 [code-eval/](../code-eval/README.md) 同级布局。`tests/test_cache_semantics.py` 会导入 code-eval 的 `app.monitor`、`app.db`、`app.config` 和 `deploy.cache_monitor_host`，因此完整测试集依赖同级 code-eval 源码及其 Python 依赖；监控服务运行本身不依赖该源码目录。测试环境还需安装 `pytest`、`pytest-asyncio`、`PyYAML`。在 `monitoring` 目录、已安装上述依赖的 Python 3.11+ 环境中执行：
+本地测试需保留 `monitoring/` 与 [code-eval/](../code-eval/README.md) 同级布局。`tests/test_cache_semantics.py` 会导入 code-eval 的 `app.monitor`、`app.db`、`app.config` 和 归档发布脚本 `deploy/releases/legacy_20260908_20260916/bin/cache_monitor_host.py`，因此完整测试集依赖同级 code-eval 源码及其 Python 依赖；监控服务运行本身不依赖该源码目录。测试环境还需安装 `pytest`、`pytest-asyncio`、`PyYAML`。在 `monitoring` 目录、已安装上述依赖的 Python 3.11+ 环境中执行：
 
 ```sh
-PYTHONPATH=.:../code-eval python -m pytest tests
+PYTHONPATH=.:../code-eval/backend python -m pytest tests
 ```
 
-可将 `python` 替换为已准备好的 `../code-eval/.venv/bin/python`。仅设置 `PYTHONPATH=.` 会导致跨项目用例无法导入 `app` 或 `deploy.cache_monitor_host`。执行 `PYTHONPATH=.:../code-eval python -m pytest -q` 可一次收集后端、Perses 看板和发布工具的全部 pytest 回归。测试时将 `DATA_DIR`、`HOST_DATA_DIR`、`STATE_DIR` 指向独立临时目录，避免使用实际运行数据。
+可将 `python` 替换为已准备好的 `../code-eval/.venv/bin/python`。仅设置 `PYTHONPATH=.` 会导致跨项目用例无法导入 `app`；归档发布脚本按文件路径加载。执行 `PYTHONPATH=.:../code-eval/backend python -m pytest -q` 可一次收集后端、Perses 看板和发布工具的全部 pytest 回归。测试时将 `DATA_DIR`、`HOST_DATA_DIR`、`STATE_DIR` 指向独立临时目录，避免使用实际运行数据。
 
 部署校验工具另需 `python -m pip install -r requirements-tools.txt`（PyYAML，仅用于采集配置解析，不加入 monitoring-api 运行依赖）。`deploy/gateway_monitor_release.py` 的发布目录必须同时包含本仓库的 `deploy/check_gateway_monitor_candidate.py`，放在发布根目录并调用 `api` 模式；该校验只允许 VM 的 GET 查询，不依赖 code-eval 或写入 VM。
 
 ## 验证与故障处理
 
-`python3 scripts/validate_live.py` 按同一发布目录的 `deploy/scrape.yml` 验证目标集合（当前配置为 23 个）、两节点共 16 张 DCU 卡、数据年龄以及 1/6/24/720 小时查询。目标以重标记后的 job、instance、environment 匹配，检查重复、缺失、多余、失败及过期观测；当前支持 static_configs 和 replace 重标记，不支持的发现/重标记方式会显式拒绝。`scripts/fault_check.py` 在独立临时目录和 18528/18529/18531 回环端口运行真实 VM/vmagent，验证存储中断后的补传，最后回收临时进程，不停止生产服务。
+`python3 scripts/validate_live.py` 按同一发布目录的 `deploy/scrape.yml` 验证目标集合（当前配置为 26 个）、两节点共 16 张 DCU 卡、数据年龄以及 1/6/24/720 小时查询。目标以重标记后的 job、instance、environment 匹配，检查重复、缺失、多余、失败及过期观测；当前支持 static_configs 和 replace 重标记，不支持的发现/重标记方式会显式拒绝。`scripts/fault_check.py` 在独立临时目录和 18528/18529/18531 回环端口运行真实 VM/vmagent，验证存储中断后的补传，最后回收临时进程，不停止生产服务。
 
 页面显示源不可用、待发送字节和 VM 存储余量。VM 在空闲空间不足 20 GiB 时停止写入，vmagent 缓冲有上限；缓冲耗尽会丢失较旧待发送数据，需要按实测增长预留容量。短时实测资源和容量不等于 24 小时稳定性结论。
 
@@ -149,3 +149,7 @@ DCU 的 E2E、TTFT、ITL 改为保留完整来源和流式标签，逐序列校�
 [A3 · 主机与 NPU](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/a3-hosts) 对齐 DCU 六项硬件图表：利用率、显存已用、温度、功耗、显存总量和显存占比。支持节点与 NPU 芯片筛选；HBM 的 MiB 转为 GiB，不使用 KV Cache 代替整芯片显存。功耗按 exporter 原始芯片 ID 展示，不相加为整机功耗。有效零保留，超过 15 秒的源观测、失败抓取及非法值留空。
 
 本次只热加载 vmagent 采集配置并更新 A3 主机看板；没有重启中央监控、推理或网关服务。实现与回退见 [NPU 发布说明](docs/npu-20260916.md)。
+
+## XPU 接入（2026-09-21）
+
+已新增 `xpu-pd` 推理采集与 monitoring-api 支持，以及 [XPU Perses 项目](http://122.247.53.162:18431/projects/xpu-monitoring)。XPU 网关画像也已接入；HiCache、缓存层级和硬件先留空。发布、验收与回退见 [XPU 接入记录](docs/xpu-20260921.md)。

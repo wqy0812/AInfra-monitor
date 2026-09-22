@@ -11,7 +11,7 @@ from .profile_counters import CounterWindow, profile_values, HISTOGRAMS, COUNTER
 
 
 def validate_environment(environment):
-    if environment not in ('dcu-pd', 'a3-vllm'):
+    if environment not in ('dcu-pd', 'a3-vllm', 'xpu-pd'):
         raise HTTPException(400, '未知画像环境')
     return environment
 
@@ -55,9 +55,8 @@ async def metrics(service, vm, start, end, backend='', model='', environment='dc
     window = await CounterWindow(service, vm, start, end, backend, model, environment).read()
     values = profile_values(window, backend, model)
     expressions = {
-        'sources': 'group by(backend,model)(aigate_requests_routed_total' + metric_scope + ')' ,
+        'sources': 'group by(backend,model)(last_over_time(' + sel('requests_routed_total') + '[' + span + ']))',
         'scrape_up': 'min(min_over_time(up' + scope + '[' + span + ']))',
-        'index_ready': 'min(min_over_time(aigate_profile_index_ready' + metric_scope + '[' + span + ']))',
     }
     async def query(key, expression):
         rows = await window.query(expression, end)
@@ -96,7 +95,6 @@ async def metrics(service, vm, start, end, backend='', model='', environment='dc
     notes = ['请求量、画像、Token、总耗时和结果统计包含流式及非流式；无法解析的入口拒绝不计入画像。',
              '网关首增量仅统计观察到有效增量的流式请求，其样本数与总请求数不同。',
              'Token 和总耗时按完成时计入；筛选模型/后端后的请求量为已选路请求。',
-             '前缀再次出现的前驱可位于所选窗口之前，最多回看一小时；不等于缓存命中。',
              '统计按计数器生命周期分段；抓取边界存在近似，跨生命周期或缺测的速率留空。']
     if window.issues:
         notes.append('部分统计不完整：缺少边界观测或计数器存在异常，相关值显示为 —。')
@@ -106,10 +104,8 @@ async def metrics(service, vm, start, end, backend='', model='', environment='dc
             'computed_at': time.time(), 'environment': environment, 'backend': backend, 'model': model, 'values': values,
             'cache_token_ratio': ratio, 'trends': trends, 'step': step,
             'time_basis': {'requests': 'arrival_or_routing', 'tokens_and_latency': 'completion'},
-            'prefix_basis': 'observed_preceding_hour_messages',
-            'quality': {'scrape_up': scalar('scrape_up'), 'index_ready': scalar('index_ready'),
+            'quality': {'scrape_up': scalar('scrape_up'),
                         'dropped_events': scalar('dropped_events'), 'write_errors': scalar('write_errors'),
-                        'index_evictions': scalar('index_evictions'),
                         'counter_status': 'incomplete' if window.issues else 'ok',
                         'counter_issues': [{'metric':n,'reason':r} for n,r in sorted(window.issues)],
                         'invalid_histograms': invalid_histograms,

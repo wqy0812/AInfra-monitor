@@ -67,11 +67,12 @@ def target_rows():
     return expected, rows, stamps
 
 
-def test_all_23_configured_targets_including_relabeled_a3_gateway_pass():
+def test_all_configured_targets_including_relabeled_gateways_pass():
     expected, up, stamps = target_rows()
-    assert len(expected) == 23
+    assert len(expected) == 26
     assert ('aigate', '122.52.5.131:18082', 'a3-vllm') in expected
-    assert len(validation.validate_targets(up, stamps, expected, 100)) == 23
+    assert ('aigate', '122.209.21.33:18082', 'xpu-pd') in expected
+    assert len(validation.validate_targets(up, stamps, expected, 100)) == 26
 
 
 @pytest.mark.parametrize('fault', ['missing', 'extra', 'duplicate', 'environment', 'down', 'stale', 'future', 'nan', 'missing-timestamp'])

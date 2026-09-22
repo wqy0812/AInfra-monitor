@@ -435,51 +435,6 @@
             }
           ]
         }
-      },
-      "p7": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "主机 CPU",
-            "description": "指标含义\n源监控输出的主机 CPU 使用百分比，按节点/角色区分。该图使用派生 CPU 数值；具体系统状态诊断请结合主机页的原始 CPU、磁盘和网络指标。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 派生指标须满足 monitoring_chart_valid=1；原始数值存在但标记无效时也不显示。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "%",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 1,
-                "connectNulls": false
-              },
-              "tooltip": {
-                "enablePinning": true
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cpu\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cpu\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cpu\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cpu\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cpu\"}) < 15)) * 1",
-                    "seriesNameFormat": "{{path}}",
-                    "minStep": "5s"
-                  }
-                }
-              }
-            }
-          ]
-        }
       }
     },
     "layouts": [
@@ -548,15 +503,6 @@
               "height": 8,
               "content": {
                 "$ref": "#/spec/panels/p6"
-              }
-            },
-            {
-              "x": 12,
-              "y": 24,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/p7"
               }
             }
           ]

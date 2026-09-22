@@ -227,7 +227,7 @@ def apply(resources, root):
             assert spec(actual[identity]) == spec(d), identity
         assert fingerprint() == json.loads((root / "services-before.json").read_text())
         save(root, "after.json", after)
-        save(root, "publication.json", {"passed": True, "projects": 2, "dashboards": 16,
+        save(root, "publication.json", {"passed": True, "projects": len(resources['projects']), "dashboards": len(resources['dashboards']),
              "panels": sum(len(d["spec"]["panels"]) for d in resources["dashboards"]),
              "services_unchanged": True, "completed_at": time.time()})
         print("Publication accepted", flush=True)

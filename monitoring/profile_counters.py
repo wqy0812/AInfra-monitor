@@ -8,17 +8,16 @@ from collections import defaultdict
 import json
 import math
 
-HISTOGRAMS = ('request_bytes', 'message_count', 'tool_count', 'prompt_tokens',
+HISTOGRAMS = ('request_bytes', 'prompt_tokens',
               'completion_tokens', 'first_increment_seconds', 'request_duration_seconds')
-PREFIX_HISTOGRAMS = ('prefix_gap_seconds', 'prefix_gap_requests')
 COUNTERS = ('requests_routed_total', 'requests_ended_total', 'prompt_tokens_total',
             'completion_tokens_total', 'cached_tokens_total', 'cache_prompt_tokens_total',
             'cache_usage_known_total')
 EXTRA = ('requests_started_total', 'usage_known_total', 'usage_missing_total',
-         'prefix_eligible_total', 'prefix_repeated_total', 'token_pairs_total',
-         'profile_parse_failures_total', 'profile_index_evictions_total')
+         'token_pairs_total',
+         'profile_parse_failures_total')
 VOLATILE = ('profile_dropped_events_total', 'profile_write_errors_total')
-NAMES = COUNTERS + EXTRA + tuple(n + suffix for n in HISTOGRAMS + PREFIX_HISTOGRAMS
+NAMES = COUNTERS + EXTRA + tuple(n + suffix for n in HISTOGRAMS
                                  for suffix in ('_bucket', '_sum', '_count'))
 GAUGES = ('profile_counter_start_time_seconds', 'profile_group_start_time_seconds',
           'profile_start_time_seconds')
@@ -106,11 +105,12 @@ class CounterWindow:
         self.service, self.vm = service, vm
         self.start, self.end = start, end
         self.backend, self.model = backend, model
-        if environment not in ('dcu-pd', 'a3-vllm'):
+        if environment not in ('dcu-pd', 'a3-vllm', 'xpu-pd'):
             raise ValueError('Unknown profile environment')
         self.environment = environment
         self.slots = asyncio.Semaphore(4)
         self.issues = set()
+        self.trend_issues = []
         self.lifetimes = []
         self.totals = {}
 
@@ -202,6 +202,13 @@ class CounterWindow:
             name = dict(identity)['__name__'].removeprefix('aigate_')
             if issue:
                 self.issues.add((name, issue))
+                # Missing shutdown samples only invalidate the tail, not the
+                # healthy history or a later counter lifetime. Other faults
+                # remain conservative within their affected segment.
+                invalid_start = left
+                if issue == 'unobserved_lifecycle_tail':
+                    invalid_start = summaries[identity]['tlast_over_time']
+                self.trend_issues.append((name, issue, invalid_start, end))
             deltas[identity] = value
         # Validate each source/lifetime before aggregation: errors from two
         # sources must not accidentally cancel out into plausible totals.
@@ -255,7 +262,9 @@ class CounterWindow:
                 return
             for series in await self.summaries(dict(labels), names, left, birth-.001):
                 self.totals[series] = None
-                self.issues.add((dict(series)['__name__'].removeprefix('aigate_'), 'missing_lifecycle'))
+                name = dict(series)['__name__'].removeprefix('aigate_')
+                self.issues.add((name, 'missing_lifecycle'))
+                self.trend_issues.append((name, 'missing_lifecycle', left, birth))
         await asyncio.gather(*(check_unassigned(identity, birth) for identity,birth in first.items()))
         return self
 
@@ -275,11 +284,14 @@ class CounterWindow:
         return [{'labels': dict(k), 'value': v} for k, v in sorted(groups.items())]
 
     def trend_valid(self, at, width, metric):
-        # Summary issues are metric-specific: an ended/outcome counter missing
-        # its baseline must not hide healthy routed-request or token rates.
-        # Keep the conservative guard for the requested counter itself because
-        # summary issues do not carry timestamps that would localize the fault.
-        if any(name == metric for name, _ in self.issues):
+        # Retain unknown totals, but only mask rolling rates whose lookbehind
+        # overlaps the faulty interval. Unlocalized faults still fail closed.
+        localized = {(name, reason) for name, reason, _, _ in self.trend_issues}
+        if any(name == metric and (name, reason) not in localized
+               for name, reason in self.issues):
+            return False
+        if any(name == metric and at >= left and at-width-FRESHNESS <= right
+               for name, _, left, right in self.trend_issues):
             return False
         lives = [life for life in self.lifetimes if life[0].get('backend')]
         return (any(birth <= at <= end for _,_,birth,end in lives)
@@ -329,18 +341,15 @@ def profile_values(window, backend='', model=''):
     mappings = {'outcomes': ('requests_ended_total', ('outcome',)),
                 'usage_known': ('usage_known_total', ('field',)),
                 'usage_missing': ('usage_missing_total', ('field',)),
-                'prefix_eligible': ('prefix_eligible_total', ('level',)),
-                'prefix_repeated': ('prefix_repeated_total', ('level',)),
                 'token_pairs': ('token_pairs_total', ('input_le', 'output_le')),
                 'parse_failures': ('profile_parse_failures_total', ('reason',)),
                 'dropped_events': ('profile_dropped_events_total', ()),
-                'write_errors': ('profile_write_errors_total', ()),
-                'index_evictions': ('profile_index_evictions_total', ())}
+                'write_errors': ('profile_write_errors_total', ())}
     values.update({key: window.aggregate(name, by) for key, (name, by) in mappings.items()})
     if not backend and not model:
         values['requests_started_total'] = window.aggregate('requests_started_total')
-    for name in HISTOGRAMS + PREFIX_HISTOGRAMS:
-        by = ('level',) if name in PREFIX_HISTOGRAMS else ()
+    for name in HISTOGRAMS:
+        by = ()
         counts = window.aggregate(name+'_count', by)
         buckets = window.aggregate(name+'_bucket', by+('le',))
         sums = window.aggregate(name+'_sum', by)

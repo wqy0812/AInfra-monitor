@@ -48,7 +48,6 @@ if __name__ == '__main__':
   p.append(panel(title,[(derived('nodes.$role.'+field),'{{path}}')],unit,'源监控 output_tokens 有效性为 0 时留空，不补零；实时生成速度请同时查看 Decode Token 吞吐。' if field=='output_tokens' else ''))
  for kind,title in [('ttft','首 Token 延迟 TTFT'),('itl','Token 间延迟 ITL'),('e2e','端到端延迟 E2E')]:
   p.append(panel(title,[(derived('nodes.$role.percentiles.'+kind+'.'+q),'{{path}}') for q in ['p50','p95','p99']],'秒','沿用监控服务的 rank 去重与有效窗口；无样本留空。'))
- p.append(panel('主机 CPU',[(derived('nodes.$role.cpu'),'{{path}}')],'%'))
  dashboard('overview','运行概览',p,[ROLE])
 
  s='{environment="dcu-pd",node=~"$node"}'

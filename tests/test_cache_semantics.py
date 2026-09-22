@@ -166,7 +166,12 @@ async def test_live_sources_are_independent_and_have_bounded_timeouts(tmp_path, 
 
 
 def test_rollout_freeze_does_not_pause_active_tasks(tmp_path, monkeypatch):
-    from deploy import cache_monitor_host as rollout
+    import importlib.util
+    from pathlib import Path
+    path = Path(__file__).resolve().parents[2] / 'code-eval/deploy/releases/legacy_20260908_20260916/bin/cache_monitor_host.py'
+    spec = importlib.util.spec_from_file_location('legacy_cache_monitor_host', path)
+    rollout = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(rollout)
     from app.db import DB
     database = DB(tmp_path/'platform.db')
     database.execute('INSERT INTO runs VALUES(?,?,?,?,?,?,?,?)', ('active','accuracy','running','{}',0,0,None,'{}'))

@@ -31,6 +31,10 @@ class Calculator:
   self.latency_windows={r:LatencyWindow() for r in ('prefill','decode')}
   self.cache_windows={r:CacheSeriesWindow() for r in ('prefill','decode')}
   self.previous={}
+ def reset(self,role):
+  self.latency_windows[role].clear()
+  self.cache_windows[role]=CacheSeriesWindow()
+  self.previous.pop(('metrics',role),None)
  def metrics(self,role,rows,ts):
   p={'ts':ts,'request_scope':'all','request_schema':SCHEMA,'metric_scopes':{'ttft':'native_mixed','itl':'native_mixed','e2e':'all'},'itl_semantics':'按输出批次平均的 Token 间隔，未区分流式'}
   for short,name in [('input_tokens','prompt_tokens_total'),('output_tokens','generation_tokens_total')]:

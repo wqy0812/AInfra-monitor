@@ -13,6 +13,7 @@ STAGES = {
     'finishing_stream': '流结束收尾',
 }
 PREFIX = 'live-'
+RETIRED_PANELS = {'live-idle-' + str(t) for t in (5, 15, 30, 60)}
 
 
 def selector(metric, environment, extra=''):
@@ -78,8 +79,6 @@ def build_panels():
         panels[PREFIX + key] = p
     comparison('waiting', '等待首个有效输出 · 请求数', lambda e: aggregate('aigate_streams_waiting_first_output', e), '请求', '仅流式；解析为 stream=true 后计入，包含路由及模型发现。')
     comparison('wait-max', '等待首个有效输出 · 最长等待', lambda e: aggregate('aigate_stream_first_output_wait_max_seconds', e, 'max'), '秒', '从网关接收请求起计时，收到有效正文、推理、拒绝或工具增量后退出。')
-    for threshold in (5, 15, 30, 60):
-        comparison('idle-' + str(threshold), f'流停顿 ≥ {threshold} 秒 · 流数量', lambda e, t=threshold: aggregate('aigate_stream_idle_requests', e, extra=f'threshold_seconds="{t}"'), '流', '仅已经开始有效输出且尚未结束的流；各阈值累计包含，不能相加。心跳、空增量和 usage 不重置时间。')
     comparison('idle-max', '流停顿 · 最长无新内容间隔', lambda e: aggregate('aigate_stream_idle_max_seconds', e, 'max'), '秒', '观察网关收到的下游内容；客户端写入受阻时结合当前阶段判断。')
     comparison('oldest', '最老在途请求 · 年龄与当前阶段', oldest, '秒', '流式及非流式请求；每个网关选择最老请求并关联其后端及阶段。阶段变化不跨线连接。', {env: name + ' · {{backend}} · {{stage_name}}' for env, name, _ in ENVIRONMENTS})
     for env, name, _ in ENVIRONMENTS:
@@ -106,7 +105,7 @@ def extend_dashboard(document):
     if len(layouts) != 1 or layouts[0]['kind'] != 'Grid':
         raise ValueError('Expected the existing single grid layout')
     items = layouts[0]['spec']['items']
-    owned_refs = {'#/spec/panels/' + key for key in live}
+    owned_refs = {'#/spec/panels/' + key for key in set(live) | RETIRED_PANELS}
     old_live = [x for x in items if x.get('content', {}).get('$ref', '') in owned_refs]
     old_height = max((x['y'] + x['height'] for x in old_live), default=0)
     preserved = [x for x in items if x not in old_live]
@@ -118,6 +117,6 @@ def extend_dashboard(document):
         # Fill the last row so Perses vertical compaction cannot pull an old
         # right-column panel up into the new diagnostic region.
         added[-1]['width'] = 24
-    spec['panels'] = {**live, **{k: v for k, v in spec['panels'].items() if k not in live}}
+    spec['panels'] = {**live, **{k: v for k, v in spec['panels'].items() if k not in live and k not in RETIRED_PANELS}}
     layouts[0]['spec']['items'] = added + preserved
     return result

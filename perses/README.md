@@ -154,3 +154,7 @@ gateway-generation 已扩为 17 项，顶部新增 11 项实时诊断，保留�
 [A3 · 主机与 NPU](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/a3-hosts) 对齐 DCU 六项硬件图表：利用率、显存已用、温度、功耗、显存总量和显存占比。支持节点与 NPU 芯片筛选；HBM 的 MiB 转为 GiB，不使用 KV Cache 代替整芯片显存。功耗按 exporter 原始芯片 ID 展示，不相加为整机功耗。有效零保留，超过 15 秒的源观测、失败抓取及非法值留空。
 
 本次只热加载 vmagent 采集配置并更新 A3 主机看板；没有重启中央监控、推理或网关服务。实现与回退见 [NPU 发布说明](../docs/npu-20260916.md)。
+
+## XPU 独立项目（2026-09-21）
+
+新增 [XPU 监控](http://122.247.53.162:18431/projects/xpu-monitoring)，8 张看板、88 个面板。资源在 `projects/xpu-monitoring/`，由 `generate_xpu.py` 基于显式线上 DCU 快照生成；现行双项目生成器不管理此新增项目。缺失项有意留空，详见 [发布与验证记录](../docs/xpu-20260921.md)。

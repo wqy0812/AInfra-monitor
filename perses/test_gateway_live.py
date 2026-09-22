@@ -17,9 +17,9 @@ class DashboardMergeTest(unittest.TestCase):
         before_items = old['spec']['layouts'][0]['spec']['items']
         after_items = new['spec']['layouts'][0]['spec']['items'][-len(before_items):]
         for before, after in zip(before_items, after_items):
-            expected = dict(before, y=before['y'] + 48)
+            expected = dict(before, y=before['y'] + 32)
             self.assertEqual(after, expected)
-        self.assertEqual(len(build_panels()), 12)
+        self.assertEqual(len(build_panels()), 8)
 
     def test_reject_unexpected_layout(self):
         old = build_dashboard()

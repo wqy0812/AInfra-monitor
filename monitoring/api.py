@@ -6,10 +6,10 @@ import httpx
 from fastapi import FastAPI,HTTPException,Request
 from .replay import decode_export,replay
 from .resource_series import resource_paths
-from . import a3, gateway_live, host_cpu
+from . import a3, gateway_live, host_cpu, xpu
 from .latency import PATHS as LATENCY_PATHS
 from .request_scope import PATH_REGEX as REQUEST_PATH_REGEX, SCHEMA as REQUEST_SCHEMA, is_request_path
-ENVIRONMENTS=("dcu-pd", "a3-vllm")
+ENVIRONMENTS=("dcu-pd", "a3-vllm", "xpu-pd")
 def validate_environment(environment):
  if environment not in ENVIRONMENTS:raise HTTPException(400,"未知监控环境")
  return environment
@@ -70,7 +70,7 @@ class Service:
   self.environment=validate_environment(environment)
   self.paths=sorted(set(PATHS+(["nodes."+role+".cache_60s.external_ratio" for role in ("prefill","decode")]+list(host_cpu.PATHS) if environment=="a3-vllm" else [])))
   self.watermark_file=STATE/("watermark-"+REQUEST_SCHEMA+"-"+environment+".json")
-  self.replay=a3.replay if environment=="a3-vllm" else replay
+  self.replay=a3.replay if environment=="a3-vllm" else xpu.replay if environment=="xpu-pd" else replay
   self.client=httpx.AsyncClient(trust_env=False,timeout=10,limits=httpx.Limits(max_connections=8))
   self.latest={'environment':self.environment,'ts':None,'nodes':{},'enabled':True,'source':'victoriametrics'};self.error=None;self.slots=asyncio.Semaphore(2)
   self.latest_point=None;self.watermark=0;self.started=time.time();self.cache={};self.host_cpu_status=None
@@ -78,6 +78,7 @@ class Service:
  async def raw(self,start,end):
   selector='{job=~"sglang-prefill|sglang-decode|node-prefill|node-decode|dcu-prefill|dcu-decode|mooncake"}'
   selector=selector[:-1]+',environment="dcu-pd"}' if self.environment=='dcu-pd' else '{environment="a3-vllm",job="vllm-a3",__name__=~"up|vllm:(request_success_total|generation_tokens_total|prefix_cache_(hits|queries)_total|external_prefix_cache_(hits|queries)_total|num_requests_(running|waiting)|kv_cache_usage_perc|(time_to_first_token|inter_token_latency|e2e_request_latency)_seconds_(bucket|count))"}'
+  if self.environment=='xpu-pd':selector='{environment="xpu-pd",job=~"sglang-prefill|sglang-decode"}'
   r=await self.client.get(VM+'/api/v1/export',params={'match[]':selector,'start':start,'end':end,'reduce_mem_usage':1});r.raise_for_status()
   return (a3.decode_export if self.environment=='a3-vllm' else decode_export)(json.loads(line) for line in r.text.splitlines() if line)
  async def cycle(self):
@@ -125,7 +126,7 @@ class Service:
  async def history(self,hours,start=None,end=None):
   end=int((end or time.time())//5)*5;start=start if start is not None else end-hours*3600
   step=max(5,math.ceil((end-start)/719/5)*5)
-  key=(start//step,end//step,step)
+  key=(start,end,step,hours)
   cached=self.cache.get(key)
   if cached and time.time()-cached[0]<5:return cached[1]
   async with self.slots:
@@ -140,7 +141,7 @@ class Service:
    p={'environment':self.environment,'ts':ts,'nodes':{'prefill':{},'decode':{}},'source':'victoriametrics'}
    for path in paths:put(p,path,vals.get((path,ts)) if oks.get((path,ts))==1 else None)
    for role in ('prefill','decode'):
-    node=p['nodes'][role];node['cache_60s']['semantics']='vllm-prefix-token-v1' if self.environment=='a3-vllm' else ('prefill-effective-v1' if role=='prefill' else 'request-accounting-v1')
+    node=p['nodes'][role];node['cache_60s']['semantics']='vllm-prefix-token-v1' if self.environment=='a3-vllm' else ('unavailable' if self.environment=='xpu-pd' else 'prefill-effective-v1' if role=='prefill' else 'request-accounting-v1')
     fields={'requests':'requests','output_tokens':'output_tokens','decode_tokens':'decode_tokens','cpu':'cpu','cache':'cache_60s.ratio','hicache':'hicache.representative.ratio',**{k:'percentiles.'+k+'.p95' for k in ('ttft','itl','e2e')}}
     if self.environment=='a3-vllm':fields['cpu_iowait']='cpu_iowait'
     node['gap_before']=[k for k,path in fields.items() if mins.get(('nodes.'+role+'.'+path,ts))!=1]

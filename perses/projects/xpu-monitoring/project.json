@@ -1,0 +1,11 @@
+{
+  "kind": "Project",
+  "metadata": {
+    "name": "xpu-monitoring"
+  },
+  "spec": {
+    "display": {
+      "name": "XPU 监控"
+    }
+  }
+}

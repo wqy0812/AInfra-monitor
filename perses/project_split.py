@@ -11,7 +11,7 @@ from project_queries import Queries, ratio
 from metric_scope import apply_scope, request_description
 
 ROOT = Path(__file__).resolve().parent
-PROJECTS = {"dcu-monitoring": "dcu-pd", "a3-monitoring": "a3-vllm"}
+PROJECTS = {"dcu-monitoring": "dcu-pd", "a3-monitoring": "a3-vllm", "xpu-monitoring": "xpu-pd"}
 REQUEST_LABEL = re.compile(r'(?:^|,)\s*(?:stream|is_streaming|request_scope)\s*(?:=~|!~|!=|=)\s*"(?:\\.|[^"\\])*"\s*(?=,|$)')
 BOUNDS = {}
 
@@ -82,7 +82,7 @@ def normalize_dashboard(document, project):
             desc = re.sub(r"蓝色为 DCU 主机网关，橙色为 A3 主机网关；阶段图的颜色区分处理阶段。", "", desc)
             desc = desc.replace("当前查询显示 DCU 主机网关，且只统计流式请求画像；它不是 DCU/A3 两网关的合计，也不等于下游硬件归属。", "")
             desc = re.sub(r"\n\n项目与源口径\n.*$", "", desc, flags=re.S)
-            owner = "DCU" if env == "dcu-pd" else "A3"
+            owner = {"dcu-pd": "DCU", "a3-vllm": "A3", "xpu-pd": "XPU"}[env]
             desc = re.sub(r"曲线与范围\n.*?(?=\n\n时间口径)",
                           "曲线与范围\n" + owner + " 主机网关。按采集环境归属；图例区分本环境的后端或阶段。",
                           desc, flags=re.S)
@@ -330,6 +330,13 @@ def build(snapshot):
     result = {"projects": [], "datasources": [], "dashboards": []}
     ds = next(x for x in snapshot["datasources"] if x["metadata"]["name"] == "victoriametrics")
     for project, env in PROJECTS.items():
+        if project == "xpu-monitoring":
+            # XPU has its own generator and integration policy. Preserve its
+            # prepared resources rather than applying DCU/A3 additions to them.
+            for kind, documents in snapshot.items():
+                result[kind].extend(copy.deepcopy(d) for d in documents
+                                    if d['metadata'].get('project', d['metadata']['name']) == project)
+            continue
         owner = "DCU" if env == "dcu-pd" else "A3"
         result["projects"].append({"kind": "Project", "metadata": {"name": project}, "spec": {"display": {"name": owner + " 监控"}}})
         result["datasources"].append(clean_resource(ds, project))
@@ -352,13 +359,18 @@ def build(snapshot):
                 cache_additions(d)
             result["dashboards"].append(d)
         result["dashboards"] += [gateway_requests(project), backend(project), shared_health(project)]
+    from remove_idle_thresholds import remove_panels
+    result['dashboards'] = [remove_panels(d) for d in result['dashboards']]
     return result
 
 
 def validate(resources):
+    projects = [d['metadata']['name'] for d in resources['projects']]
+    assert projects and len(projects) == len(set(projects)) and set(projects) <= PROJECTS.keys(), projects
     counts = collections.Counter()
     for d in resources["dashboards"]:
         project, name = d["metadata"]["project"], d["metadata"]["name"]
+        assert project in projects, project
         counts[project] += 1
         assert name.startswith("a3-") is False or project == "a3-monitoring"
         env = "dcu-pd" if name == "monitoring-health" else PROJECTS[project]
@@ -366,15 +378,18 @@ def validate(resources):
             for item in p["spec"]["queries"]:
                 query = item["spec"]["plugin"]["spec"]["query"]
                 assert no_request_filter(query) == query, (project, name, key, "request filter")
-                assert set(re.findall(r'environment="([^"]+)"', query)) == {env}, (project, name, key, "environment")
+                placeholder = (project == 'xpu-monitoring' and
+                               (name == 'hosts-xpu' or (name == 'cache-store' and key in ('p8', 'p9'))) and
+                               query == 'vector(0) unless on() vector(0)')
+                assert placeholder or set(re.findall(r'environment="([^"]+)"', query)) == {env}, (project, name, key, "environment")
                 assert current_request_schema(query) == query, (project, name, key, "outdated request schema")
             for settings in p["spec"]["plugin"]["spec"].get("querySettings", []):
                 assert 0 <= settings["queryIndex"] < len(p["spec"]["queries"])
         refs = [x["content"]["$ref"].split("/")[-1] for x in d["spec"]["layouts"][0]["spec"]["items"]]
         assert len(refs) == len(set(refs)) and set(refs) == set(d["spec"]["panels"])
         if name == "gateway-generation":
-            assert len(refs) == 17
-    assert counts == {"dcu-monitoring": 8, "a3-monitoring": 8}, counts
+            assert len(refs) == 13
+    assert counts == {project: 8 for project in projects}, counts
 
 
 def main():

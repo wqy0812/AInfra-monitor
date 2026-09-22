@@ -120,7 +120,7 @@ def main():
     (ROOT / "METRICS_GUIDE.md").write_text("\n".join(guide))
     report = ["# Perses 关键指标覆盖清单", "", "历史采集基线：2026-09-15 test4 采集清单及当时迁移前后看板对照。下表和 metric_coverage.json 保留该次采集的指标范围，不代表当前在线目标或最新覆盖数量；2026-09-16 新增 NPU 等指标未计入该基线。按 environment、job 和指标族计数；同一族在多个 job 出现会分别记录。直方图的桶、sum、count 合为一族，校验依赖不等同于单独展示数值。", "",
               "| 环境 | 原已覆盖 | 新增覆盖 | 未单独展示 |", "|---|---:|---:|---:|"]
-    for env in PROJECTS.values():
+    for env in sorted({x['environment'] for x in coverage}):
         counts = collections.Counter(x["status"] for x in coverage if x["environment"] == env)
         report.append(f'| {env} | {counts["已覆盖"]} | {counts["新增覆盖"]} | {counts["未展示"]} |')
     report += ["", "## 关键覆盖", "", "新增网关吞吐/耗时/长度/usage、后端队列和阶段时延、缓存分层容量及请求量、主机瓶颈、共享监控服务。完整对应关系见 [metric_coverage.json](metric_coverage.json)。", "",

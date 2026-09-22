@@ -30,7 +30,13 @@ async def test_every_query_is_scoped_including_quality(environment):
     async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
         now=time.time();data=await metrics(SimpleNamespace(client=client),'http://vm',now-300,now,environment=environment)
     assert data['environment']==environment
-    assert len(queries)==8
+    assert len(queries)==7
+    sources = next(q for q in queries if q.startswith('group by(backend,model)'))
+    assert 'last_over_time(aigate_requests_routed_total{' in sources
+    assert '[300.0s]' in sources or '[300s]' in sources
+    for retired in ('prefix_', 'message_count', 'tool_count', 'profile_index_'):
+        assert all(retired not in query for query in queries)
+        assert retired not in str(data)
     assert data['quality']['scrape_up'] is None
     assert data['values']['prompt_tokens_total']==[]
 

@@ -67,7 +67,7 @@ def oldest(environment):
 
 
 def expressions(environment, step):
-    if environment not in ('dcu-pd', 'a3-vllm') or not isinstance(step, int) or step < 5 or step % 5:
+    if environment not in ('dcu-pd', 'a3-vllm', 'xpu-pd') or not isinstance(step, int) or step < 5 or step % 5:
         raise ValueError('Invalid gateway history environment or step')
     queries = {
         IDLE: f'max by(environment) ({complete_gauge("aigate_stream_idle_max_seconds", environment)})',

@@ -19,7 +19,7 @@ def decode_export(lines):
    valid=isinstance(value,(int,float)) and math.isfinite(value)
    if not valid and not (latency or name=='up'):continue
    row={'name':name,'labels':labels,'value':value if valid else float('nan')}
-   if latency:row['source_labels']=source
+   row['source_labels']=source
    existing=groups[job][ts/1000].get(identity)
    if existing is not None and existing['value']!=row['value']:row['value']=float('nan')
    groups[job][ts/1000][identity]=row
@@ -76,10 +76,15 @@ def replay(groups,start,end):
    ts,rows=latest_rows(groups,'sglang-'+role,tick);node={};snapshot['nodes'][role]=node
    if ts is not None:
     key=('metric',role)
+    sources={tuple(sorted((k,v) for k,v in r.get('source_labels',{}).items() if k in META)) for r in rows}
+    if previous.get(('sources',role))!=sources:
+     calc.reset(role)
+     previous.pop(key,None)
+    previous[('sources',role)]=sources
     if previous.get(key,(None,))[0]!=ts:previous[key]=(ts,calc.metrics(role,rows,ts))
     data=previous[key][1];node['metrics']={'status':'ok','observed_at':ts,'data':data}
    else:
-    calc.latency_windows[role].clear()
+    calc.reset(role)
     previous.pop(('metric',role),None)
     node['metrics']={'status':'error','observed_at':tick,'error':'模型指标不可用或过期'}
    nts,nrows=latest_rows(groups,'node-'+role,tick);dts,drows=latest_rows(groups,'dcu-'+role,tick)
