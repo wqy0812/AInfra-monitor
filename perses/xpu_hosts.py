@@ -8,7 +8,7 @@ EMPTY = 'vector(0) unless on() vector(0)'
 def configure(source):
     text = json.dumps(source, ensure_ascii=False)
     for old, new in [('dcu-monitoring', 'xpu-monitoring'), ('hosts-dcu', 'hosts-xpu'),
-                     ('dcu-pd', 'xpu-pd'), ('dcu1', 'xpu-2'), ('dcu2', 'xpu-1'), ('DCU', 'XPU')]:
+                     ('dcu-pd', 'xpu-pd'), ('dcu1', 'xpu-1'), ('dcu2', 'xpu-2'), ('DCU', 'XPU')]:
         text = text.replace(old, new)
     document = json.loads(text)
     document['metadata'] = {'name': 'hosts-xpu', 'project': 'xpu-monitoring'}
@@ -34,8 +34,8 @@ def configure(source):
         spec = variable['spec']
         if spec['name'] == 'node':
             values = [{'label': '全部', 'value': '.*'},
-                      {'label': 'Prefill / xpu-2', 'value': 'xpu-2'},
-                      {'label': 'Decode / xpu-1', 'value': 'xpu-1'}]
+                      {'label': 'Prefill / xpu-1', 'value': 'xpu-1'},
+                      {'label': 'Decode / xpu-2', 'value': 'xpu-2'}]
         else:
             values = [{'label': '全部（卡硬件未接入）', 'value': '.*'}]
         spec['defaultValue'] = '.*'

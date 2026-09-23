@@ -1,0 +1,464 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "project": "a3-monitoring",
+    "name": "backend-prefill"
+  },
+  "spec": {
+    "display": {
+      "name": "Prefill 诊断",
+      "description": "统一核心图表；来源特有指标列于专属诊断。单位见标题，统计差异见图表提示。"
+    },
+    "variables": [],
+    "panels": {
+      "core-queue": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Prefill 运行与排队请求（请求）",
+            "description": "指标含义\n当前服务侧运行中与排队中的请求数量，按角色及源状态拆线展示。它是时刻值，不是累计请求量；排队持续增加时需结合请求到达速率和完成速率判断。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n请求派生口径\n后端指标使用原生统计，不强制区分流式。正常业务以流式为主；精度测试期间可能混入非流式并影响延迟分布。DCU ITL 按输出批次平均。新口径上线前的历史留空，不做迁移。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes.prefill.resources.queue..*\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes.prefill.resources.queue..*\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes.prefill.resources.queue..*\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes.prefill.resources.queue..*\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes.prefill.resources.queue..*\"}) < 15)) * 1",
+                    "seriesNameFormat": "{{path}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "core-kv": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Prefill KV 池占用（%）",
+            "description": "vLLM 原生 KV-cache 使用比例乘 100；按实例及 engine 展示，不是整卡显存占用。源缺失或采集失败留空。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(vllm:kv_cache_usage_perc{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"} and ((time() - timestamp(vllm:kv_cache_usage_perc{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}) < 15) and (count_over_time(vllm:kv_cache_usage_perc{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}[$__interval]) >= ($__interval / 5))))) * 100",
+                    "seriesNameFormat": "{{node}} · engine {{engine}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-wait-reason": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "等待请求原因（请求）",
+            "description": "指标含义\ncapacity 为等待调度容量；deferred 为 KV 传输等临时约束。来源是后端完整请求集合。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(vllm:num_requests_waiting_by_reason{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} and ((time() - timestamp(vllm:num_requests_waiting_by_reason{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) < 15) and (count_over_time(vllm:num_requests_waiting_by_reason{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5)))))",
+                    "seriesNameFormat": "{{node}} · engine {{engine}} · {{reason}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-preemptions": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "抢占速率（次/秒）",
+            "description": "指标含义\n引擎发生抢占的计数速率，用于判断调度/KV 容量压力。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(rate(vllm:num_preemptions_total{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) and ((time() - timestamp(vllm:num_preemptions_total{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) < 15) and (count_over_time(vllm:num_preemptions_total{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(vllm:num_preemptions_total{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) >= 12) and (resets(vllm:num_preemptions_total{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) == 0) and (resets(vllm:num_preemptions_total{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "{{node}} · engine {{engine}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-sleep": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "引擎运行状态（状态 0/1）",
+            "description": "指标含义\nawake=1 表示唤醒；weights_offloaded/discard_all 对应睡眠级别状态，按源标签分别展示。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(vllm:engine_sleep_state{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} and ((time() - timestamp(vllm:engine_sleep_state{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) < 15) and (count_over_time(vllm:engine_sleep_state{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5)))))",
+                    "seriesNameFormat": "{{node}} · engine {{engine}} · {{sleep_state}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-request_queue_time_seconds": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "排队时延（秒）",
+            "description": "指标含义\n后端原生请求直方图，包含源记录的全部请求。TPOT 是每请求输出 Token 平均耗时，与 ITL 分布含义不同。各阶段分位数不可直接相加。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "label_replace((label_replace((label_replace((histogram_quantiles(\"perses_quantile\", 0.5, 0.95, 0.99, sum by(le,environment,node,instance,engine) (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]))) unless on(environment,node,instance,engine) (count by(environment,node,instance,engine) ((count_over_time({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_queue_time_seconds_(bucket|count)\",node=~\"a3-1\"}[1m]) unless ((time() - timestamp({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_queue_time_seconds_(bucket|count)\",node=~\"a3-1\"}) < 15) and (count_over_time({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_queue_time_seconds_(bucket|count)\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5))) and (count_over_time({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_queue_time_seconds_(bucket|count)\",node=~\"a3-1\"}[1m]) >= 12) and (resets({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_queue_time_seconds_(bucket|count)\",node=~\"a3-1\"}[1m]) == 0) and (resets({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_queue_time_seconds_(bucket|count)\",node=~\"a3-1\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) >= (1m / 5))))) or (count without(le) (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) != 22) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"+Inf\",node=~\"a3-1\"} != ignoring(le) vllm:request_queue_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.3\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.5\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.3\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.5\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.5\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.8\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.5\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.8\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.8\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.8\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.5\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.5\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.5\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.5\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.5\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.5\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.5\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"5.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.5\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"5.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"5.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"10.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"5.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"10.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"10.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"15.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"10.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"15.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"15.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"20.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"15.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"20.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"20.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"30.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"20.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"30.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"30.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"40.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"30.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"40.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"40.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"50.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"40.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"50.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"50.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"60.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"50.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"60.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"60.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"120.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"60.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"120.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"120.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"240.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"120.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"240.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"240.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"480.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"240.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"480.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"480.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"960.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"480.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"960.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"960.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1920.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"960.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1920.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1920.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"7680.0\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1920.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"7680.0\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"7680.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"+Inf\",node=~\"a3-1\"}) or (rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"7680.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"+Inf\",node=~\"a3-1\"}[1m])) or (vllm:request_queue_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} unless ignoring(le) vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) or (vllm:request_queue_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} unless ignoring(le) vllm:request_queue_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) or (vllm:request_queue_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} unless ((changes(vllm:request_queue_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) == 0) and (time() - vllm:request_queue_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} >= 60) and (changes(vllm:request_queue_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) == 0) and (count_over_time(vllm:request_queue_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) >= 12) and (count_over_time(vllm:request_queue_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5)))))) and on(environment,node,instance,engine) (sum by(environment,node,instance,engine) (rate(vllm:request_queue_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m])) > 0)), \"perses_quantile\", \"P50\", \"perses_quantile\", \"0[.]5\")), \"perses_quantile\", \"P95\", \"perses_quantile\", \"0[.]95\")), \"perses_quantile\", \"P99\", \"perses_quantile\", \"0[.]99\")",
+                    "seriesNameFormat": "{{node}} · engine {{engine}} {{perses_quantile}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-request_prefill_time_seconds": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "本实例 Prefill 阶段耗时（秒）",
+            "description": "指标含义\n后端原生请求直方图，包含源记录的全部请求。TPOT 是每请求输出 Token 平均耗时，与 ITL 分布含义不同。各阶段分位数不可直接相加。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "label_replace((label_replace((label_replace((histogram_quantiles(\"perses_quantile\", 0.5, 0.95, 0.99, sum by(le,environment,node,instance,engine) (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]))) unless on(environment,node,instance,engine) (count by(environment,node,instance,engine) ((count_over_time({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_prefill_time_seconds_(bucket|count)\",node=~\"a3-1\"}[1m]) unless ((time() - timestamp({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_prefill_time_seconds_(bucket|count)\",node=~\"a3-1\"}) < 15) and (count_over_time({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_prefill_time_seconds_(bucket|count)\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5))) and (count_over_time({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_prefill_time_seconds_(bucket|count)\",node=~\"a3-1\"}[1m]) >= 12) and (resets({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_prefill_time_seconds_(bucket|count)\",node=~\"a3-1\"}[1m]) == 0) and (resets({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_prefill_time_seconds_(bucket|count)\",node=~\"a3-1\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) >= (1m / 5))))) or (count without(le) (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) != 22) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"+Inf\",node=~\"a3-1\"} != ignoring(le) vllm:request_prefill_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.3\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.5\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.3\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.5\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.5\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.8\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.5\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.8\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.8\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.8\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.5\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.5\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.5\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.5\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.5\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.5\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.5\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"5.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.5\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"5.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"5.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"10.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"5.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"10.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"10.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"15.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"10.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"15.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"15.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"20.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"15.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"20.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"20.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"30.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"20.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"30.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"30.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"40.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"30.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"40.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"40.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"50.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"40.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"50.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"50.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"60.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"50.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"60.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"60.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"120.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"60.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"120.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"120.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"240.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"120.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"240.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"240.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"480.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"240.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"480.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"480.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"960.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"480.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"960.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"960.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1920.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"960.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1920.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1920.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"7680.0\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1920.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"7680.0\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"7680.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"+Inf\",node=~\"a3-1\"}) or (rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"7680.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"+Inf\",node=~\"a3-1\"}[1m])) or (vllm:request_prefill_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} unless ignoring(le) vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) or (vllm:request_prefill_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} unless ignoring(le) vllm:request_prefill_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) or (vllm:request_prefill_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} unless ((changes(vllm:request_prefill_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) == 0) and (time() - vllm:request_prefill_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} >= 60) and (changes(vllm:request_prefill_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) == 0) and (count_over_time(vllm:request_prefill_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) >= 12) and (count_over_time(vllm:request_prefill_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5)))))) and on(environment,node,instance,engine) (sum by(environment,node,instance,engine) (rate(vllm:request_prefill_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m])) > 0)), \"perses_quantile\", \"P50\", \"perses_quantile\", \"0[.]5\")), \"perses_quantile\", \"P95\", \"perses_quantile\", \"0[.]95\")), \"perses_quantile\", \"P99\", \"perses_quantile\", \"0[.]99\")",
+                    "seriesNameFormat": "{{node}} · engine {{engine}} {{perses_quantile}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-request_decode_time_seconds": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "本实例 Decode 阶段耗时（秒）",
+            "description": "指标含义\n后端原生请求直方图，包含源记录的全部请求。TPOT 是每请求输出 Token 平均耗时，与 ITL 分布含义不同。各阶段分位数不可直接相加。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "label_replace((label_replace((label_replace((histogram_quantiles(\"perses_quantile\", 0.5, 0.95, 0.99, sum by(le,environment,node,instance,engine) (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]))) unless on(environment,node,instance,engine) (count by(environment,node,instance,engine) ((count_over_time({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_decode_time_seconds_(bucket|count)\",node=~\"a3-1\"}[1m]) unless ((time() - timestamp({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_decode_time_seconds_(bucket|count)\",node=~\"a3-1\"}) < 15) and (count_over_time({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_decode_time_seconds_(bucket|count)\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5))) and (count_over_time({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_decode_time_seconds_(bucket|count)\",node=~\"a3-1\"}[1m]) >= 12) and (resets({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_decode_time_seconds_(bucket|count)\",node=~\"a3-1\"}[1m]) == 0) and (resets({environment=\"a3-vllm\",job=\"vllm-a3\",__name__=~\"vllm:request_decode_time_seconds_(bucket|count)\",node=~\"a3-1\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) >= (1m / 5))))) or (count without(le) (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) != 22) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"+Inf\",node=~\"a3-1\"} != ignoring(le) vllm:request_decode_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.3\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.5\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.3\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.5\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.5\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.8\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.5\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.8\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.8\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"0.8\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.5\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.5\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.5\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1.5\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.5\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.5\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.5\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"5.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"2.5\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"5.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"5.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"10.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"5.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"10.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"10.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"15.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"10.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"15.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"15.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"20.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"15.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"20.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"20.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"30.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"20.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"30.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"30.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"40.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"30.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"40.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"40.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"50.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"40.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"50.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"50.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"60.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"50.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"60.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"60.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"120.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"60.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"120.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"120.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"240.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"120.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"240.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"240.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"480.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"240.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"480.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"480.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"960.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"480.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"960.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"960.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1920.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"960.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1920.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1920.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"7680.0\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"1920.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"7680.0\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"7680.0\",node=~\"a3-1\"} > ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"+Inf\",node=~\"a3-1\"}) or (rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"7680.0\",node=~\"a3-1\"}[1m]) > ignoring(le) rate(vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",le=\"+Inf\",node=~\"a3-1\"}[1m])) or (vllm:request_decode_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} unless ignoring(le) vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) or (vllm:request_decode_time_seconds_bucket{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} unless ignoring(le) vllm:request_decode_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}) or (vllm:request_decode_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} unless ((changes(vllm:request_decode_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) == 0) and (time() - vllm:request_decode_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"} >= 60) and (changes(vllm:request_decode_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) == 0) and (count_over_time(vllm:request_decode_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m]) >= 12) and (count_over_time(vllm:request_decode_time_seconds_created{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[$__interval]) >= ($__interval / 5)))))) and on(environment,node,instance,engine) (sum by(environment,node,instance,engine) (rate(vllm:request_decode_time_seconds_count{environment=\"a3-vllm\",job=\"vllm-a3\",node=~\"a3-1\"}[1m])) > 0)), \"perses_quantile\", \"P50\", \"perses_quantile\", \"0[.]5\")), \"perses_quantile\", \"P95\", \"perses_quantile\", \"0[.]95\")), \"perses_quantile\", \"P99\", \"perses_quantile\", \"0[.]99\")",
+                    "seriesNameFormat": "{{node}} · engine {{engine}} {{perses_quantile}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "核心指标"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-queue"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-kv"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "专属诊断"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-wait-reason"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-preemptions"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-sleep"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-request_queue_time_seconds"
+              }
+            },
+            {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-request_prefill_time_seconds"
+              }
+            },
+            {
+              "x": 12,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-request_decode_time_seconds"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "1h",
+    "refreshInterval": "15s"
+  }
+}

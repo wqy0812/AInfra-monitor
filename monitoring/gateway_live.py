@@ -18,11 +18,13 @@ STAGES = {
 }
 IDLE = 'stream_idle_max_seconds'
 OLDEST = 'oldest_age_seconds'
-FIELDS = (IDLE, OLDEST)
+BACKEND_WAIT = 'backend_wait_max_seconds'
+WRITE_ACTIVE = 'write_active_max_seconds'
+FIELDS = (IDLE, OLDEST, BACKEND_WAIT, WRITE_ACTIVE)
 
 
 def selector(metric, environment):
-    scope = 'streaming' if metric == 'aigate_stream_idle_max_seconds' else 'all'
+    scope = 'streaming' if metric.startswith('aigate_stream_') else 'all'
     extra = ',request_scope=' + json.dumps(scope) if metric.startswith('aigate_') else ''
     return metric + '{job="aigate",environment=' + json.dumps(environment) + extra + '}'
 
@@ -72,6 +74,8 @@ def expressions(environment, step):
     queries = {
         IDLE: f'max by(environment) ({complete_gauge("aigate_stream_idle_max_seconds", environment)})',
         OLDEST: oldest(environment),
+        BACKEND_WAIT: f'max by(environment) ({complete_gauge("aigate_stream_backend_wait_max_seconds", environment)})',
+        WRITE_ACTIVE: f'max by(environment) ({complete_gauge("aigate_stream_write_active_max_seconds", environment)})',
     }
     return {key: query.replace('$__interval', f'{step}s') for key, query in queries.items()}
 
@@ -130,7 +134,7 @@ def attach(points, gateway, step):
     previous = None
     for point in points:
         ts = point['ts']
-        data = {IDLE: None, OLDEST: None, 'backend': None, 'stage': None, 'stage_name': None,
+        data = {**dict.fromkeys(FIELDS), 'backend': None, 'stage': None, 'stage_name': None,
                 **gateway.get(ts, {}), 'gap_before': []}
         for field in FIELDS:
             contiguous = previous and 0 < ts - previous['ts'] <= step + .001

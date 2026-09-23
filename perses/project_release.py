@@ -8,6 +8,7 @@ import copy
 import hashlib
 import json
 import math
+import os
 import subprocess
 import time
 import urllib.error
@@ -22,8 +23,22 @@ VM = "http://127.0.0.1:18428"
 SERVICES = ("monitoring-perses", "monitoring-vm", "monitoring-vmagent", "monitoring-api")
 
 
+TOKEN = None
+
+
+def auth_headers():
+    global TOKEN
+    credentials = Path(os.environ.get('PERSES_CREDENTIALS_FILE', '/data2/monitoring/perses/admin-credentials.json'))
+    if TOKEN is None and credentials.exists():
+        req = urllib.request.Request(BASE + '/api/auth/providers/native/login',
+            data=credentials.read_bytes(), headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=20) as response:
+            TOKEN = json.load(response)['access_token']
+    return {'Authorization': 'Bearer ' + TOKEN} if TOKEN else {}
+
+
 def http(url, method="GET", data=None):
-    headers = {}
+    headers = auth_headers()
     if data is not None:
         data = json.dumps(data).encode()
         headers["Content-Type"] = "application/json"
@@ -106,7 +121,8 @@ def query(base, expression, start, end, step):
     for name in ("role", "node", "device"):
         expression = expression.replace("$" + name, ".*")
     params = {"query": expression, "start": start, "end": end, "step": step, "nocache": "1"}
-    req = urllib.request.Request(base + "/api/v1/query_range", data=urllib.parse.urlencode(params).encode())
+    req = urllib.request.Request(base + "/api/v1/query_range", data=urllib.parse.urlencode(params).encode(),
+                                 headers=auth_headers() if base.startswith(BASE) else {})
     try:
         with urllib.request.urlopen(req, timeout=45) as r:
             data = json.load(r)
@@ -193,7 +209,7 @@ def apply(resources, root):
         print("Published", identity, flush=True)
     try:
         # A3 first; old DCU/A3 resources remain available until the target works.
-        for project in ("a3-monitoring", "dcu-monitoring"):
+        for project in ("a3-monitoring", "dcu-monitoring", "xpu-monitoring"):
             for category in ("projects", "datasources", "dashboards"):
                 for d in resources[category]:
                     owner = d["metadata"]["name"] if category == "projects" else d["metadata"]["project"]
@@ -210,15 +226,23 @@ def apply(resources, root):
                 assert a == b and a, "A3 datasource acceptance failed"
         # A full post-publication query audit gates removal of migrated sources.
         assert audit(resources, root, published=True)["passed"]
-        for name in ("a3-overview", "a3-hosts", "a3-cache"):
-            if ("Dashboard", "dcu-monitoring", name) not in existing:
-                continue
-            old = existing[("Dashboard", "dcu-monitoring", name)]
-            url = endpoint("Dashboard", old) + "/" + name
-            assert http(url) == old, "Concurrent edit before source removal"
-            mutations.append({"action": "delete", "before": old})
-            save(root, "journal.json", mutations)
-            http(url, "DELETE")
+        from dashboard_reorg import RETIRED
+        candidates = flattened(resources)
+        retired = copy.deepcopy(RETIRED)
+        if ('Dashboard', 'a3-monitoring', 'backend-prefill') in candidates:
+            retired['a3-monitoring'] += ('backend-diagnostics',)
+        for project, names in retired.items():
+            for name in names:
+                identity = ('Dashboard', project, name)
+                assert identity not in candidates, 'Retired resource still in candidate'
+                if identity not in existing:
+                    continue
+                old = existing[identity]
+                url = endpoint('Dashboard', old) + '/' + name
+                assert http(url) == old, 'Concurrent edit before source removal'
+                mutations.append({'action': 'delete', 'before': old})
+                save(root, 'journal.json', mutations)
+                http(url, 'DELETE')
         after = snapshot()
         expected = flattened(resources)
         actual = flattened(after)

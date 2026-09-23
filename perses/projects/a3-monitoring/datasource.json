@@ -2,6 +2,9 @@
   "kind": "Datasource",
   "metadata": {
     "name": "victoriametrics",
+    "createdAt": "2026-09-15T11:39:33.117961126Z",
+    "updatedAt": "2026-09-15T11:39:33.117961126Z",
+    "version": 0,
     "project": "a3-monitoring"
   },
   "spec": {

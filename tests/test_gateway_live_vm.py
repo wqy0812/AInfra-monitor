@@ -7,9 +7,9 @@ from pathlib import Path
 import httpx
 import pytest
 
-from monitoring.gateway_live import expressions, STAGES, IDLE, OLDEST, samples
+from monitoring.gateway_live import expressions, STAGES, IDLE, OLDEST, BACKEND_WAIT, WRITE_ACTIVE, FIELDS, samples
 
-CASES = ('normal', 'idle', 'absent', 'gap', 'stale', 'restart', 'partial', 'down', 'stage-change', 'missing-stage')
+CASES = ('normal', 'idle', 'absent', 'gap', 'stale', 'restart', 'partial', 'down', 'stage-change', 'missing-stage', 'old-version', 'partial-direction')
 
 
 @pytest.fixture(scope='module')
@@ -32,7 +32,7 @@ def fixture_vm():
                 def emit(name, value, **labels):
                     tags = {'job': 'aigate', 'environment': environment, 'instance': case, **labels}
                     if name.startswith('aigate_'):
-                        tags.setdefault('request_scope', 'streaming' if name == 'aigate_stream_idle_max_seconds' else 'all')
+                        tags.setdefault('request_scope', 'streaming' if name.startswith('aigate_stream_') else 'all')
                     label = ','.join(k + '=' + json.dumps(v) for k, v in tags.items())
                     lines.append(f'{name}{{{label}}} {value} {ts * 1000}')
                 emit('up', 0 if case == 'down' and i == 59 else 1)
@@ -45,6 +45,10 @@ def fixture_vm():
                     idle = 0 if case == 'idle' else ((9 if backend == 'first' else 3) + i) * scale
                     emit('aigate_inflight_oldest_age_seconds', age, backend=backend)
                     emit('aigate_stream_idle_max_seconds', idle, backend=backend)
+                    if case != 'old-version' and not (case == 'partial-direction' and backend == 'second' and i > 55):
+                        for metric in ('aigate_stream_backend_wait_max_seconds', 'aigate_stream_write_active_max_seconds'):
+                            emit(metric, idle, backend=backend)
+                            emit(metric, 999999, backend=backend, request_scope='all')
                     emit('aigate_inflight_oldest_age_seconds', 999999, backend=backend, request_scope='streaming')
                     emit('aigate_stream_idle_max_seconds', 999999, backend=backend, request_scope='all')
                     stage = 'writing_client' if backend == 'first' or (case == 'stage-change' and i >= 59) else 'streaming'
@@ -73,13 +77,14 @@ def test_real_vm_gates_aggregation_and_dashboard_parity(fixture_vm, environment,
         response = client.get('/api/v1/query_range', params=params)
         response.raise_for_status()
         results[field] = samples(response.json()['data']['result'], environment, field, end, end)
-        panel = panels['live-idle-max' if field == IDLE else 'live-oldest']
-        params['query'] = panel['spec']['queries'][0]['spec']['plugin']['spec']['query'].replace('$__interval', f'{step}s')
-        reference = client.get('/api/v1/query_range', params=params)
-        reference.raise_for_status()
-        assert results[field] == samples(reference.json()['data']['result'], environment, field, end, end)
+        if field in (BACKEND_WAIT, WRITE_ACTIVE):
+            panel = panels['live-idle-max' if field == BACKEND_WAIT else 'live-oldest']
+            params['query'] = panel['spec']['queries'][0]['spec']['plugin']['spec']['query'].replace('$__interval', f'{step}s')
+            reference = client.get('/api/v1/query_range', params=params)
+            reference.raise_for_status()
+            assert results[field] == samples(reference.json()['data']['result'], environment, field, end, end)
     if case in ('absent', 'gap', 'stale', 'restart', 'partial', 'down'):
-        assert results == {IDLE: {}, OLDEST: {}}
+        assert results == {field: {} for field in FIELDS}
     elif case in ('stage-change', 'missing-stage'):
         assert results[OLDEST] == {}
         assert results[IDLE][end][IDLE] == 69 * scale
@@ -89,3 +94,9 @@ def test_real_vm_gates_aggregation_and_dashboard_parity(fixture_vm, environment,
     else:
         assert results[IDLE][end][IDLE] == 69 * scale
         assert results[OLDEST][end] == {OLDEST: 460 * scale, 'backend': 'second', 'stage': 'streaming', 'stage_name': '读取后续流'}
+
+    if case in ('old-version', 'partial-direction'):
+        assert results[BACKEND_WAIT] == results[WRITE_ACTIVE] == {}
+    elif case not in ('absent', 'gap', 'stale', 'restart', 'partial', 'down'):
+        for field in (BACKEND_WAIT, WRITE_ACTIVE):
+            assert results[field][end][field] == (0 if case == 'idle' else 69 * scale)

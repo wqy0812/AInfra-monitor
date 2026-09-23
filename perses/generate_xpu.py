@@ -4,10 +4,20 @@ from pathlib import Path
 EMPTY='vector(0) unless on() vector(0)'
 def generate(snapshot,output):
  baseline=json.loads(Path(snapshot).read_text())['dcu-monitoring']
+ if any(d['metadata']['name']=='backend-performance' for d in baseline['dashboards']):
+  # A reorganized DCU snapshot cannot supply XPU-specific hardware/source settings.
+  # Preserve the explicitly prepared XPU resources instead of cloning DCU metrics.
+  from project_split import read_resources, validate
+  from dashboard_reorg import migrate, write_resources
+  current=read_resources(Path(output)/'xpu-monitoring')
+  if not current['dashboards']:raise ValueError('Provide an XPU live snapshot/resources before regeneration')
+  from align_dashboards import align
+  result=align(migrate(current)[0])[0];validate(result);write_resources(result,Path(output))
+  return Path(output)/'xpu-monitoring'
  root=Path(output)/'xpu-monitoring';(root/'dashboards').mkdir(parents=True,exist_ok=True)
  def convert(obj):
   s=json.dumps(obj,ensure_ascii=False)
-  for a,b in [('dcu-monitoring','xpu-monitoring'),('dcu-pd','xpu-pd'),('Prefill / dcu1','Prefill / xpu-2'),('Decode / dcu2','Decode / xpu-1'),('dcu1','xpu-2'),('dcu2','xpu-1'),('DCU','XPU')]:s=s.replace(a,b)
+  for a,b in [('dcu-monitoring','xpu-monitoring'),('dcu-pd','xpu-pd'),('Prefill / dcu1','Prefill / xpu-1'),('Decode / dcu2','Decode / xpu-2'),('dcu1','xpu-1'),('dcu2','xpu-2'),('DCU','XPU')]:s=s.replace(a,b)
   out=json.loads(s);out['metadata']={k:v for k,v in out['metadata'].items() if k in ('name','project')};return out
  def write(path,obj):path.write_text(json.dumps(obj,ensure_ascii=False,indent=2)+'\n')
  write(root/'project.json',convert(baseline['project']))
@@ -40,6 +50,11 @@ def generate(snapshot,output):
    display=panel['spec']['display']
    display['description']=request_description(display.get('description',''))
   write(root/'dashboards'/(d['metadata']['name']+'.json'),d)
+ from project_split import read_resources, validate
+ from dashboard_reorg import migrate, write_resources
+ result=migrate(read_resources(root))[0]
+ if any(d['metadata']['name']=='backend-performance' for d in result['dashboards']):validate(result)
+ write_resources(result,Path(output))
  return root
 if __name__=='__main__':
  p=argparse.ArgumentParser();p.add_argument('snapshot');p.add_argument('--output',default=str(Path(__file__).parent/'projects'));a=p.parse_args();print(generate(a.snapshot,a.output))

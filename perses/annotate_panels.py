@@ -59,14 +59,14 @@ def meaning(name, key, panel):
         if key.startswith('generation-'):return GENERATION[int(key.split('-')[-1])]
         if key.startswith('live-stages-'):
             return '当前流式请求按处理阶段分组计数，一个请求同时只归属一个阶段。阶段包括：路由与模型发现、构造下游请求、等待响应头、等待首个有效输出、读取后续流、读取错误响应、向客户端写入和流结束收尾。阶段切换使曲线变化，不等于请求失败；某阶段持续累积可辅助定位等待位置。'
-        if key.startswith('live-idle-') and key!='live-idle-max':
+            'live-idle-max':'按指标范围统计。当前在途状态，5 秒采集、15 秒刷新；采集失败、缺样、过期、升级前或跨进程重启窗口留空。正常空闲显示零。仅累计等待后端有效输出的时间，排除网关写出耗时；首次输出前从读取响应体开始计时。心跳和 usage 不算有效输出。',
             t=key.split('-')[-1]
             return f'当前已出现有效输出、尚未结束且连续至少 {t} 秒没有新有效内容的流数量。有效内容包含正文、推理、拒绝或工具增量；心跳、空事件和 usage 不重置停顿时钟。阈值为累计包含：≥60 秒的流也计入 ≥30/15/5 秒，四图不能相加。'
         return {
             'live-waiting':'当前已确认为流式、但尚未收到首个有效内容增量的请求数。路由与模型发现等待也包含在内；收到响应头或心跳不算已经产生有效内容。',
             'live-wait-max':'当前仍在等待首个有效内容的请求中，最长的等待时间；从网关接收请求起计时。它是当前最大等待年龄，不是已完成请求 TTFT 的平均值或 P95。',
-            'live-idle-max':'当前已经开始有效输出且未结束的流中，距上次有效内容的最长时间。观察点在网关收到下游内容处；客户端写入阻塞时应结合处理阶段判断，不能直接认定模型停止计算。',
-            'live-oldest':'当前流式请求中年龄最大的请求，从接收请求开始计时，并关联该请求的后端与当前阶段。它是仍未结束请求的年龄，不是已完成请求总时延。图例随阶段改变，阶段切换处不跨线连接；有效空闲显示无在途请求及零值。',
+            'live-idle-max':'按指标范围统计。当前在途状态，5 秒采集、15 秒刷新；采集失败、缺样、过期、升级前或跨进程重启窗口留空。正常空闲显示零。仅累计等待后端有效输出的时间，排除网关写出耗时；首次输出前从读取响应体开始计时。心跳和 usage 不算有效输出。',
+            'live-oldest':'按指标范围统计。当前在途状态，5 秒采集、15 秒刷新；采集失败、缺样、过期、升级前或跨进程重启窗口留空。正常空闲显示零。当前一轮写入及刷新持续时间，升高表示输出路径可能存在背压。与后端等待最大值可能来自不同请求。',
             'live-unknown':'当前有效输出观察状态无法可靠判定的流数量，例如解析异常或超出观察限制。这些流退出首输出等待/停顿分类，但仍计入在途年龄和阶段；unknown 不是业务失败的直接结论。',
             'live-nonstream-count':'最近 1 分钟新增非流式请求的估算数量：rate(非流式累计请求数[1m]) × 60。解析确认 stream=false（含省略 stream）时计数。单位是请求数，可能因窗口速率估算出现小数，不是请求/秒。非流式仅在此图统计。'
         }[key]
@@ -100,18 +100,6 @@ def describe(name,key,p):
         scope='蓝色为 DCU 主机网关，橙色为 A3 主机网关；阶段图的颜色区分处理阶段。按网关所在环境归属，DCU 网关转发至 A3 时仍计入 DCU 曲线。同一请求经两层网关会分别计数，不可相加当作全局去重请求量。'
     else:scope=('A3 环境。' if name.startswith('a3-') else 'DCU 环境。')+'图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。'
     lines.append('**曲线与范围**\n'+scope)
-    if name=='gateway-generation' and key.startswith('live-') and key!='live-nonstream-count':window='当前在途状态，5 秒采集；不是最近窗口累计次数。'
-    elif '[1m]' in q:window='速率使用最近 1 分钟滚动窗口；比例使用同一窗口的分子和分母。'
-    elif 'cache_60s' in q or 'query_60s' in q:window='约 60 秒的连续有效观测窗口，由源监控计算。'
-    elif '.percentiles.' in q:window='使用源监控的有效时延直方图窗口；A3 约 60 秒，DCU 沿用有效窗口与 rank 去重。'
-    elif 'rate' in p['spec']['display']['name']:window='连续采集间隔内的源计数增量速率。'
-    else:window='容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。'
-    lines.append('**时间口径**\n'+window+' 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。')
-    blank='缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。'
-    if 'monitoring_chart_value' in q:blank+=' 派生指标须满足 monitoring_chart_valid=1；原始数值存在但标记无效时也不显示。'
-    if 'rate(' in q:blank+=' 速率窗口的采样、生命周期或计数重置检查不通过时留空。'
-    if name=='gateway-generation':blank+=' 未出现的错误类别可能没有序列；占比分母为零时不定义比例。实时阶段切换也可能出现间断。'
-    lines.append('**零值与空白**\n'+blank)
     return request_description('\n\n'.join(lines).replace('**', ''))
 
 def annotate(document):

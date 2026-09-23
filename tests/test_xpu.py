@@ -26,7 +26,8 @@ class XpuTest(unittest.TestCase):
   self.assertEqual(points[-1]['nodes']['decode']['decode_tokens'],10)
   self.assertEqual(points[-1]['nodes']['decode']['requests'],2)
   for node in points[-1]['nodes'].values():
-   for k in ('cpu','hicache','cache_60s'):self.assertIsNone(node[k])
+   for k in ('cpu','hicache'):self.assertIsNone(node[k])
+   self.assertIsNone((node.get('cache_60s') or {}).get('ratio'))
    self.assertNotIn('hicache_tokens',node['resources'])
   self.assertEqual(snaps[-1]['nodes']['decode']['telemetry']['status'],'not_integrated')
  def test_missing_and_reset(self):

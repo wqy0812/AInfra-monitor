@@ -6,7 +6,7 @@ import httpx
 from fastapi import FastAPI,HTTPException,Request
 from .replay import decode_export,replay
 from .resource_series import resource_paths
-from . import a3, gateway_live, host_cpu, xpu
+from . import a3, gateway_live, host_cpu, xpu, xpu_cache
 from .latency import PATHS as LATENCY_PATHS
 from .request_scope import PATH_REGEX as REQUEST_PATH_REGEX, SCHEMA as REQUEST_SCHEMA, is_request_path
 ENVIRONMENTS=("dcu-pd", "a3-vllm", "xpu-pd")
@@ -131,6 +131,7 @@ class Service:
   if cached and time.time()-cached[0]<5:return cached[1]
   async with self.slots:
    values,valid,gaps,gateway_result=await asyncio.gather(*(self.query(history_expression(self.environment,kind,step),start,end,step) for kind in ('value','valid','gaps')),gateway_live.history(self.query,self.environment,start,end,step))
+   xpu_cache_result=await xpu_cache.history(self.query,start,end,step) if self.environment=='xpu-pd' else None
   gateway,gateway_status=gateway_result
   def index(series):return {(s['metric']['path'],float(ts)):float(v) for s in series for ts,v in s['values']}
   vals,oks,mins=index(values),index(valid),index(gaps);points=[]
@@ -141,7 +142,7 @@ class Service:
    p={'environment':self.environment,'ts':ts,'nodes':{'prefill':{},'decode':{}},'source':'victoriametrics'}
    for path in paths:put(p,path,vals.get((path,ts)) if oks.get((path,ts))==1 else None)
    for role in ('prefill','decode'):
-    node=p['nodes'][role];node['cache_60s']['semantics']='vllm-prefix-token-v1' if self.environment=='a3-vllm' else ('unavailable' if self.environment=='xpu-pd' else 'prefill-effective-v1' if role=='prefill' else 'request-accounting-v1')
+    node=p['nodes'][role];node['cache_60s']['semantics']='vllm-prefix-token-v1' if self.environment=='a3-vllm' else (xpu_cache.SCHEMA if self.environment=='xpu-pd' and role=='prefill' else 'unavailable' if self.environment=='xpu-pd' else 'prefill-effective-v1' if role=='prefill' else 'request-accounting-v1')
     fields={'requests':'requests','output_tokens':'output_tokens','decode_tokens':'decode_tokens','cpu':'cpu','cache':'cache_60s.ratio','hicache':'hicache.representative.ratio',**{k:'percentiles.'+k+'.p95' for k in ('ttft','itl','e2e')}}
     if self.environment=='a3-vllm':fields['cpu_iowait']='cpu_iowait'
     node['gap_before']=[k for k,path in fields.items() if mins.get(('nodes.'+role+'.'+path,ts))!=1]
@@ -160,6 +161,7 @@ class Service:
     get(p,root)['gap_before'] += [path[len(root)+1:] for path in resource_paths(p) if path.startswith(root+'.')]
    points=[x for x in points if x['ts']!=p['ts']]+[p]
    points.sort(key=lambda x:x['ts'])
+  if xpu_cache_result is not None:xpu_cache.attach(points,xpu_cache_result)
   gateway_live.attach(points,gateway,step)
   value={'environment':self.environment,'hours':hours,'stride':step//5,'points':points,'source':'victoriametrics','retention_hours':720,'gateway_status':gateway_status}
   self.cache={key:(time.time(),value)};return value

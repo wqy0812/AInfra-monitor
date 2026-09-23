@@ -4,23 +4,23 @@ global:
 scrape_configs:
 - job_name: sglang-prefill
   static_configs:
-  - targets: ['122.235.251.106:30125']
+  - targets: ['122.235.251.106:31125']
     labels: {environment: dcu-pd, role: prefill, node: dcu1, service: sglang}
-  - targets: ['122.209.21.34:8501']
-    labels: {environment: xpu-pd, role: prefill, node: xpu-2, service: sglang}
+  - targets: ['122.209.21.33:8501']
+    labels: {environment: xpu-pd, role: prefill, node: xpu-1, service: sglang}
   metric_relabel_configs:
   - source_labels: [environment, __name__]
-    regex: '(.*;sglang:(num_requests_total|prompt_tokens_total|generation_tokens_total|cached_tokens_total|num_running_reqs|num_queue_reqs|token_usage|cache_hit_rate|hicache_host_used_tokens|hicache_host_total_tokens|prefill_effective_tokens_total|realtime_tokens_total|(time_to_first_token_seconds|inter_token_latency_seconds|e2e_request_latency_seconds)_(bucket|count|sum))|xpu-pd;sglang:(load_back_tokens_total|evicted_tokens_total|(load_back|eviction)_duration_seconds_(bucket|sum|count)|hicache_scheduler_idle_with_pending(_seconds)?_total|num_used_tokens|max_total_num_tokens))'
+    regex: '((.*;sglang:(num_requests_total|prompt_tokens_total|generation_tokens_total|cached_tokens_total|num_running_reqs|num_queue_reqs|token_usage|cache_hit_rate|hicache_host_used_tokens|hicache_host_total_tokens|prefill_effective_tokens_total|realtime_tokens_total|(time_to_first_token_seconds|inter_token_latency_seconds|e2e_request_latency_seconds)_(bucket|count|sum))|xpu-pd;sglang:(load_back_tokens_total|evicted_tokens_total|(load_back|eviction)_duration_seconds_(bucket|sum|count)|hicache_scheduler_idle_with_pending(_seconds)?_total|num_used_tokens|max_total_num_tokens))|dcu-pd;sglang:(max_total_num_tokens|max_total_num_tokens_swa|num_used_tokens|kv_available_tokens|kv_evictable_tokens|kv_used_tokens|swa_available_tokens|swa_evictable_tokens|swa_used_tokens|swa_token_usage|num_prefill_bootstrap_queue_reqs|num_prefill_inflight_queue_reqs|num_decode_prealloc_queue_reqs|num_decode_transfer_queue_reqs|num_transfer_failed_reqs_total|hicache_backup_tokens_total|hicache_backup_bytes_total|load_back_tokens_total|load_back_bytes_total|hicache_dropped_tokens_total|(queue_time_seconds|per_stage_req_latency_seconds|kv_transfer_latency_ms|kv_transfer_total_mb|kv_transfer_speed_gb_s|kv_transfer_bootstrap_ms|kv_transfer_alloc_ms|hicache_backup_duration_seconds|load_back_duration_seconds)_(bucket|sum|count)))'
     action: keep
 - job_name: sglang-decode
   static_configs:
-  - targets: ['122.235.251.182:30127']
+  - targets: ['122.235.251.182:31127']
     labels: {environment: dcu-pd, role: decode, node: dcu2, service: sglang}
-  - targets: ['122.209.21.33:8501']
-    labels: {environment: xpu-pd, role: decode, node: xpu-1, service: sglang}
+  - targets: ['122.209.21.34:8501']
+    labels: {environment: xpu-pd, role: decode, node: xpu-2, service: sglang}
   metric_relabel_configs:
-  - source_labels: [__name__]
-    regex: 'sglang:(num_requests_total|prompt_tokens_total|generation_tokens_total|cached_tokens_total|num_running_reqs|num_queue_reqs|token_usage|cache_hit_rate|hicache_host_used_tokens|hicache_host_total_tokens|prefill_effective_tokens_total|realtime_tokens_total|(time_to_first_token_seconds|inter_token_latency_seconds|e2e_request_latency_seconds)_(bucket|count|sum))'
+  - source_labels: [environment, __name__]
+    regex: '(.*;sglang:(num_requests_total|prompt_tokens_total|generation_tokens_total|cached_tokens_total|num_running_reqs|num_queue_reqs|token_usage|cache_hit_rate|hicache_host_used_tokens|hicache_host_total_tokens|prefill_effective_tokens_total|realtime_tokens_total|(time_to_first_token_seconds|inter_token_latency_seconds|e2e_request_latency_seconds)_(bucket|count|sum))|dcu-pd;sglang:(max_total_num_tokens|max_total_num_tokens_swa|num_used_tokens|kv_available_tokens|kv_evictable_tokens|kv_used_tokens|swa_available_tokens|swa_evictable_tokens|swa_used_tokens|swa_token_usage|num_prefill_bootstrap_queue_reqs|num_prefill_inflight_queue_reqs|num_decode_prealloc_queue_reqs|num_decode_transfer_queue_reqs|num_transfer_failed_reqs_total|hicache_backup_tokens_total|hicache_backup_bytes_total|load_back_tokens_total|load_back_bytes_total|hicache_dropped_tokens_total|(queue_time_seconds|per_stage_req_latency_seconds|kv_transfer_latency_ms|kv_transfer_total_mb|kv_transfer_speed_gb_s|kv_transfer_bootstrap_ms|kv_transfer_alloc_ms|hicache_backup_duration_seconds|load_back_duration_seconds)_(bucket|sum|count)))'
     action: keep
 - job_name: mooncake
   static_configs:
@@ -136,9 +136,9 @@ scrape_configs:
   scrape_timeout: 4s
   static_configs:
   - targets: ['122.209.21.33:9110']
-    labels: {environment: xpu-pd, role: decode, node: xpu-1, service: host}
+    labels: {environment: xpu-pd, role: prefill, node: xpu-1, service: host}
   - targets: ['122.209.21.34:9110']
-    labels: {environment: xpu-pd, role: prefill, node: xpu-2, service: host}
+    labels: {environment: xpu-pd, role: decode, node: xpu-2, service: host}
   metric_relabel_configs:
   - source_labels: [__name__]
     regex: 'node_.*'
@@ -150,10 +150,19 @@ scrape_configs:
   scrape_timeout: 4s
   static_configs:
   - targets: ['122.209.21.33:9507']
-    labels: {environment: xpu-pd, role: decode, node: xpu-1, service: xpu-exporter}
+    labels: {environment: xpu-pd, role: prefill, node: xpu-1, service: xpu-exporter}
   - targets: ['122.209.21.34:9507']
-    labels: {environment: xpu-pd, role: prefill, node: xpu-2, service: xpu-exporter}
+    labels: {environment: xpu-pd, role: decode, node: xpu-2, service: xpu-exporter}
   metric_relabel_configs:
   - source_labels: [__name__]
     regex: 'node_xpu_.*'
+    action: keep
+
+- job_name: mooncake-a3
+  static_configs:
+  - targets: ['122.209.21.24:9003']
+    labels: {environment: a3-vllm, node: a3-1, service: mooncake}
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: '(master_allocated_bytes|master_total_capacity_bytes|master_allocated_file_size_bytes|master_total_file_capacity_bytes|master_key_count|master_active_clients|master_exist_key_requests_total|master_exist_key_failures_total|master_put_start_requests_total|master_put_start_failures_total|master_put_end_requests_total|master_put_end_failures_total|master_put_revoke_requests_total|master_put_revoke_failures_total|master_get_replica_list_requests_total|master_get_replica_list_failures_total|master_batch_exist_key_requests_total|master_batch_exist_key_failures_total|master_batch_put_start_requests_total|master_batch_put_start_failures_total|master_batch_put_end_requests_total|master_batch_put_end_failures_total|master_batch_put_revoke_requests_total|master_batch_put_revoke_failures_total|master_batch_get_replica_list_requests_total|master_batch_get_replica_list_failures_total|master_attempted_evictions_total|master_successful_evictions_total|master_evicted_key_count|master_evicted_size_bytes)'
     action: keep

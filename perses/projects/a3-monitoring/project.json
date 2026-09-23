@@ -1,7 +1,10 @@
 {
   "kind": "Project",
   "metadata": {
-    "name": "a3-monitoring"
+    "name": "a3-monitoring",
+    "createdAt": "2026-09-15T11:39:33.111683371Z",
+    "updatedAt": "2026-09-15T11:39:33.111683371Z",
+    "version": 0
   },
   "spec": {
     "display": {

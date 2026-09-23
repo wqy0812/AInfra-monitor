@@ -1,0 +1,466 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "project": "dcu-monitoring",
+    "name": "accelerator-resources"
+  },
+  "spec": {
+    "display": {
+      "name": "加速卡资源",
+      "description": "统一核心图表；来源特有指标列于专属诊断。单位见标题，统计差异见图表提示。"
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "role",
+          "display": {
+            "name": "角色"
+          },
+          "defaultValue": ".*",
+          "plugin": {
+            "kind": "StaticListVariable",
+            "spec": {
+              "values": [
+                {
+                  "value": ".*",
+                  "label": "全部"
+                },
+                {
+                  "value": "(prefill|dcu1)",
+                  "label": "Prefill"
+                },
+                {
+                  "value": "(decode|dcu2)",
+                  "label": "Decode"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "display": {
+            "name": "节点",
+            "hidden": false
+          },
+          "defaultValue": ".*",
+          "allowAllValue": false,
+          "allowMultiple": false,
+          "plugin": {
+            "kind": "StaticListVariable",
+            "spec": {
+              "values": [
+                {
+                  "label": "全部",
+                  "value": ".*"
+                },
+                {
+                  "label": "dcu1",
+                  "value": "dcu1"
+                },
+                {
+                  "label": "dcu2",
+                  "value": "dcu2"
+                }
+              ]
+            }
+          },
+          "name": "node"
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "display": {
+            "name": "DCU",
+            "hidden": false
+          },
+          "defaultValue": ".*",
+          "allowAllValue": false,
+          "allowMultiple": false,
+          "plugin": {
+            "kind": "StaticListVariable",
+            "spec": {
+              "values": [
+                {
+                  "label": "全部",
+                  "value": ".*"
+                },
+                {
+                  "label": "card0",
+                  "value": "card0"
+                },
+                {
+                  "label": "card1",
+                  "value": "card1"
+                },
+                {
+                  "label": "card2",
+                  "value": "card2"
+                },
+                {
+                  "label": "card3",
+                  "value": "card3"
+                },
+                {
+                  "label": "card4",
+                  "value": "card4"
+                },
+                {
+                  "label": "card5",
+                  "value": "card5"
+                },
+                {
+                  "label": "card6",
+                  "value": "card6"
+                },
+                {
+                  "label": "card7",
+                  "value": "card7"
+                }
+              ]
+            }
+          },
+          "name": "device"
+        }
+      }
+    ],
+    "panels": {
+      "core-utilization": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡利用率（%）",
+            "description": "指标含义\n每张 DCU 卡的设备利用率采样值。按节点和卡号分别展示；不是整个集群的平均值，也不是显存容量使用率。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(dcu_utilization_percent{node=~\"$node\",device=~\"$device\",environment=\"dcu-pd\",node=~\"$role\"} * 1) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"dcu-.*\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"dcu-.*\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"dcu-.*\",node=~\"$role\"}) < 15)) and on(job,instance) (dcu_sample_success == 1 and (time() - dcu_sample_timestamp_seconds < 15))",
+                    "seriesNameFormat": "{{node}} {{device}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "core-memory-used": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡显存已用（GiB）",
+            "description": "指标含义\n每张 DCU 卡的已用显存字节数除以 2^30。按卡展示绝对容量；要判断显存是否接近耗尽，还需结合该卡总容量。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(dcu_memory_used_bytes{node=~\"$node\",device=~\"$device\",environment=\"dcu-pd\",node=~\"$role\"} * 9.313225746154785e-10) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"dcu-.*\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"dcu-.*\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"dcu-.*\",node=~\"$role\"}) < 15)) and on(job,instance) (dcu_sample_success == 1 and (time() - dcu_sample_timestamp_seconds < 15))",
+                    "seriesNameFormat": "{{node}} {{device}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "core-temperature": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡温度（°C）",
+            "description": "指标含义\n每张 DCU 卡的当前设备温度。按节点和卡号区分；该图未设置统一安全温度阈值，应结合具体设备规格和历史基线判断。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(dcu_temperature_celsius{node=~\"$node\",device=~\"$device\",environment=\"dcu-pd\",node=~\"$role\"} * 1) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"dcu-.*\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"dcu-.*\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"dcu-.*\",node=~\"$role\"}) < 15)) and on(job,instance) (dcu_sample_success == 1 and (time() - dcu_sample_timestamp_seconds < 15))",
+                    "seriesNameFormat": "{{node}} {{device}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "core-power": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡功耗（W）",
+            "description": "指标含义\n每张 DCU 卡的当前功率采样值。瓦特表示瞬时功率，不是累计耗电量；耗电量需要对功率随时间积分。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(dcu_power_watts{node=~\"$node\",device=~\"$device\",environment=\"dcu-pd\",node=~\"$role\"} * 1) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"dcu-.*\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"dcu-.*\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"dcu-.*\",node=~\"$role\"}) < 15)) and on(job,instance) (dcu_sample_success == 1 and (time() - dcu_sample_timestamp_seconds < 15))",
+                    "seriesNameFormat": "{{node}} {{device}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "core-memory-total": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡显存总量（GiB）",
+            "description": "指标含义\n每张设备实际显存容量，配合已有已用显存曲线判断余量。\n\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "((dcu_memory_total_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"} and ((time() - timestamp(dcu_memory_total_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"}) < 15) and (count_over_time(dcu_memory_total_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)))))) / 1024^3 and on(job,instance) ((dcu_sample_success{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$role\"} == 1) and (time() - dcu_sample_timestamp_seconds{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$role\"} < 15))",
+                    "seriesNameFormat": "{{node}} · {{device}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "core-memory-ratio": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡显存占用比例（%）",
+            "description": "指标含义\n每卡已用显存 / 总显存，要求 DCU 采样成功且新鲜。\n\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "100 * ((dcu_memory_used_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"} and ((time() - timestamp(dcu_memory_used_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"}) < 15) and (count_over_time(dcu_memory_used_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)))))) / (((dcu_memory_total_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"} and ((time() - timestamp(dcu_memory_total_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"}) < 15) and (count_over_time(dcu_memory_total_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)))))) > 0) and on(job,instance) ((dcu_sample_success{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$role\"} == 1) and (time() - dcu_sample_timestamp_seconds{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$role\"} < 15))",
+                    "seriesNameFormat": "{{node}} · {{device}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "核心指标"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-utilization"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-memory-used"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-temperature"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-power"
+              }
+            },
+            {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-memory-total"
+              }
+            },
+            {
+              "x": 12,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-memory-ratio"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "1h",
+    "refreshInterval": "15s"
+  }
+}

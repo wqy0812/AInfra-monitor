@@ -1,5 +1,11 @@
 # Perses on test4
 
+## 当前分类（2026-09-23）
+
+运行概览已删除，图表迁入网关、后端性能、P/D 诊断、主机、加速卡、缓存和采集健康看板。DCU/XPU/A3 各 10 张，共 303 图；非缓存看板公共核心对齐，保留平台专属扩展，A3 Mooncake 新增 10 图。单位在标题，提示去除重复单位与曲线范围标题。当前验收与回退见 [对齐发布记录](../docs/perses-alignment-mooncake-20260923.md)，此前迁移见 [重组记录](../docs/perses-dashboard-reorg-20260923.md)。XPU 角色修复见 [修复记录](../docs/xpu-role-fix-20260923.md)。以下带日期章节为历史记录，不能据此恢复旧概览或旧看板数量。
+
+现行资源：`projects/`；通过 `project_split.py` 再生成、`project_coverage.py --docs-only` 同步说明。发布脚本从服务器 `admin-credentials.json` 读取认证信息（可用 `PERSES_CREDENTIALS_FILE` 指定），不再依赖免登录访问。
+
 ## 加载优化已上线（2026-09-16，0.54.0-perf.2）
 
 已完成 [两批加载优化](performance/README.md)：修复重复刷新、内置变量初始化、插件按需加载、静态缓存及失败插件重试；13 个图表的 P50/P95/P99 已合并查询，共用原有效性检查。当前镜像配置摘要为 `sha256:c5a17dc68da543e42b3c78618b0c452ea29328a027ec4439b402f3aa79a15bfa`。

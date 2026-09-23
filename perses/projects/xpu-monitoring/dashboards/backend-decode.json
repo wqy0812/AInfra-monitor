@@ -1,0 +1,151 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "backend-decode",
+    "createdAt": "2026-09-23T10:25:32.272587805Z",
+    "updatedAt": "2026-09-23T15:44:45.098104913Z",
+    "version": 1,
+    "project": "xpu-monitoring"
+  },
+  "spec": {
+    "display": {
+      "name": "Decode 诊断",
+      "description": "统一核心图表；来源特有指标列于专属诊断。单位见标题，统计差异见图表提示。"
+    },
+    "panels": {
+      "core-kv": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Decode KV 池占用（%）",
+            "description": "指标含义\n源调度器 token_usage，反映 KV Token 池占用，不是整卡显存占用。\n\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(sglang:token_usage{environment=\"xpu-pd\",job=\"sglang-decode\"} and ((time() - timestamp(sglang:token_usage{environment=\"xpu-pd\",job=\"sglang-decode\"}) < 15) and (count_over_time(sglang:token_usage{environment=\"xpu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"sglang-decode\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5))))) * 100",
+                    "seriesNameFormat": "{{node}} · DP {{dp_rank}} / TP {{tp_rank}} / EP {{moe_ep_rank}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "core-queue": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Decode 运行与排队请求（请求）",
+            "description": "指标含义\n调度器当前运行与排队请求，按原始 rank 分线，未对复制 rank 求总和。\n\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(sglang:num_running_reqs{environment=\"xpu-pd\",job=\"sglang-decode\"} and ((time() - timestamp(sglang:num_running_reqs{environment=\"xpu-pd\",job=\"sglang-decode\"}) < 15) and (count_over_time(sglang:num_running_reqs{environment=\"xpu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"sglang-decode\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)))))",
+                    "seriesNameFormat": "{{node}} · DP {{dp_rank}} / TP {{tp_rank}} / EP {{moe_ep_rank}} · 运行"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(sglang:num_queue_reqs{environment=\"xpu-pd\",job=\"sglang-decode\"} and ((time() - timestamp(sglang:num_queue_reqs{environment=\"xpu-pd\",job=\"sglang-decode\"}) < 15) and (count_over_time(sglang:num_queue_reqs{environment=\"xpu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"sglang-decode\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)))))",
+                    "seriesNameFormat": "{{node}} · DP {{dp_rank}} / TP {{tp_rank}} / EP {{moe_ep_rank}} · 排队"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "核心指标"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-queue"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-kv"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "1h",
+    "refreshInterval": "15s"
+  }
+}

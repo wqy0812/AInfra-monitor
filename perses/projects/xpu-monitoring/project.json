@@ -1,7 +1,10 @@
 {
   "kind": "Project",
   "metadata": {
-    "name": "xpu-monitoring"
+    "name": "xpu-monitoring",
+    "createdAt": "2026-09-21T05:58:11.560242581Z",
+    "updatedAt": "2026-09-21T05:58:11.560242581Z",
+    "version": 0
   },
   "spec": {
     "display": {

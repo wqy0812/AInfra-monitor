@@ -2,14 +2,49 @@
   "kind": "Dashboard",
   "metadata": {
     "name": "hosts-xpu",
+    "createdAt": "2026-09-21T05:58:11.919754691Z",
+    "updatedAt": "2026-09-23T15:44:47.937999067Z",
+    "version": 6,
     "project": "xpu-monitoring"
   },
   "spec": {
     "display": {
-      "name": "主机与 XPU",
-      "description": "XPU 主机指标来自 Node Exporter，卡硬件来自 xpu_exporter；按节点和卡号分线。缺失、采集失败或过期观测留空，有效零值保留；默认 1 小时 / 15 秒刷新。"
+      "name": "主机资源 · Node Exporter",
+      "description": "统一核心图表；来源特有指标列于专属诊断。单位见标题，统计差异见图表提示。"
     },
     "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "display": {
+            "name": "角色",
+            "hidden": false
+          },
+          "defaultValue": ".*",
+          "allowAllValue": false,
+          "allowMultiple": false,
+          "plugin": {
+            "kind": "StaticListVariable",
+            "spec": {
+              "values": [
+                {
+                  "label": "全部",
+                  "value": ".*"
+                },
+                {
+                  "label": "Prefill",
+                  "value": "(prefill|xpu-1)"
+                },
+                {
+                  "label": "Decode",
+                  "value": "(decode|xpu-2)"
+                }
+              ]
+            }
+          },
+          "name": "role"
+        }
+      },
       {
         "kind": "ListVariable",
         "spec": {
@@ -29,83 +64,27 @@
                   "value": ".*"
                 },
                 {
-                  "label": "Prefill / xpu-2",
-                  "value": "xpu-2"
+                  "label": "Prefill / xpu-1",
+                  "value": "xpu-1"
                 },
                 {
-                  "label": "Decode / xpu-1",
-                  "value": "xpu-1"
+                  "label": "Decode / xpu-2",
+                  "value": "xpu-2"
                 }
               ]
             }
           },
           "name": "node"
         }
-      },
-      {
-        "kind": "ListVariable",
-        "spec": {
-          "display": {
-            "name": "XPU",
-            "hidden": false
-          },
-          "defaultValue": ".*",
-          "allowAllValue": false,
-          "allowMultiple": false,
-          "plugin": {
-            "kind": "StaticListVariable",
-            "spec": {
-              "values": [
-                {
-                  "label": "全部",
-                  "value": ".*"
-                },
-                {
-                  "label": "XPU 0",
-                  "value": "0"
-                },
-                {
-                  "label": "XPU 1",
-                  "value": "1"
-                },
-                {
-                  "label": "XPU 2",
-                  "value": "2"
-                },
-                {
-                  "label": "XPU 3",
-                  "value": "3"
-                },
-                {
-                  "label": "XPU 4",
-                  "value": "4"
-                },
-                {
-                  "label": "XPU 5",
-                  "value": "5"
-                },
-                {
-                  "label": "XPU 6",
-                  "value": "6"
-                },
-                {
-                  "label": "XPU 7",
-                  "value": "7"
-                }
-              ]
-            }
-          },
-          "name": "device"
-        }
       }
     ],
     "panels": {
-      "extra-fs-free": {
+      "core-extra-fs-free": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "文件系统剩余容量",
-            "description": "指标含义\n普通用户可用空间，按挂载点分线，不对重复挂载累计。\n\nY 轴单位\nGiB\n\n曲线与范围\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。查询不额外过滤请求类型。"
+            "name": "文件系统剩余容量（GiB）",
+            "description": "指标含义\n普通用户可用空间，按挂载点分线，不对重复挂载累计。\n\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -123,7 +102,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "GiB",
                 "min": 0
               }
             }
@@ -136,7 +114,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(node_filesystem_avail_bytes{environment=\"xpu-pd\",node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\",job=\"node-xpu\"} and ((time() - timestamp(node_filesystem_avail_bytes{environment=\"xpu-pd\",node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\",job=\"node-xpu\"}) < 15) and (count_over_time(node_filesystem_avail_bytes{environment=\"xpu-pd\",node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15))))) / 1024^3",
+                    "query": "(node_filesystem_avail_bytes{environment=\"xpu-pd\",node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\",job=\"node-xpu\",node=~\"$role\"} and ((time() - timestamp(node_filesystem_avail_bytes{environment=\"xpu-pd\",node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (count_over_time(node_filesystem_avail_bytes{environment=\"xpu-pd\",node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15))))) / 1024^3",
                     "seriesNameFormat": "{{node}} · {{mountpoint}}"
                   }
                 }
@@ -145,12 +123,12 @@
           ]
         }
       },
-      "extra-iowait": {
+      "core-extra-iowait": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "CPU I/O 等待",
-            "description": "指标含义\nCPU 处于 iowait 状态的平均比例；结合磁盘延迟判断存储等待。\n\nY 轴单位\n%\n\n曲线与范围\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。查询不额外过滤请求类型。"
+            "name": "CPU I/O 等待（%）",
+            "description": "指标含义\nCPU 处于 iowait 状态的平均比例；结合磁盘延迟判断存储等待。\n\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -168,7 +146,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "%",
                 "min": 0
               }
             }
@@ -181,7 +158,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "100 * avg by(environment,node) ((rate(node_cpu_seconds_total{environment=\"xpu-pd\",node=~\"$node\",mode=\"iowait\",job=\"node-xpu\"}[1m]) and ((time() - timestamp(node_cpu_seconds_total{environment=\"xpu-pd\",node=~\"$node\",mode=\"iowait\",job=\"node-xpu\"}) < 15) and (count_over_time(node_cpu_seconds_total{environment=\"xpu-pd\",node=~\"$node\",mode=\"iowait\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15))) and (count_over_time(node_cpu_seconds_total{environment=\"xpu-pd\",node=~\"$node\",mode=\"iowait\",job=\"node-xpu\"}[1m]) >= 12) and (resets(node_cpu_seconds_total{environment=\"xpu-pd\",node=~\"$node\",mode=\"iowait\",job=\"node-xpu\"}[1m]) == 0) and (resets(node_cpu_seconds_total{environment=\"xpu-pd\",node=~\"$node\",mode=\"iowait\",job=\"node-xpu\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[1m]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15))))))",
+                    "query": "100 * avg by(environment,node) ((rate(node_cpu_seconds_total{environment=\"xpu-pd\",node=~\"$node\",mode=\"iowait\",job=\"node-xpu\",node=~\"$role\"}[1m]) and ((time() - timestamp(node_cpu_seconds_total{environment=\"xpu-pd\",node=~\"$node\",mode=\"iowait\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (count_over_time(node_cpu_seconds_total{environment=\"xpu-pd\",node=~\"$node\",mode=\"iowait\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15))) and (count_over_time(node_cpu_seconds_total{environment=\"xpu-pd\",node=~\"$node\",mode=\"iowait\",job=\"node-xpu\",node=~\"$role\"}[1m]) >= 12) and (resets(node_cpu_seconds_total{environment=\"xpu-pd\",node=~\"$node\",mode=\"iowait\",job=\"node-xpu\",node=~\"$role\"}[1m]) == 0) and (resets(node_cpu_seconds_total{environment=\"xpu-pd\",node=~\"$node\",mode=\"iowait\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[1m]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15))))))",
                     "seriesNameFormat": "{{node}}"
                   }
                 }
@@ -190,12 +167,12 @@
           ]
         }
       },
-      "extra-load": {
+      "core-extra-load": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "主机负载",
-            "description": "指标含义\n1/5/15 分钟系统负载，包含可运行及不可中断等待任务；不是百分比。\n\nY 轴单位\n任务数\n\n曲线与范围\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。查询不额外过滤请求类型。"
+            "name": "主机负载（任务数）",
+            "description": "指标含义\n1/5/15 分钟系统负载，包含可运行及不可中断等待任务；不是百分比。\n\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -213,7 +190,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "任务数",
                 "min": 0
               }
             }
@@ -226,7 +202,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(node_load1{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} and ((time() - timestamp(node_load1{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (count_over_time(node_load1{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15)))))",
+                    "query": "(node_load1{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} and ((time() - timestamp(node_load1{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (count_over_time(node_load1{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15)))))",
                     "seriesNameFormat": "{{node}} · 1m"
                   }
                 }
@@ -239,7 +215,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(node_load5{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} and ((time() - timestamp(node_load5{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (count_over_time(node_load5{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15)))))",
+                    "query": "(node_load5{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} and ((time() - timestamp(node_load5{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (count_over_time(node_load5{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15)))))",
                     "seriesNameFormat": "{{node}} · 5m"
                   }
                 }
@@ -252,7 +228,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(node_load15{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} and ((time() - timestamp(node_load15{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (count_over_time(node_load15{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15)))))",
+                    "query": "(node_load15{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} and ((time() - timestamp(node_load15{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (count_over_time(node_load15{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15)))))",
                     "seriesNameFormat": "{{node}} · 15m"
                   }
                 }
@@ -261,12 +237,12 @@
           ]
         }
       },
-      "extra-memory-ratio": {
+      "core-extra-memory-ratio": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "内存占用比例",
-            "description": "指标含义\n1 − MemAvailable/MemTotal，含可回收内存的可用量估算。\n\nY 轴单位\n%\n\n曲线与范围\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。查询不额外过滤请求类型。"
+            "name": "内存占用比例（%）",
+            "description": "指标含义\n1 − MemAvailable/MemTotal，含可回收内存的可用量估算。\n\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -284,7 +260,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "%",
                 "min": 0
               }
             }
@@ -297,7 +272,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "100 * (1 - ((node_memory_MemAvailable_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} and ((time() - timestamp(node_memory_MemAvailable_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (count_over_time(node_memory_MemAvailable_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15)))))) / ((node_memory_MemTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} and ((time() - timestamp(node_memory_MemTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (count_over_time(node_memory_MemTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15)))))))",
+                    "query": "100 * (1 - ((node_memory_MemAvailable_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} and ((time() - timestamp(node_memory_MemAvailable_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (count_over_time(node_memory_MemAvailable_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15)))))) / ((node_memory_MemTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} and ((time() - timestamp(node_memory_MemTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (count_over_time(node_memory_MemTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15)))))))",
                     "seriesNameFormat": "{{node}}"
                   }
                 }
@@ -306,12 +281,12 @@
           ]
         }
       },
-      "extra-swap": {
+      "core-extra-swap": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "Swap 已用与总量",
-            "description": "指标含义\nSwap 总量为零表示没有配置 Swap；绝对容量显示有效零。\n\nY 轴单位\nGiB\n\n曲线与范围\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。查询不额外过滤请求类型。"
+            "name": "Swap 已用与总量（GiB）",
+            "description": "指标含义\nSwap 总量为零表示没有配置 Swap；绝对容量显示有效零。\n\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -329,7 +304,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "GiB",
                 "min": 0
               }
             }
@@ -342,7 +316,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(((node_memory_SwapTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} and ((time() - timestamp(node_memory_SwapTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (count_over_time(node_memory_SwapTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15)))))) - ((node_memory_SwapFree_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} and ((time() - timestamp(node_memory_SwapFree_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (count_over_time(node_memory_SwapFree_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15))))))) / 1024^3",
+                    "query": "(((node_memory_SwapTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} and ((time() - timestamp(node_memory_SwapTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (count_over_time(node_memory_SwapTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15)))))) - ((node_memory_SwapFree_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} and ((time() - timestamp(node_memory_SwapFree_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (count_over_time(node_memory_SwapFree_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15))))))) / 1024^3",
                     "seriesNameFormat": "{{node}} · 已用"
                   }
                 }
@@ -355,7 +329,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "((node_memory_SwapTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} and ((time() - timestamp(node_memory_SwapTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (count_over_time(node_memory_SwapTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) < 15)))))) / 1024^3",
+                    "query": "((node_memory_SwapTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} and ((time() - timestamp(node_memory_SwapTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (count_over_time(node_memory_SwapTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) < 15)))))) / 1024^3",
                     "seriesNameFormat": "{{node}} · 总量"
                   }
                 }
@@ -364,12 +338,12 @@
           ]
         }
       },
-      "extra-vram-ratio": {
+      "core-p0": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "XPU 显存占用比例",
-            "description": "指标：node_xpu_memutil，单位：%。按节点与卡号 devid 展示瞬时观测。直接使用 exporter 的百分数，不再次乘以 100。每 5 秒采集，默认每 15 秒刷新。有效零值保留；负值、缺样、超过 15 秒的采样和失败抓取留空。超过 100% 的值留空。新鲜度依据抓取时间，exporter 未提供独立设备观测时间。"
+            "name": "CPU 使用率（%）",
+            "description": "指标含义\n主机 CPU 忙碌时间占总 CPU 时间的比例。当前查询扣除 idle 和 iowait，再按主机汇总；100% 表示接近全部 CPU 时间处于其余状态。iowait 被扣除，所以该图不能单独排除存储等待。\n\nXPU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -387,7 +361,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "%",
                 "min": 0
               }
             }
@@ -400,97 +373,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "((node_xpu_memutil{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"} >= 0) and (node_xpu_memutil{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"} <= 100) and (time() - timestamp(node_xpu_memutil{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"}) < 15) and (count_over_time(node_xpu_memutil{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}[$__interval]) >= ($__interval / 5))))",
-                    "seriesNameFormat": "{{node}} · XPU {{devid}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "extra-vram-total": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "XPU 显存总量",
-            "description": "指标：node_xpu_memtotal，单位：GiB。按节点与卡号 devid 展示瞬时观测。Exporter 的 MiB 除以 1024 转为 GiB。每 5 秒采集，默认每 15 秒刷新。有效零值保留；负值、缺样、超过 15 秒的采样和失败抓取留空。新鲜度依据抓取时间，exporter 未提供独立设备观测时间。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "label": "GiB",
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "((node_xpu_memtotal{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"} >= 0) and (time() - timestamp(node_xpu_memtotal{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"}) < 15) and (count_over_time(node_xpu_memtotal{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)))) / 1024",
-                    "seriesNameFormat": "{{node}} · XPU {{devid}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "p0": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "主机 CPU",
-            "description": "指标含义\n主机 CPU 忙碌时间占总 CPU 时间的比例。当前查询扣除 idle 和 iowait，再按主机汇总；100% 表示接近全部 CPU 时间处于其余状态。iowait 被扣除，所以该图不能单独排除存储等待。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nXPU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n速率使用最近 1 分钟滚动窗口；比例使用同一窗口的分子和分母。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 速率窗口的采样、生命周期或计数重置检查不通过时留空。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "label": "%",
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(100 * (1 - avg by(job,instance,node) (rate(node_cpu_seconds_total{mode=\"idle\",node=~\"$node\",environment=\"xpu-pd\",job=\"node-xpu\"}[1m]) + ignoring(mode) rate(node_cpu_seconds_total{mode=\"iowait\",node=~\"$node\",environment=\"xpu-pd\",job=\"node-xpu\"}[1m])))) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\"}) < 15))",
+                    "query": "(100 * (1 - avg by(job,instance,node) (rate(node_cpu_seconds_total{mode=\"idle\",node=~\"$node\",environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[1m]) + ignoring(mode) rate(node_cpu_seconds_total{mode=\"iowait\",node=~\"$node\",environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[1m])))) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}) < 15))",
                     "seriesNameFormat": "{{node}}"
                   }
                 }
@@ -499,12 +382,12 @@
           ]
         }
       },
-      "p1": {
+      "core-p1": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "主机内存",
-            "description": "指标含义\n主机内存已用量及总量：已用 = MemTotal − MemAvailable。MemAvailable 包含可回收内存的估算，因此不等于把所有缓存都视作不可用。每条曲线按节点和已用/总量区分。\n\nY 轴单位\nGiB；1 GiB = 2^30 字节。\n\n曲线与范围\nXPU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。"
+            "name": "主机内存（GiB）",
+            "description": "指标含义\n主机内存已用量及总量：已用 = MemTotal − MemAvailable。MemAvailable 包含可回收内存的估算，因此不等于把所有缓存都视作不可用。每条曲线按节点和已用/总量区分。\n\nXPU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -522,7 +405,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "GiB",
                 "min": 0
               }
             }
@@ -535,7 +417,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "((node_memory_MemTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} - node_memory_MemAvailable_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"}) / 1024^3) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\"}) < 15))",
+                    "query": "((node_memory_MemTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} - node_memory_MemAvailable_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"}) / 1024^3) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}) < 15))",
                     "seriesNameFormat": "{{node}} 已用"
                   }
                 }
@@ -548,7 +430,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(node_memory_MemTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\"} / 1024^3) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\"}) < 15))",
+                    "query": "(node_memory_MemTotal_bytes{environment=\"xpu-pd\",node=~\"$node\",job=\"node-xpu\",node=~\"$role\"} / 1024^3) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}) < 15))",
                     "seriesNameFormat": "{{node}} 总量"
                   }
                 }
@@ -557,12 +439,12 @@
           ]
         }
       },
-      "p2": {
+      "core-p2": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "文件系统容量使用率",
-            "description": "指标含义\n文件系统容量占用比例：(1 − 可用字节/总字节) × 100%。按节点、设备或挂载点分别展示；可用空间采用普通用户可用口径。它是容量百分比，不是磁盘 I/O 忙碌率。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nXPU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。"
+            "name": "文件系统容量使用率（%）",
+            "description": "指标含义\n文件系统容量占用比例：(1 − 可用字节/总字节) × 100%。按节点、设备或挂载点分别展示；可用空间采用普通用户可用口径。它是容量百分比，不是磁盘 I/O 忙碌率。\n\nXPU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -580,7 +462,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "%",
                 "min": 0
               }
             }
@@ -593,7 +474,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(100 * (1 - node_filesystem_avail_bytes{node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\",environment=\"xpu-pd\",job=\"node-xpu\"} / node_filesystem_size_bytes{node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\",environment=\"xpu-pd\",job=\"node-xpu\"})) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\"}) < 15))",
+                    "query": "(100 * (1 - node_filesystem_avail_bytes{node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\",environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"} / node_filesystem_size_bytes{node=~\"$node\",fstype!~\"tmpfs|devtmpfs|overlay|squashfs\",environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"})) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}) < 15))",
                     "seriesNameFormat": "{{node}} {{mountpoint}}"
                   }
                 }
@@ -602,12 +483,12 @@
           ]
         }
       },
-      "p3": {
+      "core-p3": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "磁盘 I/O",
-            "description": "指标含义\n设备读/写字节累计计数在最近 1 分钟的平均增长速率，除以 2^20。分别展示读和写及各设备；逻辑盘与其底层物理盘可能重复承载同一 I/O，不应把所有曲线直接相加。\n\nY 轴单位\nMiB / 秒；表示每秒的平均变化量。\n\n曲线与范围\nXPU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n速率使用最近 1 分钟滚动窗口；比例使用同一窗口的分子和分母。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 速率窗口的采样、生命周期或计数重置检查不通过时留空。"
+            "name": "磁盘吞吐（MiB/秒）",
+            "description": "指标含义\n设备读/写字节累计计数在最近 1 分钟的平均增长速率，除以 2^20。分别展示读和写及各设备；逻辑盘与其底层物理盘可能重复承载同一 I/O，不应把所有曲线直接相加。\n\nXPU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -625,7 +506,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "MiB / 秒",
                 "min": 0
               }
             }
@@ -638,7 +518,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(rate(node_disk_read_bytes_total{node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\",environment=\"xpu-pd\",job=\"node-xpu\"}[1m]) / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\"}) < 15))",
+                    "query": "(rate(node_disk_read_bytes_total{node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\",environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[1m]) / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}) < 15))",
                     "seriesNameFormat": "{{node}} {{device}} 读"
                   }
                 }
@@ -651,7 +531,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(rate(node_disk_written_bytes_total{node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\",environment=\"xpu-pd\",job=\"node-xpu\"}[1m]) / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\"}) < 15))",
+                    "query": "(rate(node_disk_written_bytes_total{node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\",environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[1m]) / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}) < 15))",
                     "seriesNameFormat": "{{node}} {{device}} 写"
                   }
                 }
@@ -660,12 +540,12 @@
           ]
         }
       },
-      "p4": {
+      "core-p4": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "网络吞吐",
-            "description": "指标含义\n网络接口接收/发送字节累计计数在最近 1 分钟的平均增长速率，除以 2^20。单位是字节速率，不是位速率；1 MiB/秒约等于 8.39 Mbit/秒。按节点、网卡及收发方向区分，部分虚拟接口被排除。\n\nY 轴单位\nMiB / 秒；表示每秒的平均变化量。\n\n曲线与范围\nXPU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n速率使用最近 1 分钟滚动窗口；比例使用同一窗口的分子和分母。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 速率窗口的采样、生命周期或计数重置检查不通过时留空。"
+            "name": "网络吞吐（MiB/秒）",
+            "description": "指标含义\n网络接口接收/发送字节累计计数在最近 1 分钟的平均增长速率，除以 2^20。单位是字节速率，不是位速率；1 MiB/秒约等于 8.39 Mbit/秒。按节点、网卡及收发方向区分，部分虚拟接口被排除。\n\nXPU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -683,7 +563,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "MiB / 秒",
                 "min": 0
               }
             }
@@ -696,7 +575,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(rate(node_network_receive_bytes_total{node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\",environment=\"xpu-pd\",job=\"node-xpu\"}[1m]) / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\"}) < 15))",
+                    "query": "(rate(node_network_receive_bytes_total{node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\",environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[1m]) / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}) < 15))",
                     "seriesNameFormat": "{{node}} {{device}} 接收"
                   }
                 }
@@ -709,188 +588,8 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(rate(node_network_transmit_bytes_total{node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\",environment=\"xpu-pd\",job=\"node-xpu\"}[1m]) / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\"}) < 15))",
+                    "query": "(rate(node_network_transmit_bytes_total{node=~\"$node\",device!~\"lo|loop.*|ram.*|veth.*|docker.*|br-.*\",environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[1m]) / 1024^2) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"node-xpu\",node=~\"$role\"}) < 15))",
                     "seriesNameFormat": "{{node}} {{device}} 发送"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "p5": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "XPU 利用率",
-            "description": "指标：node_xpu_utilization，单位：%。按节点与卡号 devid 展示瞬时观测。直接使用 exporter 的百分数，不再次乘以 100。每 5 秒采集，默认每 15 秒刷新。有效零值保留；负值、缺样、超过 15 秒的采样和失败抓取留空。超过 100% 的值留空。新鲜度依据抓取时间，exporter 未提供独立设备观测时间。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "label": "%",
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "((node_xpu_utilization{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"} >= 0) and (node_xpu_utilization{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"} <= 100) and (time() - timestamp(node_xpu_utilization{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"}) < 15) and (count_over_time(node_xpu_utilization{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}[$__interval]) >= ($__interval / 5))))",
-                    "seriesNameFormat": "{{node}} · XPU {{devid}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "p6": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "XPU 显存已用",
-            "description": "指标：node_xpu_memused，单位：GiB。按节点与卡号 devid 展示瞬时观测。Exporter 的 MiB 除以 1024 转为 GiB。每 5 秒采集，默认每 15 秒刷新。有效零值保留；负值、缺样、超过 15 秒的采样和失败抓取留空。新鲜度依据抓取时间，exporter 未提供独立设备观测时间。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "label": "GiB",
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "((node_xpu_memused{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"} >= 0) and (time() - timestamp(node_xpu_memused{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"}) < 15) and (count_over_time(node_xpu_memused{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}[$__interval]) >= ($__interval / 5)))) / 1024",
-                    "seriesNameFormat": "{{node}} · XPU {{devid}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "p7": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "XPU 温度",
-            "description": "指标：node_xpu_temp，单位：°C。按节点与卡号 devid 展示瞬时观测。每 5 秒采集，默认每 15 秒刷新。有效零值保留；负值、缺样、超过 15 秒的采样和失败抓取留空。新鲜度依据抓取时间，exporter 未提供独立设备观测时间。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "label": "°C",
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "((node_xpu_temp{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"} >= 0) and (time() - timestamp(node_xpu_temp{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"}) < 15) and (count_over_time(node_xpu_temp{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}[$__interval]) >= ($__interval / 5))))",
-                    "seriesNameFormat": "{{node}} · XPU {{devid}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "p8": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "XPU 功耗",
-            "description": "指标：node_xpu_powerUsage，单位：W。按节点与卡号 devid 展示瞬时观测。每 5 秒采集，默认每 15 秒刷新。有效零值保留；负值、缺样、超过 15 秒的采样和失败抓取留空。新鲜度依据抓取时间，exporter 未提供独立设备观测时间。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "label": "W",
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "((node_xpu_powerUsage{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"} >= 0) and (time() - timestamp(node_xpu_powerUsage{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"}) < 15) and (count_over_time(node_xpu_powerUsage{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\"}[$__interval]) >= ($__interval / 5))))",
-                    "seriesNameFormat": "{{node}} · XPU {{devid}}"
                   }
                 }
               }
@@ -903,6 +602,9 @@
       {
         "kind": "Grid",
         "spec": {
+          "display": {
+            "title": "核心指标"
+          },
           "items": [
             {
               "x": 0,
@@ -910,7 +612,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p0"
+                "$ref": "#/spec/panels/core-p0"
               }
             },
             {
@@ -919,7 +621,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p1"
+                "$ref": "#/spec/panels/core-p1"
               }
             },
             {
@@ -928,7 +630,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p2"
+                "$ref": "#/spec/panels/core-p2"
               }
             },
             {
@@ -937,7 +639,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p3"
+                "$ref": "#/spec/panels/core-p3"
               }
             },
             {
@@ -946,7 +648,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p4"
+                "$ref": "#/spec/panels/core-p4"
               }
             },
             {
@@ -955,7 +657,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p5"
+                "$ref": "#/spec/panels/core-extra-load"
               }
             },
             {
@@ -964,7 +666,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p6"
+                "$ref": "#/spec/panels/core-extra-iowait"
               }
             },
             {
@@ -973,7 +675,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p7"
+                "$ref": "#/spec/panels/core-extra-memory-ratio"
               }
             },
             {
@@ -982,70 +684,16 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p8"
-              }
-            },
-            {
-              "x": 0,
-              "y": 40,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-load"
+                "$ref": "#/spec/panels/core-extra-swap"
               }
             },
             {
               "x": 12,
-              "y": 40,
+              "y": 32,
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/extra-iowait"
-              }
-            },
-            {
-              "x": 0,
-              "y": 48,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-memory-ratio"
-              }
-            },
-            {
-              "x": 12,
-              "y": 48,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-swap"
-              }
-            },
-            {
-              "x": 0,
-              "y": 56,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-fs-free"
-              }
-            },
-            {
-              "x": 12,
-              "y": 56,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-vram-total"
-              }
-            },
-            {
-              "x": 0,
-              "y": 64,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-vram-ratio"
+                "$ref": "#/spec/panels/core-extra-fs-free"
               }
             }
           ]

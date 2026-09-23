@@ -1,4 +1,10 @@
+# 当前 Perses 分类
+
+DCU/XPU/A3 各 10 张专业看板，共 303 图；非缓存看板按公共核心指标和平台专属诊断对齐，A3 已拆分 Prefill/Decode，运行概览已删除，主机与加速卡分开。A3 Mooncake 原生指标已接入。详见 [对齐与 Mooncake 发布记录](docs/perses-alignment-mooncake-20260923.md)。XPU 角色修复见 [修复记录](docs/xpu-role-fix-20260923.md)。下文历史部署记录中的旧分类、数量和免登录说明不代表当前配置。
+
 # 独立监控
+
+XPU 节点环境与初始部署拓扑见 [2026-09-21 环境记录](docs/xpu-environment-2026-09-21.md)，当前角色映射以 [2026-09-23 修复记录](docs/xpu-role-fix-20260923.md) 为准。
 
 ## 仓库范围
 
@@ -146,10 +152,12 @@ DCU 的 E2E、TTFT、ITL 改为保留完整来源和流式标签，逐序列校�
 
 复用 A3-1 `122.209.21.24:8082/metrics` 和 A3-2 `122.209.21.25:8082/metrics` 的既有 `npu-exporter`，以 `job=npu-a3`、`environment=a3-vllm` 每 5 秒采集。保留 exporter 自带时间戳，采集 `npu_.*` 和 `machine_npu_nums`，每节点 16 个芯片 ID。
 
-[A3 · 主机与 NPU](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/a3-hosts) 对齐 DCU 六项硬件图表：利用率、显存已用、温度、功耗、显存总量和显存占比。支持节点与 NPU 芯片筛选；HBM 的 MiB 转为 GiB，不使用 KV Cache 代替整芯片显存。功耗按 exporter 原始芯片 ID 展示，不相加为整机功耗。有效零保留，超过 15 秒的源观测、失败抓取及非法值留空。
+[A3 · 加速卡资源](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/accelerator-resources) 对齐 DCU 六项硬件图表：利用率、显存已用、温度、功耗、显存总量和显存占比。支持节点与 NPU 芯片筛选；HBM 的 MiB 转为 GiB，不使用 KV Cache 代替整芯片显存。功耗按 exporter 原始芯片 ID 展示，不相加为整机功耗。有效零保留，超过 15 秒的源观测、失败抓取及非法值留空。
 
 本次只热加载 vmagent 采集配置并更新 A3 主机看板；没有重启中央监控、推理或网关服务。实现与回退见 [NPU 发布说明](docs/npu-20260916.md)。
 
 ## XPU 接入（2026-09-21）
 
 已新增 `xpu-pd` 推理采集与 monitoring-api 支持，以及 [XPU Perses 项目](http://122.247.53.162:18431/projects/xpu-monitoring)。XPU 网关画像也已接入；HiCache、缓存层级和硬件先留空。发布、验收与回退见 [XPU 接入记录](docs/xpu-20260921.md)。
+
+流停顿方向监控新增 `points[].gateway.backend_wait_max_seconds` 与 `write_active_max_seconds`，两者分别按环境取当前最大读取等待和当前连续写出时长；页面和 Perses 展示这两项，旧字段保留。有效空闲为零，指标缺失留空，不以旧字段回填。完整口径和验证说明见 [流停顿方向监控](docs/stream-direction-monitoring-20260923.md)。

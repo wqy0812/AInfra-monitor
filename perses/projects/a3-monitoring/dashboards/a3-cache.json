@@ -2,12 +2,15 @@
   "kind": "Dashboard",
   "metadata": {
     "name": "a3-cache",
+    "createdAt": "2026-09-15T11:39:33.141920666Z",
+    "updatedAt": "2026-09-23T10:25:27.136654004Z",
+    "version": 2,
     "project": "a3-monitoring"
   },
   "spec": {
     "display": {
-      "name": "A3 · 缓存",
-      "description": "数据源：test4 VictoriaMetrics。缺失或无效观测留空；默认 1 小时 / 15 秒刷新。"
+      "name": "缓存与存储",
+      "description": "按指标观测位置分类；单位见图表标题，详细统计含义见图表提示。"
     },
     "variables": [
       {
@@ -44,12 +47,12 @@
       }
     ],
     "panels": {
-      "p0": {
+      "extra-external_prefix_cache_": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "实例 KV 缓存占用",
-            "description": "指标含义\nvLLM 实例已分配 KV Cache 的占用比例乘以 100。按实例/角色区分；分母是该实例的 KV Cache 容量，不是整张 NPU 的显存容量。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n容量、队列和状态表示观测时刻值；服务请求/Token 速率由源监控按连续采样间隔计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 派生指标须满足 monitoring_chart_valid=1；原始数值存在但标记无效时也不显示。"
+            "name": "外部前缀缓存查询与命中（Token/秒）",
+            "description": "指标含义\n前缀缓存按 Token 统计的查询/命中速率；外部缓存指跨实例 KV 共享。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -67,7 +70,120 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "%",
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(rate(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) and ((time() - timestamp(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (count_over_time(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= 12) and (resets(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 0) and (resets(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "{{node}} · {{engine}} · 查询"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(rate(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) and ((time() - timestamp(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (count_over_time(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= 12) and (resets(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 0) and (resets(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "{{node}} · {{engine}} · 命中"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-prefix_cache_": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "本地前缀缓存查询与命中（Token/秒）",
+            "description": "指标含义\n前缀缓存按 Token 统计的查询/命中速率；外部缓存指跨实例 KV 共享。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(rate(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) and ((time() - timestamp(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (count_over_time(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= 12) and (resets(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 0) and (resets(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "{{node}} · {{engine}} · 查询"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(rate(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) and ((time() - timestamp(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (count_over_time(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= 12) and (resets(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 0) and (resets(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "{{node}} · {{engine}} · 命中"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p0": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "实例 KV 缓存占用（%）",
+            "description": "指标含义\nvLLM 实例已分配 KV Cache 的占用比例乘以 100。按实例/角色区分；分母是该实例的 KV Cache 容量，不是整张 NPU 的显存容量。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
                 "min": 0
               }
             }
@@ -93,8 +209,8 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "本地前缀缓存命中率",
-            "description": "指标含义\n最近约 60 秒本地前缀缓存命中 Token ÷ 查询 Token × 100%。合并实例时按 Token 加权，不能直接平均各实例百分比。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n约 60 秒的连续有效观测窗口，由源监控计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 派生指标须满足 monitoring_chart_valid=1；原始数值存在但标记无效时也不显示。"
+            "name": "本地前缀缓存命中率（%）",
+            "description": "指标含义\n最近约 60 秒本地前缀缓存命中 Token ÷ 查询 Token × 100%。合并实例时按 Token 加权，不能直接平均各实例百分比。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -112,7 +228,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "%",
                 "min": 0
               }
             }
@@ -138,8 +253,8 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "外部前缀缓存命中率",
-            "description": "指标含义\n最近约 60 秒跨实例共享的外部前缀缓存命中 Token ÷ 查询 Token × 100%。这是外部 KV 共享口径，不表示 HiCache CPU、Mooncake Store 或 SSD 命中。\n\nY 轴单位\n百分比；图中 50 表示 50%，不是 0.5。\n\n曲线与范围\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\n时间口径\n约 60 秒的连续有效观测窗口，由源监控计算。 当前看板默认最近 1 小时、15 秒刷新；X 轴为时间。刷新间隔与统计窗口是不同概念。\n\n零值与空白\n缺样、过期或有效性检查不通过时留空。No data 不等于零；正常有效的零值才表示测得为零。 派生指标须满足 monitoring_chart_valid=1；原始数值存在但标记无效时也不显示。"
+            "name": "外部前缀缓存命中率（%）",
+            "description": "指标含义\n最近约 60 秒跨实例共享的外部前缀缓存命中 Token ÷ 查询 Token × 100%。这是外部 KV 共享口径，不表示 HiCache CPU、Mooncake Store 或 SSD 命中。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -157,7 +272,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "%",
                 "min": 0
               }
             }
@@ -179,12 +293,12 @@
           ]
         }
       },
-      "extra-prefix_cache_": {
+      "mooncake-capacity": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "本地前缀缓存查询与命中",
-            "description": "指标含义\n前缀缓存按 Token 统计的查询/命中速率；外部缓存指跨实例 KV 共享。\n\nY 轴单位\nToken / 秒\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+            "name": "Mooncake 内存容量（GiB）",
+            "description": "Master 管理的内存 segment 总容量及分配量，不是 NPU 显存。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -194,7 +308,6 @@
                 "mode": "list"
               },
               "yAxis": {
-                "label": "Token / 秒",
                 "min": 0
               },
               "visual": {
@@ -214,8 +327,8 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "(rate(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) and ((time() - timestamp(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (count_over_time(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= 12) and (resets(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 0) and (resets(vllm:prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= (1m / 5)))))",
-                    "seriesNameFormat": "{{node}} · {{engine}} · 查询",
+                    "query": "(master_allocated_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"} and ((time() - timestamp(master_allocated_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_allocated_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))))) / 1024^3",
+                    "seriesNameFormat": "已分配",
                     "minStep": "5s"
                   }
                 }
@@ -227,8 +340,8 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "(rate(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) and ((time() - timestamp(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (count_over_time(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= 12) and (resets(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 0) and (resets(vllm:prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= (1m / 5)))))",
-                    "seriesNameFormat": "{{node}} · {{engine}} · 命中",
+                    "query": "(master_total_capacity_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"} and ((time() - timestamp(master_total_capacity_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_total_capacity_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))))) / 1024^3",
+                    "seriesNameFormat": "总容量",
                     "minStep": "5s"
                   }
                 }
@@ -237,12 +350,12 @@
           ]
         }
       },
-      "extra-external_prefix_cache_": {
+      "mooncake-memory-ratio": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "外部前缀缓存查询与命中",
-            "description": "指标含义\n前缀缓存按 Token 统计的查询/命中速率；外部缓存指跨实例 KV 共享。\n\nY 轴单位\nToken / 秒\n\n曲线与范围\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+            "name": "Mooncake 内存分配比例（%）",
+            "description": "分配量 / 总容量；零容量时留空。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -252,7 +365,6 @@
                 "mode": "list"
               },
               "yAxis": {
-                "label": "Token / 秒",
                 "min": 0
               },
               "visual": {
@@ -272,8 +384,52 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "(rate(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) and ((time() - timestamp(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (count_over_time(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= 12) and (resets(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 0) and (resets(vllm:external_prefix_cache_queries_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= (1m / 5)))))",
-                    "seriesNameFormat": "{{node}} · {{engine}} · 查询",
+                    "query": "100 * ((master_allocated_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"} and ((time() - timestamp(master_allocated_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_allocated_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)))))) / (((master_total_capacity_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"} and ((time() - timestamp(master_total_capacity_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_total_capacity_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)))))) > 0)",
+                    "seriesNameFormat": "已分配比例",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "mooncake-file-capacity": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Mooncake 文件层容量（GiB）",
+            "description": "源定义为 3fs/nfs 文件存储容量；零容量不表示已启用 SSD offload，也不代表物理磁盘 I/O。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(master_allocated_file_size_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"} and ((time() - timestamp(master_allocated_file_size_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_allocated_file_size_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))))) / 1024^3",
+                    "seriesNameFormat": "已分配",
                     "minStep": "5s"
                   }
                 }
@@ -285,8 +441,563 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "(rate(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) and ((time() - timestamp(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (count_over_time(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= 12) and (resets(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 0) and (resets(vllm:external_prefix_cache_hits_total{environment=\"a3-vllm\",job=\"vllm-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\"}[1m]) >= (1m / 5)))))",
-                    "seriesNameFormat": "{{node}} · {{engine}} · 命中",
+                    "query": "(master_total_file_capacity_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"} and ((time() - timestamp(master_total_file_capacity_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_total_file_capacity_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))))) / 1024^3",
+                    "seriesNameFormat": "总容量",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "mooncake-keys": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Mooncake Key 数（个）",
+            "description": "Master 管理的 Key 数，不是模型请求数。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(master_key_count{environment=\"a3-vllm\",job=\"mooncake-a3\"} and ((time() - timestamp(master_key_count{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_key_count{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)))))",
+                    "seriesNameFormat": "Key",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "mooncake-clients": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Mooncake 活跃客户端（个）",
+            "description": "Master 报告的活跃客户端数。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(master_active_clients{environment=\"a3-vllm\",job=\"mooncake-a3\"} and ((time() - timestamp(master_active_clients{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_active_clients{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)))))",
+                    "seriesNameFormat": "客户端",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "mooncake-requests": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Mooncake 操作请求速率（次/秒）",
+            "description": "分别展示单次及批量 RPC 调用；不将批量 RPC 次数解释为 Key 数或缓存命中。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_exist_key_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_exist_key_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_exist_key_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_exist_key_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_exist_key_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_exist_key_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "exist_key",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_put_start_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_put_start_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_put_start_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_put_start_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_put_start_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_put_start_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "put_start",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_put_end_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_put_end_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_put_end_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_put_end_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_put_end_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_put_end_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "put_end",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_put_revoke_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_put_revoke_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_put_revoke_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_put_revoke_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_put_revoke_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_put_revoke_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "put_revoke",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_get_replica_list_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_get_replica_list_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_get_replica_list_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_get_replica_list_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_get_replica_list_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_get_replica_list_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "get_replica_list",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_batch_exist_key_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_batch_exist_key_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_batch_exist_key_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_batch_exist_key_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_batch_exist_key_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_batch_exist_key_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "batch_exist_key",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_batch_put_start_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_batch_put_start_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_batch_put_start_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_batch_put_start_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_batch_put_start_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_batch_put_start_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "batch_put_start",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_batch_put_end_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_batch_put_end_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_batch_put_end_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_batch_put_end_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_batch_put_end_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_batch_put_end_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "batch_put_end",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_batch_put_revoke_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_batch_put_revoke_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_batch_put_revoke_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_batch_put_revoke_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_batch_put_revoke_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_batch_put_revoke_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "batch_put_revoke",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_batch_get_replica_list_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_batch_get_replica_list_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_batch_get_replica_list_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_batch_get_replica_list_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_batch_get_replica_list_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_batch_get_replica_list_requests_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "batch_get_replica_list",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "mooncake-failures": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Mooncake 操作失败速率（次/秒）",
+            "description": "Master 操作失败计数速率；不是模型生成失败率或缓存未命中率。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_exist_key_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_exist_key_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_exist_key_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_exist_key_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_exist_key_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_exist_key_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "exist_key",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_put_start_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_put_start_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_put_start_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_put_start_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_put_start_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_put_start_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "put_start",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_put_end_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_put_end_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_put_end_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_put_end_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_put_end_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_put_end_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "put_end",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_put_revoke_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_put_revoke_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_put_revoke_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_put_revoke_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_put_revoke_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_put_revoke_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "put_revoke",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_get_replica_list_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_get_replica_list_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_get_replica_list_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_get_replica_list_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_get_replica_list_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_get_replica_list_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "get_replica_list",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_batch_exist_key_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_batch_exist_key_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_batch_exist_key_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_batch_exist_key_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_batch_exist_key_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_batch_exist_key_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "batch_exist_key",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_batch_put_start_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_batch_put_start_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_batch_put_start_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_batch_put_start_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_batch_put_start_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_batch_put_start_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "batch_put_start",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_batch_put_end_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_batch_put_end_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_batch_put_end_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_batch_put_end_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_batch_put_end_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_batch_put_end_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "batch_put_end",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_batch_put_revoke_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_batch_put_revoke_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_batch_put_revoke_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_batch_put_revoke_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_batch_put_revoke_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_batch_put_revoke_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "batch_put_revoke",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_batch_get_replica_list_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_batch_get_replica_list_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_batch_get_replica_list_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_batch_get_replica_list_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_batch_get_replica_list_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_batch_get_replica_list_failures_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "batch_get_replica_list",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "mooncake-evictions": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Mooncake 驱逐操作速率（次/秒）",
+            "description": "驱逐操作尝试和成功次数，保留源计数定义。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_attempted_evictions_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_attempted_evictions_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_attempted_evictions_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_attempted_evictions_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_attempted_evictions_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_attempted_evictions_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "尝试",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_successful_evictions_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_successful_evictions_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_successful_evictions_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_successful_evictions_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_successful_evictions_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_successful_evictions_total{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "成功",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "mooncake-evicted-keys": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Mooncake 驱逐 Key 速率（个/秒）",
+            "description": "被驱逐对象数量的增长速率。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_evicted_key_count{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_evicted_key_count{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_evicted_key_count{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_evicted_key_count{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_evicted_key_count{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_evicted_key_count{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5)))))",
+                    "seriesNameFormat": "Key",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "mooncake-evicted-bytes": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Mooncake 驱逐数据速率（MiB/秒）",
+            "description": "被驱逐对象字节计数，不代表物理 SSD 吞吐。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(master_evicted_size_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) and ((time() - timestamp(master_evicted_size_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (count_over_time(master_evicted_size_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(master_evicted_size_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= 12) and (resets(master_evicted_size_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 0) and (resets(master_evicted_size_bytes{environment=\"a3-vllm\",job=\"mooncake-a3\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"mooncake-a3\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"mooncake-a3\"}[1m]) >= (1m / 5))))) / 1024^2",
+                    "seriesNameFormat": "数据",
                     "minStep": "5s"
                   }
                 }
@@ -329,12 +1040,76 @@
               }
             },
             {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-prefix_cache_"
+              }
+            },
+            {
               "x": 0,
               "y": 16,
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/extra-prefix_cache_"
+                "$ref": "#/spec/panels/extra-external_prefix_cache_"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Mooncake Master"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/mooncake-capacity"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/mooncake-memory-ratio"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/mooncake-file-capacity"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/mooncake-keys"
+              }
+            },
+            {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/mooncake-clients"
               }
             },
             {
@@ -343,7 +1118,43 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/extra-external_prefix_cache_"
+                "$ref": "#/spec/panels/mooncake-requests"
+              }
+            },
+            {
+              "x": 0,
+              "y": 24,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/mooncake-failures"
+              }
+            },
+            {
+              "x": 12,
+              "y": 24,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/mooncake-evictions"
+              }
+            },
+            {
+              "x": 0,
+              "y": 32,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/mooncake-evicted-keys"
+              }
+            },
+            {
+              "x": 12,
+              "y": 32,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/mooncake-evicted-bytes"
               }
             }
           ]

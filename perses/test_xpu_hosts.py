@@ -11,7 +11,22 @@ from xpu_hosts import configure, EMPTY
 
 class XpuHostsTest(unittest.TestCase):
     def setUp(self):
-        self.source = json.loads((Path(__file__).parent / 'projects/dcu-monitoring/dashboards/hosts-dcu.json').read_text())
+        root = Path(__file__).parent / 'projects/dcu-monitoring/dashboards'
+        self.source = json.loads((root / 'hosts-dcu.json').read_text())
+        hardware = json.loads((root / 'accelerator-resources.json').read_text())
+        # Reconstruct the legacy mixed-layout input for this legacy converter test.
+        self.source['spec']['panels'] = {k.removeprefix('core-'):v for k,v in self.source['spec']['panels'].items()}
+        aliases = dict(zip(['utilization','memory-used','temperature','power','memory-total','memory-ratio'], ['p5','p6','p7','p8','extra-vram-total','extra-vram-ratio']))
+        self.source['spec']['panels'].update({aliases[k.removeprefix('core-')]:v for k,v in hardware['spec']['panels'].items()})
+        for p in self.source['spec']['panels'].values():
+            for q in p['spec']['queries']:
+                x=q['spec']['plugin']['spec'];x['query']=x['query'].replace(',node=~"$role"','')
+        self.source['spec']['variables'] = hardware['spec']['variables']
+        from project_split import grid
+        from xpu_hardware import PANELS
+        self.source['spec']['layouts'][0]['spec']['items'] = grid(list(self.source['spec']['panels']))
+        for key, (_, unit, _, _) in PANELS.items():
+            self.source['spec']['panels'][key]['spec']['plugin']['spec']['yAxis']['label'] = unit
 
     def test_host_scope_layout_and_card_metrics(self):
         before = copy.deepcopy(self.source)
@@ -50,7 +65,7 @@ class XpuHostsTest(unittest.TestCase):
             output = generate(path, root / 'output')
             result = json.loads((output / 'dashboards/hosts-xpu.json').read_text())
             self.assertIn('node_cpu_seconds_total', result['spec']['panels']['p0']['spec']['queries'][0]['spec']['plugin']['spec']['query'])
-            self.assertEqual(result['spec']['variables'][0]['spec']['plugin']['spec']['values'][1]['value'], 'xpu-2')
+            self.assertEqual(result['spec']['variables'][0]['spec']['plugin']['spec']['values'][1]['value'], 'xpu-1')
 
 
 if __name__ == '__main__':

@@ -1,7 +1,10 @@
 {
   "kind": "Project",
   "metadata": {
-    "name": "dcu-monitoring"
+    "name": "dcu-monitoring",
+    "createdAt": "2026-09-14T06:33:17.180800014Z",
+    "updatedAt": "2026-09-14T06:33:17.180800014Z",
+    "version": 0
   },
   "spec": {
     "display": {

@@ -1,0 +1,31 @@
+{
+  "passed": true,
+  "image": "sha256:edaf43b2e4a5e4bd678265de3eb2e10354a72bf60fc765d7a6364676460fb393",
+  "backup": "code-eval-web-before-stream-direction-20260923",
+  "other_containers_unchanged": true,
+  "health": {
+    "status": "ok",
+    "version": "0.8.0",
+    "build": "0.8.0-token-usage.2",
+    "monitoring_enabled": true,
+    "evaluation_router": {
+      "enabled": false,
+      "running": false,
+      "observed_at": 1790155391.0230699
+    },
+    "components": {
+      "web": {
+        "status": "ok"
+      },
+      "engine": {
+        "status": "ok",
+        "observed_at": 1790155391.0230699,
+        "build": "0.8.0-token-usage.2"
+      },
+      "database": {
+        "status": "ok",
+        "observed_at": 1790155392.3884745
+      }
+    }
+  }
+}

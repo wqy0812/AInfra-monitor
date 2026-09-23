@@ -15,7 +15,7 @@ def test_queries_match_current_project_dashboards(environment, project, step):
     path = Path(__file__).parents[1] / 'perses/projects' / project / 'dashboards/gateway-generation.json'
     panels = json.loads(path.read_text())['spec']['panels']
     queries = live.expressions(environment, step)
-    for field, panel in [(live.IDLE, 'live-idle-max'), (live.OLDEST, 'live-oldest')]:
+    for field, panel in [(live.BACKEND_WAIT, 'live-idle-max'), (live.WRITE_ACTIVE, 'live-oldest')]:
         expected = panels[panel]['spec']['queries'][0]['spec']['plugin']['spec']['query']
         assert queries[field] == expected.replace('$__interval', f'{step}s')
 
@@ -34,7 +34,7 @@ def test_decode_retains_zero_and_rejects_wrong_environment_invalid_and_ambiguous
 
 def test_gaps_and_stage_or_backend_changes_break_lines():
     points = [{'ts': ts} for ts in (100, 105, 110, 115, 120, 130)]
-    gateway = {ts: {live.IDLE: 1, live.OLDEST: ts, 'backend': 'a', 'stage': 'streaming'}
+    gateway = {ts: {live.IDLE: 1, live.BACKEND_WAIT: 2, live.WRITE_ACTIVE: 3, live.OLDEST: ts, 'backend': 'a', 'stage': 'streaming'}
                for ts in (100, 105, 110, 120, 130)}
     gateway[110]['stage'] = 'writing_client'
     gateway[120]['backend'] = 'b'
@@ -52,7 +52,7 @@ async def test_each_query_has_an_independent_timeout_and_error_boundary():
             await asyncio.sleep(1)
         return [row([[100, '55']], backend='a', stage='streaming')]
     points, status = await live.history(query, 'dcu-pd', 100, 110, 5, timeout=.01)
-    assert status == {live.IDLE: 'unavailable', live.OLDEST: 'ok'}
+    assert status == {field: 'unavailable' if field == live.IDLE else 'ok' for field in live.FIELDS}
     assert points[100][live.OLDEST] == 55
     assert points[100]['stage_name'] == '读取后续流'
 
@@ -68,6 +68,8 @@ async def test_history_merges_gateway_timestamps_caches_and_preserves_backend_fi
             return [row([[105, '0'], [110, '3']])]
         if 'aigate_inflight_oldest_age_seconds' in expr:
             return [row([[105, '0']]), row([[110, '20']], backend='a', stage='streaming')]
+        if 'aigate_' in expr:
+            return []
         if gateway_only:
             return []
         return [{'metric': {'path': path}, 'values': [[100, '7' if 'chart_value' in expr else '1']]}
@@ -82,7 +84,7 @@ async def test_history_merges_gateway_timestamps_caches_and_preserves_backend_fi
             node = result['points'][0]['nodes']['decode']
             assert node['requests'] == node['percentiles']['e2e']['p95'] == 7
         assert await service.history(1, 100, 110) is result
-        assert len(calls) == 5
+        assert len(calls) == 7
         assert all(args[1:] == (100, 110, 5) for args in calls)
     finally:
         await service.client.aclose()
@@ -119,3 +121,17 @@ async def test_latest_backend_sample_is_retained_when_gateway_is_ahead():
         assert result['points'][1]['gateway'][live.IDLE] == 3
     finally:
         await service.client.aclose()
+
+
+def test_new_metrics_are_streaming_and_old_samples_do_not_fill_them():
+    for field in (live.BACKEND_WAIT, live.WRITE_ACTIVE):
+        expr = live.expressions('dcu-pd', 15)[field]
+        assert f'aigate_stream_{field}{{job="aigate",environment="dcu-pd",request_scope="streaming"}}' in expr
+        for guard in ('aigate_live_backend_groups', 'timestamp(', 'count_over_time(', 'changes(', 'min_over_time(up'):
+            assert guard in expr
+    points = [{'ts': 100}, {'ts': 105}]
+    live.attach(points, {100: {live.IDLE: 8, live.OLDEST: 20}, 105: {live.BACKEND_WAIT: 0, live.WRITE_ACTIVE: 0}}, 5)
+    for field in (live.BACKEND_WAIT, live.WRITE_ACTIVE):
+        assert points[0]['gateway'][field] is None
+        assert points[1]['gateway'][field] == 0
+        assert field in points[1]['gateway']['gap_before']

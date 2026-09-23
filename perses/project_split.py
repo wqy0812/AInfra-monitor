@@ -86,12 +86,12 @@ def normalize_dashboard(document, project):
             desc = re.sub(r"曲线与范围\n.*?(?=\n\n时间口径)",
                           "曲线与范围\n" + owner + " 主机网关。按采集环境归属；图例区分本环境的后端或阶段。",
                           desc, flags=re.S)
-            desc += "\n\n项目与源口径\n" + owner + " 主机网关；按采集环境归属，后端可能跨环境转发。请求量、画像、总耗时、错误率和在途状态包含流式及非流式；首增量、首输出等待、流停顿及流观察未知仅统计流式。"
         if any('schema="request-metrics-v2"' in q['spec']['plugin']['spec']['query']
                for q in p['spec'].get('queries', [])):
             desc = re.sub(r'\n\n请求派生口径\n.*$', '', desc, flags=re.S)
             desc += ('\n\n请求派生口径\n后端指标使用原生统计，不强制区分流式。正常业务以流式为主；精度测试期间可能混入非流式并影响延迟分布。DCU ITL 按输出批次平均。新口径上线前的历史留空，不做迁移。')
-        display["description"] = desc.strip()
+        from dcu_bottlenecks import compact_description
+        display["description"] = compact_description(desc)
     return d
 
 
@@ -143,9 +143,7 @@ def add(d, key, title, qs, unit, meaning):
     scope = "test4，共享于 DCU / A3；不表示某一个推理集群的资源。" if shared else ("DCU" if env == "dcu-pd" else "A3") + " 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
     desc = (
         "指标含义\n" + meaning + "\n\nY 轴单位\n" + unit +
-        "\n\n曲线与范围\n" + scope +
-        "\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。"
-        "\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+        "\n\n曲线与范围\n" + scope
     )
     if d["metadata"]["name"] == "gateway-requests":
         desc += "\n\n源口径\n画像包含流式及非流式。网关首增量仅包含观测到有效增量的流式请求；Token 和总耗时在请求结束时计入。"
@@ -326,6 +324,10 @@ def shared_health(project):
 
 
 def build(snapshot):
+    from dashboard_reorg import migrate
+    if any(d['metadata']['name'] == 'backend-performance' for d in snapshot['dashboards']):
+        from align_dashboards import align
+        return align(migrate(snapshot)[0])[0]
     by_key = {(d["metadata"]["project"], d["metadata"]["name"]): d for d in snapshot["dashboards"]}
     result = {"projects": [], "datasources": [], "dashboards": []}
     ds = next(x for x in snapshot["datasources"] if x["metadata"]["name"] == "victoriametrics")
@@ -360,8 +362,10 @@ def build(snapshot):
             result["dashboards"].append(d)
         result["dashboards"] += [gateway_requests(project), backend(project), shared_health(project)]
     from remove_idle_thresholds import remove_panels
-    result['dashboards'] = [remove_panels(d) for d in result['dashboards']]
-    return result
+    from dcu_bottlenecks import default_configure
+    result['dashboards'] = [default_configure(remove_panels(d)) for d in result['dashboards']]
+    from align_dashboards import align
+    return align(migrate(result)[0])[0]
 
 
 def validate(resources):
@@ -375,6 +379,7 @@ def validate(resources):
         assert name.startswith("a3-") is False or project == "a3-monitoring"
         env = "dcu-pd" if name == "monitoring-health" else PROJECTS[project]
         for key, p in d["spec"]["panels"].items():
+            env = PROJECTS[project] if name == "monitoring-health" and key.startswith("overview-") else ("dcu-pd" if name == "monitoring-health" else PROJECTS[project])
             for item in p["spec"]["queries"]:
                 query = item["spec"]["plugin"]["spec"]["query"]
                 assert no_request_filter(query) == query, (project, name, key, "request filter")
@@ -385,11 +390,23 @@ def validate(resources):
                 assert current_request_schema(query) == query, (project, name, key, "outdated request schema")
             for settings in p["spec"]["plugin"]["spec"].get("querySettings", []):
                 assert 0 <= settings["queryIndex"] < len(p["spec"]["queries"])
-        refs = [x["content"]["$ref"].split("/")[-1] for x in d["spec"]["layouts"][0]["spec"]["items"]]
+        refs = [x["content"]["$ref"].split("/")[-1] for layout in d["spec"]["layouts"] for x in layout["spec"]["items"]]
         assert len(refs) == len(set(refs)) and set(refs) == set(d["spec"]["panels"])
-        if name == "gateway-generation":
-            assert len(refs) == 13
-    assert counts == {project: 8 for project in projects}, counts
+        from dashboard_reorg import RETIRED
+        assert name not in RETIRED[project], (project, name, 'retired dashboard')
+        variables = {v['spec']['name'] for v in d['spec'].get('variables', [])}
+        for p in d['spec']['panels'].values():
+            assert not p['spec']['plugin']['spec'].get('yAxis', {}).get('label'), (name, 'axis label')
+            desc = p['spec']['display'].get('description', '')
+            assert 'Y 轴单位' not in desc and '曲线与范围' not in desc
+            for q in p['spec'].get('queries', []):
+                used = set(re.findall(r'\$([A-Za-z_]\w*)', q['spec']['plugin']['spec']['query'])) - {'__interval'}
+                assert used <= variables, (project, name, used - variables)
+    for project in projects:
+        names = {d['metadata']['name'] for d in resources['dashboards'] if d['metadata']['project'] == project}
+        required = {'backend-performance', 'accelerator-resources', 'gateway', 'gateway-requests', 'gateway-generation', 'monitoring-health'}
+        required |= {'backend-prefill', 'backend-decode', 'a3-hosts', 'a3-cache'} if project == 'a3-monitoring' else {'backend-prefill', 'backend-decode', 'cache-store', 'hosts-xpu' if project == 'xpu-monitoring' else 'hosts-dcu'}
+        assert required <= names, (project, required - names)
 
 
 def main():
@@ -402,15 +419,8 @@ def main():
     source = json.loads(args.snapshot.read_text()) if args.snapshot else read_resources(args.output)
     resources = build(source)
     validate(resources)
-    for kind, documents in resources.items():
-        for d in documents:
-            project = d["metadata"]["name"] if kind == "projects" else d["metadata"]["project"]
-            path = args.output / project
-            if kind == "dashboards":
-                path /= "dashboards"
-            path.mkdir(parents=True, exist_ok=True)
-            filename = "project" if kind == "projects" else "datasource" if kind == "datasources" else d["metadata"]["name"]
-            (path / (filename + ".json")).write_text(json.dumps(d, ensure_ascii=False, indent=2) + "\n")
+    from dashboard_reorg import write_resources
+    write_resources(resources, args.output)
     print(json.dumps({"projects": len(resources["projects"]), "dashboards": len(resources["dashboards"]),
                       "panels": sum(len(d["spec"]["panels"]) for d in resources["dashboards"])}))
 

@@ -24,7 +24,7 @@ class ProjectSplitTest(unittest.TestCase):
 
     def test_resource_structure_and_no_request_filters(self):
         split.validate(self.resources)
-        self.assertEqual(len(self.resources["dashboards"]), 24)
+        self.assertEqual(len(self.resources["dashboards"]), 30)
         self.assertEqual(split.no_request_filter(
             'm{request_scope="streaming",a="b"} + m{a="b",is_streaming!="false"} + m{stream="true"}'),
             'm{a="b"} + m{a="b"} + m{}')
@@ -33,8 +33,9 @@ class ProjectSplitTest(unittest.TestCase):
         for d in self.resources["dashboards"]:
             if d["metadata"]["name"] == "gateway-generation":
                 env = split.PROJECTS[d["metadata"]["project"]]
-                self.assertIn("live-stages-" + env, d["spec"]["panels"])
-                self.assertEqual(len(d["spec"]["panels"]), 13)
+                self.assertIn("live-stages", d["spec"]["panels"])
+                self.assertEqual(len(d["spec"]["panels"]), 8)
+                d = next(x for x in self.resources["dashboards"] if x["metadata"]["project"] == d["metadata"]["project"] and x["metadata"]["name"] == "gateway-requests")
                 self.assertEqual(len(d["spec"]["panels"]["generation-0"]["spec"]["queries"]), 1)
                 setting = d["spec"]["panels"]["generation-0"]["spec"]["plugin"]["spec"]["querySettings"]
                 self.assertEqual(setting[0]["queryIndex"], 0)
@@ -55,7 +56,7 @@ class ProjectSplitTest(unittest.TestCase):
     def test_validation_rejects_wrong_environment_even_for_xpu(self):
         resources = copy.deepcopy(self.resources)
         dashboard = next(d for d in resources['dashboards'] if
-                         d['metadata']['project'] == 'xpu-monitoring' and d['metadata']['name'] == 'overview')
+                         d['metadata']['project'] == 'xpu-monitoring' and d['metadata']['name'] == 'backend-performance')
         query = next(iter(dashboard['spec']['panels'].values()))['spec']['queries'][0]['spec']['plugin']['spec']
         query['query'] = query['query'].replace('environment="xpu-pd"', 'environment="dcu-pd"')
         with self.assertRaises(AssertionError):
@@ -69,7 +70,7 @@ class ProjectSplitTest(unittest.TestCase):
                      for kind, docs in self.resources.items()}
         generated = split.build(resources)
         split.validate(generated)
-        self.assertEqual(len(generated['dashboards']), 16)
+        self.assertEqual(len(generated['dashboards']), 20)
         for d in generated['dashboards']:
             self.assertFalse(set(d['spec']['panels']) & {'live-idle-5', 'live-idle-15', 'live-idle-30', 'live-idle-60'})
 

@@ -79,8 +79,8 @@ def build_panels():
         panels[PREFIX + key] = p
     comparison('waiting', '等待首个有效输出 · 请求数', lambda e: aggregate('aigate_streams_waiting_first_output', e), '请求', '仅流式；解析为 stream=true 后计入，包含路由及模型发现。')
     comparison('wait-max', '等待首个有效输出 · 最长等待', lambda e: aggregate('aigate_stream_first_output_wait_max_seconds', e, 'max'), '秒', '从网关接收请求起计时，收到有效正文、推理、拒绝或工具增量后退出。')
-    comparison('idle-max', '流停顿 · 最长无新内容间隔', lambda e: aggregate('aigate_stream_idle_max_seconds', e, 'max'), '秒', '观察网关收到的下游内容；客户端写入受阻时结合当前阶段判断。')
-    comparison('oldest', '最老在途请求 · 年龄与当前阶段', oldest, '秒', '流式及非流式请求；每个网关选择最老请求并关联其后端及阶段。阶段变化不跨线连接。', {env: name + ' · {{backend}} · {{stage_name}}' for env, name, _ in ENVIRONMENTS})
+    comparison('idle-max', '后端最长未更新时间', lambda e: aggregate('aigate_stream_backend_wait_max_seconds', e, 'max'), '秒', '仅累计等待后端有效输出的时间，排除网关写出耗时；首次输出前从读取响应体开始计时。心跳和 usage 不算有效输出。')
+    comparison('oldest', '写持续最长时间', lambda e: aggregate('aigate_stream_write_active_max_seconds', e, 'max'), '秒', '当前一轮写入及刷新持续时间，升高表示输出路径可能存在背压。与后端等待最大值可能来自不同请求。')
     for env, name, _ in ENVIRONMENTS:
         queries = [(f'sum by(environment) ({complete_gauge("aigate_inflight_requests_by_stage", env, "stage=" + json.dumps(stage))})', label) for stage, label in STAGES.items()]
         panels[PREFIX + 'stages-' + env] = panel(name + ' · 在途处理阶段', queries, '请求', common + '一个请求同时只属于一个阶段；流读取与客户端写入会切换阶段。')

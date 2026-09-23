@@ -69,12 +69,13 @@ def target_rows():
 
 def test_all_configured_targets_including_relabeled_gateways_pass():
     expected, up, stamps = target_rows()
-    assert len(expected) == 30
+    assert len(expected) == 31
+    assert ('mooncake-a3', '122.209.21.24:9003', 'a3-vllm') in expected
     assert ('aigate', '122.52.5.131:18082', 'a3-vllm') in expected
     assert ('aigate', '122.209.21.33:18082', 'xpu-pd') in expected
     assert {('node-xpu', address + ':9110', 'xpu-pd') for address in ('122.209.21.33', '122.209.21.34')} <= expected
     assert {('xpu-hardware', address + ':9507', 'xpu-pd') for address in ('122.209.21.33', '122.209.21.34')} <= expected
-    assert len(validation.validate_targets(up, stamps, expected, 100)) == 30
+    assert len(validation.validate_targets(up, stamps, expected, 100)) == 31
 
 
 @pytest.mark.parametrize('fault', ['missing', 'extra', 'duplicate', 'environment', 'down', 'stale', 'future', 'nan', 'missing-timestamp'])
@@ -108,6 +109,7 @@ def test_configured_duplicates_and_unsupported_discovery_fail(tmp_path):
 @pytest.mark.parametrize('write', [False, True])
 async def test_gateway_candidate_checks_all_ranges_and_rejects_vm_writes(monkeypatch, write):
     import monitoring.api as api
+    from monitoring.gateway_live import FIELDS
     original_client = httpx.AsyncClient
     calls = []
     def transport(request):
@@ -125,8 +127,8 @@ async def test_gateway_candidate_checks_all_ranges_and_rejects_vm_writes(monkeyp
             queried.append((self.environment, hours))
             if write:await self.client.post('http://vm/api/v1/import/prometheus', content='forbidden')
             else:await self.client.get('http://vm/api/v1/query_range')
-            return {'environment': self.environment, 'points': [{'gateway': {'stream_idle_max_seconds': 0, 'oldest_age_seconds': 0}}],
-                    'gateway_status': {'stream_idle_max_seconds': 'ok', 'oldest_age_seconds': 'ok'}}
+            return {'environment': self.environment, 'points': [{'gateway': dict.fromkeys(FIELDS, 0)}],
+                    'gateway_status': dict.fromkeys(FIELDS, 'ok')}
     monkeypatch.setattr(api, 'Service', Service)
     if write:
         with pytest.raises(RuntimeError, match='read-only'):await checker.api()

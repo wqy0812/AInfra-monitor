@@ -138,6 +138,6 @@ async def test_history_reads_aggregates_without_raw_cpu_query():
         assert 'cpu_iowait' not in result['points'][0]['nodes']['prefill']['gap_before']
         assert all('node_cpu_seconds_total' not in q for q in calls)
         assert await service.history(1, 100, 105) is result
-        assert len(calls) == 5
+        assert len(calls) == 7
     finally:
         await service.client.aclose()

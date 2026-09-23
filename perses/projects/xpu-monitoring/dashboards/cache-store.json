@@ -2,20 +2,22 @@
   "kind": "Dashboard",
   "metadata": {
     "name": "cache-store",
+    "createdAt": "2026-09-21T05:58:11.646659541Z",
+    "updatedAt": "2026-09-23T10:25:33.525708987Z",
+    "version": 4,
     "project": "xpu-monitoring"
   },
   "spec": {
     "display": {
-      "name": "XPU Prefill 与 HiCache",
-      "description": "XPU Prefill 原始指标，每 5 秒采集。缓存回载和淘汰保留框架计数口径；整体前缀命中率不等于 CPU 独立命中率。缺失及无分母留空。"
+      "name": "缓存与存储",
+      "description": "按指标观测位置分类；单位见图表标题，详细统计含义见图表提示。"
     },
-    "variables": [],
     "panels": {
       "p0": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "采集状态",
+            "name": "采集状态（up）",
             "description": "Prefill 原始指标采集状态，1 表示成功。"
           },
           "plugin": {
@@ -34,7 +36,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "up",
                 "min": 0
               }
             }
@@ -47,7 +48,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "up{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}",
+                    "query": "up{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.33:8501\"}",
                     "seriesNameFormat": "{{instance}} {{cache_type}}"
                   }
                 }
@@ -60,7 +61,7 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "整体前缀缓存命中率",
+            "name": "整体前缀缓存命中率（%）",
             "description": "取代表 rank 的原生前缀缓存命中率；包含整体缓存复用，不是 CPU HiCache 独立命中率。"
           },
           "plugin": {
@@ -79,7 +80,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "%",
                 "min": 0
               }
             }
@@ -92,7 +92,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "sglang:cache_hit_rate{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\",tp_rank=\"0\",pp_rank=\"0\"} * 100",
+                    "query": "sglang:cache_hit_rate{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.33:8501\",tp_rank=\"0\",pp_rank=\"0\"} * 100",
                     "seriesNameFormat": "{{instance}} {{cache_type}}"
                   }
                 }
@@ -105,7 +105,7 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "缓存命中 token 速率",
+            "name": "缓存命中 token 速率（Token/秒）",
             "description": "原生累计缓存 token 的一分钟速率，仅取 Prefill，不与 Decode 相加。"
           },
           "plugin": {
@@ -124,7 +124,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "token/s",
                 "min": 0
               }
             }
@@ -137,7 +136,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "rate(sglang:cached_tokens_total{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}[1m])",
+                    "query": "rate(sglang:cached_tokens_total{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.33:8501\"}[1m])",
                     "seriesNameFormat": "{{instance}} {{cache_type}}"
                   }
                 }
@@ -150,7 +149,7 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "CPU → XPU 回载 token 速率",
+            "name": "CPU → XPU 回载 token 速率（Token/秒）",
             "description": "原生 HiRadixCache 回载计数的速率，可能包含多个 rank；不作为唯一请求 token 数或独立命中率。"
           },
           "plugin": {
@@ -169,7 +168,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "token/s",
                 "min": 0
               }
             }
@@ -182,7 +180,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "rate(sglang:load_back_tokens_total{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}[1m])",
+                    "query": "rate(sglang:load_back_tokens_total{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.33:8501\"}[1m])",
                     "seriesNameFormat": "{{instance}} {{cache_type}}"
                   }
                 }
@@ -195,7 +193,7 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "XPU → CPU 淘汰 token 速率",
+            "name": "XPU → CPU 淘汰 token 速率（Token/秒）",
             "description": "原生 HiRadixCache 淘汰计数的速率，保留框架聚合口径，不与请求 token 直接比较。"
           },
           "plugin": {
@@ -214,7 +212,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "token/s",
                 "min": 0
               }
             }
@@ -227,7 +224,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "rate(sglang:evicted_tokens_total{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}[1m])",
+                    "query": "rate(sglang:evicted_tokens_total{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.33:8501\"}[1m])",
                     "seriesNameFormat": "{{instance}} {{cache_type}}"
                   }
                 }
@@ -240,7 +237,7 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "平均回载耗时",
+            "name": "平均回载耗时（秒）",
             "description": "原生计时器每次回载操作平均耗时；无操作时留空，不等同于用户请求时延。"
           },
           "plugin": {
@@ -259,7 +256,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "ms",
                 "min": 0
               }
             }
@@ -272,7 +268,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "rate(sglang:load_back_duration_seconds_sum{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}[1m]) / (rate(sglang:load_back_duration_seconds_count{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}[1m]) > 0) * 1000",
+                    "query": "(rate(sglang:load_back_duration_seconds_sum{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.33:8501\"}[1m]) / (rate(sglang:load_back_duration_seconds_count{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.33:8501\"}[1m]) > 0) * 1000) * 0.001",
                     "seriesNameFormat": "{{instance}} {{cache_type}}"
                   }
                 }
@@ -285,7 +281,7 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "平均淘汰耗时",
+            "name": "平均淘汰耗时（秒）",
             "description": "原生计时器每次淘汰操作平均耗时；无操作时留空。"
           },
           "plugin": {
@@ -304,7 +300,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "ms",
                 "min": 0
               }
             }
@@ -317,7 +312,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "rate(sglang:eviction_duration_seconds_sum{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}[1m]) / (rate(sglang:eviction_duration_seconds_count{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}[1m]) > 0) * 1000",
+                    "query": "(rate(sglang:eviction_duration_seconds_sum{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.33:8501\"}[1m]) / (rate(sglang:eviction_duration_seconds_count{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.33:8501\"}[1m]) > 0) * 1000) * 0.001",
                     "seriesNameFormat": "{{instance}} {{cache_type}}"
                   }
                 }
@@ -330,7 +325,7 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "缓存操作速率",
+            "name": "回载操作速率（次/秒）",
             "description": "原生回载计时器观测次数速率，可能为多 rank 聚合。"
           },
           "plugin": {
@@ -349,7 +344,6 @@
                 "lineWidth": 1
               },
               "yAxis": {
-                "label": "次/s",
                 "min": 0
               }
             }
@@ -362,97 +356,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "rate(sglang:load_back_duration_seconds_count{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}[1m])",
-                    "seriesNameFormat": "{{instance}} {{cache_type}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "p8": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "主机缓存容量 / 占用（未暴露）",
-            "description": "当前端点未暴露主机缓存容量和占用；No data 不代表零。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "label": "token",
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "vector(0) unless on() vector(0)",
-                    "seriesNameFormat": "{{instance}} {{cache_type}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "p9": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "CPU HiCache 独立命中率（未暴露）",
-            "description": "当前端点没有可核实的 CPU 层独立命中率分子和分母；不以整体命中率替代。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "label": "%",
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "vector(0) unless on() vector(0)",
+                    "query": "rate(sglang:load_back_duration_seconds_count{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.33:8501\"}[1m])",
                     "seriesNameFormat": "{{instance}} {{cache_type}}"
                   }
                 }
@@ -537,24 +441,6 @@
               "height": 8,
               "content": {
                 "$ref": "#/spec/panels/p7"
-              }
-            },
-            {
-              "x": 0,
-              "y": 32,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/p8"
-              }
-            },
-            {
-              "x": 12,
-              "y": 32,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/p9"
               }
             }
           ]

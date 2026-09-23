@@ -68,10 +68,10 @@ async def test_history_cache_preserves_exact_query_bounds_and_response_metadata(
     try:
         first = await service.history(1, 100, 3700)
         assert await service.history(1, 100, 3700) == first
-        assert len(calls) == 5
+        assert len(calls) == 7
         second = await service.history(1, 105, 3705)
         assert [p['ts'] for p in second['points']] == [105, 3705]
-        assert len(calls) == 10
+        assert len(calls) == 14
         assert (await service.history(2, 105, 3705))['hours'] == 2
     finally:
         await service.client.aclose()

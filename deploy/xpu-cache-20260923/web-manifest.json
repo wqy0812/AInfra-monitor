@@ -1,0 +1,12 @@
+{
+  "before": {
+    "/app/frontend/static/app.js": "f27facb4b66d8820a9fe3c3d0cb67cbbfe0f5cc9d5e01640c5330dbdace6c45d",
+    "/app/frontend/static/charts.js": "e689aefba90dd4e8f683db85b24a83fd31014db35f8879d57e681b269f30c782",
+    "/app/frontend/static/index.html": "6dd8ccd155a40f7cb3a2e9ad0e420e2b6e8ada7d480cbc9494617341165d99f0"
+  },
+  "after": {
+    "/app/frontend/static/app.js": "272070298de9d25081ea55a6b1637db76da211e4104566101861646fd2e7c663",
+    "/app/frontend/static/charts.js": "fa262c6bd466d5dbd4068da8a4ae065e5de28f518097ab0a78c4ebb77eda899d",
+    "/app/frontend/static/index.html": "a8af27b1bbbbded1b044e542baf8730d8e65cc93bcf883df09ea62049026631b"
+  }
+}

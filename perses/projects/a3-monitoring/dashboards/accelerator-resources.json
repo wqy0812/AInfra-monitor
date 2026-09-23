@@ -1,0 +1,500 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "project": "a3-monitoring",
+    "name": "accelerator-resources"
+  },
+  "spec": {
+    "display": {
+      "name": "加速卡资源",
+      "description": "统一核心图表；来源特有指标列于专属诊断。单位见标题，统计差异见图表提示。"
+    },
+    "variables": [
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "name": "role",
+          "display": {
+            "name": "角色"
+          },
+          "defaultValue": ".*",
+          "plugin": {
+            "kind": "StaticListVariable",
+            "spec": {
+              "values": [
+                {
+                  "value": ".*",
+                  "label": "全部"
+                },
+                {
+                  "value": "(prefill|a3-1)",
+                  "label": "Prefill"
+                },
+                {
+                  "value": "(decode|a3-2)",
+                  "label": "Decode"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "display": {
+            "name": "节点",
+            "hidden": false
+          },
+          "defaultValue": ".*",
+          "allowAllValue": false,
+          "allowMultiple": false,
+          "plugin": {
+            "kind": "StaticListVariable",
+            "spec": {
+              "values": [
+                {
+                  "label": "全部",
+                  "value": ".*"
+                },
+                {
+                  "label": "A3-1",
+                  "value": "a3-1"
+                },
+                {
+                  "label": "A3-2",
+                  "value": "a3-2"
+                }
+              ]
+            }
+          },
+          "name": "node"
+        }
+      },
+      {
+        "kind": "ListVariable",
+        "spec": {
+          "display": {
+            "name": "NPU 芯片",
+            "hidden": false
+          },
+          "defaultValue": ".*",
+          "allowAllValue": false,
+          "allowMultiple": false,
+          "plugin": {
+            "kind": "StaticListVariable",
+            "spec": {
+              "values": [
+                {
+                  "label": "全部",
+                  "value": ".*"
+                },
+                {
+                  "label": "NPU 0",
+                  "value": "0"
+                },
+                {
+                  "label": "NPU 1",
+                  "value": "1"
+                },
+                {
+                  "label": "NPU 2",
+                  "value": "2"
+                },
+                {
+                  "label": "NPU 3",
+                  "value": "3"
+                },
+                {
+                  "label": "NPU 4",
+                  "value": "4"
+                },
+                {
+                  "label": "NPU 5",
+                  "value": "5"
+                },
+                {
+                  "label": "NPU 6",
+                  "value": "6"
+                },
+                {
+                  "label": "NPU 7",
+                  "value": "7"
+                },
+                {
+                  "label": "NPU 8",
+                  "value": "8"
+                },
+                {
+                  "label": "NPU 9",
+                  "value": "9"
+                },
+                {
+                  "label": "NPU 10",
+                  "value": "10"
+                },
+                {
+                  "label": "NPU 11",
+                  "value": "11"
+                },
+                {
+                  "label": "NPU 12",
+                  "value": "12"
+                },
+                {
+                  "label": "NPU 13",
+                  "value": "13"
+                },
+                {
+                  "label": "NPU 14",
+                  "value": "14"
+                },
+                {
+                  "label": "NPU 15",
+                  "value": "15"
+                }
+              ]
+            }
+          },
+          "name": "device"
+        }
+      }
+    ],
+    "panels": {
+      "core-utilization": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡利用率（%）",
+            "description": "AI Core 利用率，按 exporter 原始芯片 ID 分线；不与 DCU HCU 的硬件执行单元定义等同。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "max": 100,
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} and ((npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} >= 0) and (npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} < +Inf) and (npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} <= 100)) and (time() - timestamp(npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) >= 0) and (time() - timestamp(npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5))))",
+                    "seriesNameFormat": "{{node}} · NPU {{id}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "core-memory-used": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡显存已用（GiB）",
+            "description": "芯片 HBM 已用容量；源单位 MiB，除以 1024 转为 GiB。不是 vLLM KV Cache 占用。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(((npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} and ((npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} >= 0) and (npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5))))) <= ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} and ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} >= 0) and (npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)))))) / 1024",
+                    "seriesNameFormat": "{{node}} · NPU {{id}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "core-temperature": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡温度（°C）",
+            "description": "exporter 上报的芯片温度。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(npu_chip_info_temperature{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} and ((npu_chip_info_temperature{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} >= 0) and (npu_chip_info_temperature{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} < +Inf)) and (time() - timestamp(npu_chip_info_temperature{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) >= 0) and (time() - timestamp(npu_chip_info_temperature{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5))))",
+                    "seriesNameFormat": "{{node}} · NPU {{id}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "core-power": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡功耗（W）",
+            "description": "exporter 按芯片 ID 上报的功耗读数，保留原始粒度，不跨芯片相加为整机功耗。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(npu_chip_info_power{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} and ((npu_chip_info_power{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} >= 0) and (npu_chip_info_power{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} < +Inf)) and (time() - timestamp(npu_chip_info_power{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) >= 0) and (time() - timestamp(npu_chip_info_power{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5))))",
+                    "seriesNameFormat": "{{node}} · NPU {{id}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "core-memory-total": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡显存总量（GiB）",
+            "description": "芯片 HBM 总容量；源单位 MiB，除以 1024 转为 GiB。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} and ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} >= 0) and (npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5))))) > 0) / 1024",
+                    "seriesNameFormat": "{{node}} · NPU {{id}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "core-memory-ratio": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡显存占用比例（%）",
+            "description": "同一节点、同一芯片 HBM 已用 / 总量；总量必须大于零且已用量不能超过总量。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "max": 100,
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "100 * ((((npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} and ((npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} >= 0) and (npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5))))) <= ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} and ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} >= 0) and (npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5))))))) / (((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} and ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} >= 0) and (npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5))))) > 0)",
+                    "seriesNameFormat": "{{node}} · NPU {{id}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "核心指标"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-utilization"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-memory-used"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-temperature"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-power"
+              }
+            },
+            {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-memory-total"
+              }
+            },
+            {
+              "x": 12,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/core-memory-ratio"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "duration": "1h",
+    "refreshInterval": "15s"
+  }
+}

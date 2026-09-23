@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "image": "sha256:aeb36a7b90345b0ce2025f63b67ceb156b28f44814f0d542798418935b3cfbb3",
+  "rollback_container": "monitoring-api-before-xpu-cache-20260923",
+  "other_containers_unchanged": true,
+  "latest_ratio": 0,
+  "history_points": 542,
+  "valid": 541,
+  "max": 0.0
+}

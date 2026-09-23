@@ -1,43 +1,39 @@
 {
   "kind": "Dashboard",
   "metadata": {
-    "name": "monitoring-health",
-    "project": "dcu-monitoring"
+    "project": "dcu-monitoring",
+    "name": "monitoring-health"
   },
   "spec": {
     "display": {
-      "name": "共享监控服务 · test4",
-      "description": "test4，共享于 DCU / A3。两项目读取同一组公共服务指标；公共源现有 environment 标签为 dcu-pd。"
+      "name": "采集与监控健康",
+      "description": "统一核心图表；来源特有指标列于专属诊断。单位见标题，统计差异见图表提示。"
     },
-    "duration": "1h",
-    "refreshInterval": "15s",
-    "variables": [],
     "panels": {
-      "extra-up": {
+      "overview-p0": {
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "VM / vmagent 采集状态",
-            "description": "指标含义\n公共服务监控端点的抓取状态，不代表推理服务可用。\n\nY 轴单位\n1 = 正常\n\n曲线与范围\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+            "name": "采集目标状态（1 = 正常）",
+            "description": "指标含义\nPrometheus 采集目标的抓取状态：1 表示本次指标抓取成功，0 表示失败。图例区分采集 job；采集成功只证明监控端点可读取，不证明模型能够正常完成推理。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
             "spec": {
               "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "1 = 正常",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 1,
-                "connectNulls": false
+                "mode": "list",
+                "position": "bottom"
               },
               "tooltip": {
                 "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
               }
             }
           },
@@ -48,9 +44,198 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
+                    "minStep": "5s",
+                    "query": "up{environment=\"dcu-pd\"} and (time() - timestamp(up{environment=\"dcu-pd\"}) < 15)",
+                    "seriesNameFormat": "{{job}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "overview-extra-scrape-duration": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "指标采集耗时（秒）",
+            "description": "指标含义\n每次抓取指标所耗时间；接近 scrape timeout 时需检查源端或网络。\n\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "scrape_duration_seconds{environment=\"dcu-pd\"} and (time() - timestamp(scrape_duration_seconds{environment=\"dcu-pd\"}) < 15)",
+                    "seriesNameFormat": "{{job}} · {{instance}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "overview-extra-sample-age": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "采集样本年龄（秒）",
+            "description": "指标含义\n最近 up 观测距当前查询时刻的年龄。超出查询回看范围时源序列消失，留空。\n\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "time() - timestamp(up{environment=\"dcu-pd\"})",
+                    "seriesNameFormat": "{{job}} · {{instance}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "overview-extra-derived-valid": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "派生指标有效性（字段数）",
+            "description": "指标含义\n按 schema 展示当前有效及已观测派生字段数。无请求造成部分字段无效属于正常口径，不是服务故障率。\n\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "sum by(schema) (monitoring_chart_valid{environment=\"dcu-pd\"} and (time() - timestamp(monitoring_chart_valid{environment=\"dcu-pd\"}) < 15))",
+                    "seriesNameFormat": "{{schema}} · 有效字段"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "count by(schema) (monitoring_chart_valid{environment=\"dcu-pd\"} and (time() - timestamp(monitoring_chart_valid{environment=\"dcu-pd\"}) < 15))",
+                    "seriesNameFormat": "{{schema}} · 已观测字段"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "extra-up": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "VM / vmagent 采集状态（1 = 正常）",
+            "description": "指标含义\n公共服务监控端点的抓取状态，不代表推理服务可用。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
                     "query": "up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15)",
-                    "seriesNameFormat": "{{job}}",
-                    "minStep": "5s"
+                    "seriesNameFormat": "{{job}}"
                   }
                 }
               }
@@ -62,27 +247,26 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "监控服务 CPU",
-            "description": "指标含义\n进程 CPU 用时增长率，1 表示占用约一个逻辑 CPU 核。\n\nY 轴单位\nCPU 核\n\n曲线与范围\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+            "name": "监控服务 CPU（CPU 核）",
+            "description": "指标含义\n进程 CPU 用时增长率，1 表示占用约一个逻辑 CPU 核。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
             "spec": {
               "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "CPU 核",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 1,
-                "connectNulls": false
+                "mode": "list",
+                "position": "bottom"
               },
               "tooltip": {
                 "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
               }
             }
           },
@@ -93,9 +277,9 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
+                    "minStep": "5s",
                     "query": "(rate(process_cpu_seconds_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) and ((time() - timestamp(process_cpu_seconds_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (count_over_time(process_cpu_seconds_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15))) and (count_over_time(process_cpu_seconds_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) >= 12) and (resets(process_cpu_seconds_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) == 0) and (resets(process_cpu_seconds_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) >= (1m / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} >= 1m) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15)))))",
-                    "seriesNameFormat": "{{job}}",
-                    "minStep": "5s"
+                    "seriesNameFormat": "{{job}}"
                   }
                 }
               }
@@ -107,27 +291,26 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "监控服务常驻内存",
-            "description": "指标含义\nVM / vmagent 进程实际常驻内存。\n\nY 轴单位\nGiB\n\n曲线与范围\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+            "name": "监控服务常驻内存（GiB）",
+            "description": "指标含义\nVM / vmagent 进程实际常驻内存。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
             "spec": {
               "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "GiB",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 1,
-                "connectNulls": false
+                "mode": "list",
+                "position": "bottom"
               },
               "tooltip": {
                 "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
               }
             }
           },
@@ -138,9 +321,9 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
+                    "minStep": "5s",
                     "query": "(process_resident_memory_bytes{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} and ((time() - timestamp(process_resident_memory_bytes{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (count_over_time(process_resident_memory_bytes{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15))))) / 1024^3",
-                    "seriesNameFormat": "{{job}}",
-                    "minStep": "5s"
+                    "seriesNameFormat": "{{job}}"
                   }
                 }
               }
@@ -152,27 +335,26 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "VM 数据容量",
-            "description": "指标含义\n按 VM 原始数据类型及分区展示存储容量，保留标签避免隐藏不同组成。\n\nY 轴单位\nGiB\n\n曲线与范围\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+            "name": "VM 数据容量（GiB）",
+            "description": "指标含义\n按 VM 原始数据类型及分区展示存储容量，保留标签避免隐藏不同组成。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
             "spec": {
               "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "GiB",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 1,
-                "connectNulls": false
+                "mode": "list",
+                "position": "bottom"
               },
               "tooltip": {
                 "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
               }
             }
           },
@@ -183,9 +365,9 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
+                    "minStep": "5s",
                     "query": "(vm_data_size_bytes{environment=\"dcu-pd\",job=\"victoriametrics\"} and ((time() - timestamp(vm_data_size_bytes{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (count_over_time(vm_data_size_bytes{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"victoriametrics\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15))))) / 1024^3",
-                    "seriesNameFormat": "{{type}} · {{partition}}",
-                    "minStep": "5s"
+                    "seriesNameFormat": "{{type}} · {{partition}}"
                   }
                 }
               }
@@ -197,27 +379,26 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "VM 磁盘余量",
-            "description": "指标含义\nVM 所在文件系统空闲量及配置的最低余量阈值。\n\nY 轴单位\nGiB\n\n曲线与范围\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+            "name": "VM 磁盘余量（GiB）",
+            "description": "指标含义\nVM 所在文件系统空闲量及配置的最低余量阈值。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
             "spec": {
               "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "GiB",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 1,
-                "connectNulls": false
+                "mode": "list",
+                "position": "bottom"
               },
               "tooltip": {
                 "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
               }
             }
           },
@@ -228,9 +409,9 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
+                    "minStep": "5s",
                     "query": "(vm_free_disk_space_bytes{environment=\"dcu-pd\",job=\"victoriametrics\"} and ((time() - timestamp(vm_free_disk_space_bytes{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (count_over_time(vm_free_disk_space_bytes{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"victoriametrics\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15))))) / 1024^3",
-                    "seriesNameFormat": "空闲空间",
-                    "minStep": "5s"
+                    "seriesNameFormat": "空闲空间"
                   }
                 }
               }
@@ -241,9 +422,9 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
+                    "minStep": "5s",
                     "query": "(vm_free_disk_space_limit_bytes{environment=\"dcu-pd\",job=\"victoriametrics\"} and ((time() - timestamp(vm_free_disk_space_limit_bytes{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (count_over_time(vm_free_disk_space_limit_bytes{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"victoriametrics\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15))))) / 1024^3",
-                    "seriesNameFormat": "停止写入阈值",
-                    "minStep": "5s"
+                    "seriesNameFormat": "停止写入阈值"
                   }
                 }
               }
@@ -255,27 +436,26 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "VM 存储只读状态",
-            "description": "指标含义\n1 表示 VM 存储当前处于只读状态，0 表示未处于该状态。\n\nY 轴单位\n1 = 只读\n\n曲线与范围\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+            "name": "VM 存储只读状态（1 = 只读）",
+            "description": "指标含义\n1 表示 VM 存储当前处于只读状态，0 表示未处于该状态。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
             "spec": {
               "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "1 = 只读",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 1,
-                "connectNulls": false
+                "mode": "list",
+                "position": "bottom"
               },
               "tooltip": {
                 "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
               }
             }
           },
@@ -286,9 +466,9 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
+                    "minStep": "5s",
                     "query": "(vm_storage_is_read_only{environment=\"dcu-pd\",job=\"victoriametrics\"} and ((time() - timestamp(vm_storage_is_read_only{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (count_over_time(vm_storage_is_read_only{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"victoriametrics\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15)))))",
-                    "seriesNameFormat": "只读状态",
-                    "minStep": "5s"
+                    "seriesNameFormat": "只读状态"
                   }
                 }
               }
@@ -300,27 +480,26 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "VM 写入速率",
-            "description": "指标含义\nVM 接收的指标样本写入计数速率，按输入类型汇总。\n\nY 轴单位\n样本 / 秒\n\n曲线与范围\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+            "name": "VM 写入速率（样本/秒）",
+            "description": "指标含义\nVM 接收的指标样本写入计数速率，按输入类型汇总。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
             "spec": {
               "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "样本 / 秒",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 1,
-                "connectNulls": false
+                "mode": "list",
+                "position": "bottom"
               },
               "tooltip": {
                 "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
               }
             }
           },
@@ -331,9 +510,9 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
+                    "minStep": "5s",
                     "query": "(sum by(environment,job,type) ((rate(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) and ((time() - timestamp(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (count_over_time(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"victoriametrics\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15))) and (count_over_time(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) >= 12) and (resets(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) == 0) and (resets(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"victoriametrics\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) >= (1m / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"} >= 1m) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15))))))) unless on(environment,job,type) (count by(environment,job,type) ((count_over_time(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) unless ((time() - timestamp(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (count_over_time(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"victoriametrics\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15))) and (count_over_time(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) >= 12) and (resets(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) == 0) and (resets(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"victoriametrics\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) >= (1m / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"} >= 1m) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15)))))))",
-                    "seriesNameFormat": "{{type}}",
-                    "minStep": "5s"
+                    "seriesNameFormat": "{{type}}"
                   }
                 }
               }
@@ -345,27 +524,26 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "vmagent 发送积压",
-            "description": "指标含义\n持久发送队列等待传输的字节数，持续增长说明发送落后。\n\nY 轴单位\nMiB\n\n曲线与范围\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+            "name": "vmagent 发送积压（MiB）",
+            "description": "指标含义\n持久发送队列等待传输的字节数，持续增长说明发送落后。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
             "spec": {
               "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "MiB",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 1,
-                "connectNulls": false
+                "mode": "list",
+                "position": "bottom"
               },
               "tooltip": {
                 "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
               }
             }
           },
@@ -376,9 +554,9 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
+                    "minStep": "5s",
                     "query": "(vm_persistentqueue_bytes_pending{environment=\"dcu-pd\",job=\"vmagent\"} and ((time() - timestamp(vm_persistentqueue_bytes_pending{environment=\"dcu-pd\",job=\"vmagent\"}) < 15) and (count_over_time(vm_persistentqueue_bytes_pending{environment=\"dcu-pd\",job=\"vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"vmagent\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"vmagent\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"vmagent\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"vmagent\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"vmagent\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"vmagent\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"vmagent\"}) < 15))))) / 1024^2",
-                    "seriesNameFormat": "{{path}}",
-                    "minStep": "5s"
+                    "seriesNameFormat": "{{path}}"
                   }
                 }
               }
@@ -390,27 +568,26 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "vmagent 数据丢弃速率",
-            "description": "指标含义\n持久队列丢弃数据的字节速率；有效零表示窗口内未记录丢弃。\n\nY 轴单位\nMiB / 秒\n\n曲线与范围\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+            "name": "vmagent 数据丢弃速率（MiB/秒）",
+            "description": "指标含义\n持久队列丢弃数据的字节速率；有效零表示窗口内未记录丢弃。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
             "spec": {
               "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "MiB / 秒",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 1,
-                "connectNulls": false
+                "mode": "list",
+                "position": "bottom"
               },
               "tooltip": {
                 "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
               }
             }
           },
@@ -421,9 +598,9 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
+                    "minStep": "5s",
                     "query": "(rate(vm_persistentqueue_bytes_dropped_total{environment=\"dcu-pd\",job=\"vmagent\"}[1m]) and ((time() - timestamp(vm_persistentqueue_bytes_dropped_total{environment=\"dcu-pd\",job=\"vmagent\"}) < 15) and (count_over_time(vm_persistentqueue_bytes_dropped_total{environment=\"dcu-pd\",job=\"vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"vmagent\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"vmagent\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"vmagent\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"vmagent\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"vmagent\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"vmagent\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"vmagent\"}) < 15))) and (count_over_time(vm_persistentqueue_bytes_dropped_total{environment=\"dcu-pd\",job=\"vmagent\"}[1m]) >= 12) and (resets(vm_persistentqueue_bytes_dropped_total{environment=\"dcu-pd\",job=\"vmagent\"}[1m]) == 0) and (resets(vm_persistentqueue_bytes_dropped_total{environment=\"dcu-pd\",job=\"vmagent\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"vmagent\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"vmagent\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"vmagent\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"vmagent\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"vmagent\"}[1m]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"vmagent\"}[1m]) >= (1m / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"vmagent\"} >= 1m) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"vmagent\"}) < 15))))) / 1024^2",
-                    "seriesNameFormat": "{{path}}",
-                    "minStep": "5s"
+                    "seriesNameFormat": "{{path}}"
                   }
                 }
               }
@@ -435,27 +612,26 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "监控数据解析错误",
-            "description": "指标含义\n公共监控组件解析输入指标数据时记录的错误速率。\n\nY 轴单位\n次 / 秒\n\n曲线与范围\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\n时间口径\n速率和分位数使用最近 1 分钟窗口；状态与容量是观测时刻值。默认 1 小时，15 秒刷新。\n\n零值与空白\n正常有效的零值保留；缺样、过期、重启、计数异常、无有效分母或无直方图样本时留空，不补零。请求范围以各指标说明为准。"
+            "name": "监控数据解析错误（次/秒）",
+            "description": "指标含义\n公共监控组件解析输入指标数据时记录的错误速率。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
             "spec": {
               "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "label": "次 / 秒",
-                "min": 0
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 1,
-                "connectNulls": false
+                "mode": "list",
+                "position": "bottom"
               },
               "tooltip": {
                 "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
               }
             }
           },
@@ -466,9 +642,9 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
+                    "minStep": "5s",
                     "query": "(rate(vm_protoparser_parse_errors_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) and ((time() - timestamp(vm_protoparser_parse_errors_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (count_over_time(vm_protoparser_parse_errors_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15))) and (count_over_time(vm_protoparser_parse_errors_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) >= 12) and (resets(vm_protoparser_parse_errors_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) == 0) and (resets(vm_protoparser_parse_errors_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) >= (1m / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} >= 1m) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15)))))",
-                    "seriesNameFormat": "{{job}} · {{type}}",
-                    "minStep": "5s"
+                    "seriesNameFormat": "{{job}} · {{type}}"
                   }
                 }
               }
@@ -481,6 +657,55 @@
       {
         "kind": "Grid",
         "spec": {
+          "display": {
+            "title": "项目采集链路"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/overview-p0"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/overview-extra-scrape-duration"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/overview-extra-sample-age"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/overview-extra-derived-valid"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "共享 VM / vmagent 服务"
+          },
           "items": [
             {
               "x": 0,
@@ -575,6 +800,9 @@
           ]
         }
       }
-    ]
+    ],
+    "duration": "1h",
+    "refreshInterval": "15s",
+    "variables": []
   }
 }
