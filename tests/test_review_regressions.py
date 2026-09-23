@@ -69,10 +69,12 @@ def target_rows():
 
 def test_all_configured_targets_including_relabeled_gateways_pass():
     expected, up, stamps = target_rows()
-    assert len(expected) == 26
+    assert len(expected) == 30
     assert ('aigate', '122.52.5.131:18082', 'a3-vllm') in expected
     assert ('aigate', '122.209.21.33:18082', 'xpu-pd') in expected
-    assert len(validation.validate_targets(up, stamps, expected, 100)) == 26
+    assert {('node-xpu', address + ':9110', 'xpu-pd') for address in ('122.209.21.33', '122.209.21.34')} <= expected
+    assert {('xpu-hardware', address + ':9507', 'xpu-pd') for address in ('122.209.21.33', '122.209.21.34')} <= expected
+    assert len(validation.validate_targets(up, stamps, expected, 100)) == 30
 
 
 @pytest.mark.parametrize('fault', ['missing', 'extra', 'duplicate', 'environment', 'down', 'stale', 'future', 'nan', 'missing-timestamp'])

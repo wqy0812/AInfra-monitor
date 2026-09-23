@@ -16,10 +16,10 @@ def generate(snapshot,output):
   from remove_idle_thresholds import remove_panels
   d=remove_panels(convert(source));name=d['metadata']['name']
   if name=='hosts-dcu':d['metadata']['name']='hosts-xpu'
-  desc='XPU 独立环境；请求为原生全量口径，P/D 不相加为唯一请求量。缺失、过期、重置、无分母留空。HiCache、缓存层级、主机和卡硬件暂未接入；网关画像单独采集。'
+  desc='XPU 独立环境；请求为原生全量口径，P/D 不相加为唯一请求量。缺失、过期、重置、无分母留空。HiCache、缓存层级暂未接入；网关画像单独采集。'
   d['spec']['display']['description']=desc
   for key,p in d['spec']['panels'].items():
-   blank=name in ('hosts-dcu','cache-store')
+   blank=name=='cache-store'
    if blank:
     reason='硬件监控暂未接入' if name=='hosts-dcu' else '缓存与 HiCache 监控暂未接入，未推断服务是否启用 HiCache' if name=='cache-store' else '网关画像暂未采集'
     p['spec']['display']['description']=reason+'。本面板有意留空，No data 不表示零。'
@@ -28,10 +28,10 @@ def generate(snapshot,output):
     # Central VM/vmagent have a historical dcu-pd label, but are shared services.
     p['spec']['queries']=copy.deepcopy(source['spec']['panels'][key]['spec']['queries'])
     p['spec']['display']['description']='共享中央监控服务状态，不表示 XPU 模型或硬件指标。'+p['spec']['display'].get('description','')
-  # Hardware variables must remain selectable even with no hardware series.
+  # Restore host metrics from the baseline; configure XPU exporter card metrics.
   if name=='hosts-dcu':
-   for v in d['spec'].get('variables',[]):
-    v['spec']['defaultValue']='.*';v['spec']['plugin']={'kind':'StaticListVariable','spec':{'values':[{'label':'全部（未接入）','value':'.*'}]}}
+   from xpu_hosts import configure as configure_hosts
+   d=configure_hosts(source)
   if name=='cache-store':
    from xpu_cache import configure
    d=configure(d)

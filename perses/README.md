@@ -158,3 +158,7 @@ gateway-generation 已扩为 17 项，顶部新增 11 项实时诊断，保留�
 ## XPU 独立项目（2026-09-21）
 
 新增 [XPU 监控](http://122.247.53.162:18431/projects/xpu-monitoring)，8 张看板、88 个面板。资源在 `projects/xpu-monitoring/`，由 `generate_xpu.py` 基于显式线上 DCU 快照生成；现行双项目生成器不管理此新增项目。缺失项有意留空，详见 [发布与验证记录](../docs/xpu-20260921.md)。
+
+## XPU 卡硬件监控（2026-09-22）
+
+已接入两节点 `:9507` 的 xpu_exporter，6 项卡硬件图表支持节点及卡号筛选，共 16 张 P800。全部 `node_xpu_.*` 原始指标进入 VictoriaMetrics；显存 MiB 转 GiB，百分数保持原值。详见 [发布记录](../docs/xpu-hardware-20260922.md)。

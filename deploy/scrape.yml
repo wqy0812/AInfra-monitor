@@ -129,3 +129,31 @@ scrape_configs:
   - source_labels: [__name__]
     regex: 'aigate_.*'
     action: keep
+
+- job_name: node-xpu
+  metrics_path: /metrics
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  static_configs:
+  - targets: ['122.209.21.33:9110']
+    labels: {environment: xpu-pd, role: decode, node: xpu-1, service: host}
+  - targets: ['122.209.21.34:9110']
+    labels: {environment: xpu-pd, role: prefill, node: xpu-2, service: host}
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'node_.*'
+    action: keep
+
+- job_name: xpu-hardware
+  metrics_path: /metrics
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  static_configs:
+  - targets: ['122.209.21.33:9507']
+    labels: {environment: xpu-pd, role: decode, node: xpu-1, service: xpu-exporter}
+  - targets: ['122.209.21.34:9507']
+    labels: {environment: xpu-pd, role: prefill, node: xpu-2, service: xpu-exporter}
+  metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'node_xpu_.*'
+    action: keep
