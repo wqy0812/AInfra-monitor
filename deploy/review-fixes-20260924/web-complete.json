@@ -1,0 +1,65 @@
+{
+  "passed": true,
+  "image": "sha256:d4d1cf6e0adaa27b330c8eaa295c2f5248a674c50af75b6f33ad3f1b1116ceb1",
+  "rollback_container": "code-eval-web-before-review-fixes-20260924",
+  "other_containers_unchanged": true,
+  "health": {
+    "status": "ok",
+    "version": "0.8.0",
+    "build": "0.8.0-token-usage.2",
+    "monitoring_enabled": true,
+    "evaluation_router": {
+      "enabled": false,
+      "running": false,
+      "observed_at": 1790180111.5207613
+    },
+    "components": {
+      "web": {
+        "status": "ok"
+      },
+      "engine": {
+        "status": "ok",
+        "observed_at": 1790180111.5207613,
+        "build": "0.8.0-token-usage.2"
+      },
+      "database": {
+        "status": "ok",
+        "observed_at": 1790180113.504326
+      }
+    }
+  },
+  "history": {
+    "dcu-pd": {
+      "points": 542,
+      "gateway_status": {
+        "stream_idle_max_seconds": "ok",
+        "oldest_age_seconds": "ok",
+        "backend_wait_max_seconds": "ok",
+        "write_active_max_seconds": "ok"
+      }
+    },
+    "a3-vllm": {
+      "points": 542,
+      "gateway_status": {
+        "stream_idle_max_seconds": "ok",
+        "oldest_age_seconds": "ok",
+        "backend_wait_max_seconds": "ok",
+        "write_active_max_seconds": "ok"
+      }
+    },
+    "xpu-pd": {
+      "points": 541,
+      "gateway_status": {
+        "stream_idle_max_seconds": "ok",
+        "oldest_age_seconds": "ok",
+        "backend_wait_max_seconds": "ok",
+        "write_active_max_seconds": "ok"
+      },
+      "valid_cache_points": 540
+    }
+  },
+  "hashes": {
+    "/app/frontend/static/app.js": "d121418f389a3a482acc69112707621b9feb306f722d090f00455f23752c4d6f",
+    "/app/backend/app/main.py": "6806026c8f6c427465e1c6d39cdde998c6f7e42bd2155bacea38862dbeb47ff2"
+  }
+}
