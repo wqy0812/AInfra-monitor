@@ -43,11 +43,13 @@ Go 1.26.5 toolchain on PATH. Dependency preparation runs `go mod tidy` and
 
 The output includes the binary, image archive, checksums and a generated
 `release-lock.json`. Preserve that generated lock with its exact archive.
-The checked-in release lock identifies the current candidate, not future builds.
+The checked-in release locks identify exact artifacts, not future builds.
 Versioned archives use `perses-<version>.tar.gz`. New deployment locks must pin
 `previous_image_digest` and `previous_version` for upgrade and rollback. The build
 reads these from `release-lock.json`, or an explicit previous-release lock passed
 as its third argument. `image_release.py --lock FILE` selects a version-specific lock.
+For a future upgrade from the deployed perf.3, pass `release-lock-perf3.json`
+as the third argument instead of the default historical perf.2 lock.
 
 ## Second batch
 
@@ -71,8 +73,11 @@ refresh and existing dashboard specs. The toolbar explains fixed-window pause.
 Absolute URL ranges retain milliseconds. The earlier builtin plugin collector's
 `ListVariable` metadata kind is corrected to upstream's `Variable` kind.
 See [behavior and acceptance](../../docs/time-navigation-cache-20260924.md).
-This is not a production publication; the existing `release-lock.json` still
-identifies the previous release. Use `release-lock-perf3.json` for the new artifact.
+Perf.3 was deployed on 2026-09-25 with local browser acceptance and remote
+candidate/production API validation. The remote browser and 1800-second remote
+soak were not run. See the [deployment record](../../deploy/time-navigation-20260925/README.md).
+The existing `release-lock.json` still identifies the previous perf.2 release.
+Use `release-lock-perf3.json` for the deployed artifact.
 The perf.3 lock pins the deployed perf.2 image as its previous release. Resource
 validation logs in using the server-local `admin-credentials.json` (or
 `PERSES_CREDENTIALS_FILE`), keeps tokens separate for production and candidate,
@@ -142,7 +147,8 @@ command-line SSH, SCP or port-forwarding subprocesses in these scripts.
    records that remote browser and the 1800-second remote soak were not run.
    Evidence directories are resolved to absolute paths before Docker bind mounts.
 3. Run `image_release.py apply --evidence DIR`. It preserves the original container
-   as `monitoring-perses-before-perf1`, keeps systemd/access controls, checks
+   as `monitoring-perses-before-perf3` for perf.3 (the suffix follows the selected
+   version), keeps systemd/access controls, checks
    unchanged resources and protected monitoring services, and restores the old
    container on failure. Explicit rollback is `image_release.py rollback`.
 4. Capture a fresh dashboard snapshot after the first batch. Prepare changes from

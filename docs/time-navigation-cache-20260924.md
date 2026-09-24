@@ -1,6 +1,6 @@
 # 时间范围、历史缓存与自动刷新
 
-此变更只生成本地候选，尚未发布生产。评测平台前端不在此次修改范围内。
+此变更已于 2026-09-25 发布至 test4：monitoring-api 历史缓存和 Perses `0.54.0-perf.3` 均已切换并通过线上核验。评测平台前端不在此次修改范围内。版本、回退及证据位置见 [发布记录](../deploy/time-navigation-20260925/README.md)。
 
 ## 行为
 
@@ -15,7 +15,7 @@ Python 回归覆盖历史摘要、网关历史、缓存共享、取消、过期�
 
 `perses/performance/tests/browser-navigation.cjs` 使用 1920×1080 本地 Chrome/Playwright 验证完整候选页面，拦截 datasource 代理返回合成空数据，不访问生产。后台状态通过 document.hidden 与 visibilitychange 事件注入，报告注明此方法，不等同于操作系统真实切换标签页。`PLAYWRIGHT_MODULE` 指向安装的 Playwright 模块，`CANDIDATE_URL` 仅允许回环地址，`BROWSER_EVIDENCE` 指定报告及截图前缀。
 
-构建先准备 vendor；Go 测试和编译均使用 `-mod=vendor` 与 `GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local`。新增补丁保留上游 source map SHA256 校验，候选使用独立版本和归档，不覆盖原发布锁。后续生产发布只能使用 SSH MCP，并单独验收真实数据与候选镜像。
+构建先准备 vendor；Go 测试和编译均使用 `-mod=vendor` 与 `GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local`。新增补丁保留上游 source map SHA256 校验，候选使用独立版本和归档，不覆盖原发布锁。生产发布只能使用 SSH MCP，并单独验收真实数据与候选镜像。
 
 ## 本地验收结果（2026-09-24）
 
@@ -26,10 +26,20 @@ Python 回归覆盖历史摘要、网关历史、缓存共享、取消、过期�
 - 候选归档：`work/time-navigation-20260924/perses-0.54.0-perf.3.tar.gz`；版本锁：`perses/performance/release-lock-perf3.json`；浏览器报告和截图：`work/time-navigation-20260924/browser.json`、`browser.png`。构建产物位于忽略目录，版本锁随源码保存。
 - 本地候选容器已停止，生产服务未修改，未创建服务器目录。
 
-## 发布前修复与状态（2026-09-25）
+## 发布前修复与历史阻塞（2026-09-25）
 
 - perf.3 发布锁明确以线上 perf.2 的镜像摘要和版本为升级／回退基线；新构建也从前一发布锁生成这两个字段。除历史 perf.1 外，缺少基线的发布锁在任何容器操作前被拒绝。
 - 发布器使用服务器本地凭据分别登录正式服务与候选，认证过期只重试一次；资源快照动态枚举全部项目、看板和数据源，覆盖 XPU 与自建项目，发布前后核对完整快照。发布证据以私有权限保存。
 - 修复后 320 项 Python 测试、19 项前端测试通过；218 项独立 VM 测试未启用。本次复审的 1080p 本地候选浏览器验收已通过，合成数据不代表线上验收。
 - test1 的评测与两个 worker 在发布准备检查时空闲。test4 已创建 `/data2/monitoring/perses/evidence/time-navigation-20260925`（含 `candidate-data` 副本）及 `/data2/monitoring/releases/time-navigation-20260925`。
-- SSH MCP 上传时远端关闭连接并返回 `Broken pipe`，按工作区规则停止后续远程发布。上传完成程度尚未核实；正式服务未切换，远端候选浏览器和 30 分钟观察尚未执行。浏览器验收镜像下载另因服务器无法解析 `mcr.microsoft.com` 失败，可在 SSH MCP 恢复后从本地上传离线镜像；不得绕过 SSH MCP。
+- SSH MCP 上传曾返回 `Broken pipe` / `Connection closed`，每次失败后均停止远程操作；用户要求重试后恢复上传。最终校验全部 28 个后续分段、旧断点和完整归档 SHA256 后才载入镜像。用户随后明确选择本机浏览器验收，因此没有上传或执行远端浏览器镜像。
+
+## 上线核验（2026-09-25）
+
+- 完成发布器相对路径修复，Docker bind mount 统一使用绝对路径。最终 Python 回归 325 项通过、218 项独立 VM 测试未启用；前端 19 项测试已通过。
+- 再次运行本机 1920×1080 浏览器验收通过，报告与部署归档的配置摘要绑定；本机 Docker manifest ID 与服务器 config digest 的差异通过 RootFS 和 Config 对照确认。合成数据、DOM 可见性事件的验证范围仍如上所述。
+- monitoring-api 一次性候选读取真实 VM，三个环境均返回 361 点；各环境 20 个并发等待者共享在途查询。正式切换后再次验证完整/摘要一致、重复结果一致和处理进度新鲜。
+- Perses 正式健康接口返回 `0.54.0-perf.3`，三个项目各 10 张看板和 1 个数据源与切换前相同；各项目代理 `up` 查询成功，各返回 31 条序列。VM/vmagent 未重启，API 未被 Perses 切换重启。
+- A3 后端 prefill/decode 源错误在发布前已存在，发布后仍保留；API 总体健康且三个环境处理时间均在 30 秒内，原先正常的数据源继续正常。
+- 本机及远端候选容器已停止，两个原生产容器保留供回退。依用户“浏览器验收本机就可以”采用本机验收；远端浏览器和 30 分钟持续观察未运行，发布报告明确记录。
+- 完成线上验证后下载证据副本时 SSH MCP 再次断开，已停止远程操作。只有 `image-publication.json`、`candidate-api-validation.json` 下载到本地证据目录；完整证据仍在服务器，部署成功结论来自切换及核验命令的成功输出。
