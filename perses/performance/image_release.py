@@ -107,7 +107,17 @@ def resources(base=BASE):
  return result
 def protected():return [(n,inspect(n)['Id'],inspect(n)['State']['StartedAt']) for n in PROTECTED]
 def save(root,name,data):(root/name).write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
-def validation_status(root,image,defer_browser):
+def validation_status(root,image,defer_browser,local_browser=False):
+ assert not (defer_browser and local_browser),'Choose one validation mode'
+ if local_browser:
+  authorization=json.loads((root/'deployment-authorization.json').read_text())
+  assert authorization['explicit_user_instruction'] and authorization['image']==image
+  assert authorization['scope']=='deploy-perses-performance' and authorization['validation_mode']=='local-browser'
+  acceptance=json.loads((root/'local-browser-acceptance.json').read_text())
+  assert acceptance['passed'] and acceptance['environment']=='local-candidate' and acceptance['archive_config_digest']==image
+  api=json.loads((root/'candidate-api-validation.json').read_text())
+  assert api['passed'] and api['image']==image
+  return {'mode':'user-authorized-local-browser-validation','user_instruction':authorization['user_instruction'],'remote_candidate_api':'passed','local_browser':'passed','checks_not_run':['remote-candidate-browser','remote-candidate-1800-second-soak']}
  if defer_browser:
   authorization=json.loads((root/'deployment-authorization.json').read_text())
   assert authorization['explicit_user_instruction'] and authorization['image']==image
@@ -137,8 +147,9 @@ def create(old,name,image,binds,listen):
 def main():
  global BACKUP,CANDIDATE
  os.umask(0o077)
- p=argparse.ArgumentParser();p.add_argument('action',choices=['load','candidate','apply','rollback']);p.add_argument('--evidence',type=Path,required=True);p.add_argument('--lock',type=Path,help='Explicit release lock for version-specific deployment or rollback.');p.add_argument('--defer-browser-validation',action='store_true',help='Requires recorded explicit user deployment authorization; validate on production after cutover.');a=p.parse_args();r=a.evidence;assert r.is_dir()
+ p=argparse.ArgumentParser();p.add_argument('action',choices=['load','candidate','apply','rollback']);p.add_argument('--evidence',type=Path,required=True);p.add_argument('--lock',type=Path,help='Explicit release lock for version-specific deployment or rollback.');p.add_argument('--defer-browser-validation',action='store_true',help='Requires recorded explicit user deployment authorization; validate on production after cutover.');p.add_argument('--local-browser-validation',action='store_true',help='Requires explicit user selection, exact-image local browser evidence and remote candidate API validation.');a=p.parse_args();r=a.evidence.resolve();assert r.is_dir()
  assert not a.defer_browser_validation or a.action=='apply'
+ assert not a.local_browser_validation or a.action=='apply'
  lock=json.loads((a.lock or r/'release-lock.json').read_text());image=lock['candidate_config_digest']
  version=lock.get('candidate_version','0.54.0-perf.1');suffix=version.split('-')[-1].replace('.','');BACKUP=NAME+'-before-'+suffix;CANDIDATE=NAME+'-candidate-'+suffix
  previous_image,previous_version=previous_release(lock)
@@ -166,6 +177,6 @@ def main():
   save(r,'candidate-resources.json',report);save(r,'candidate-api-validation.json',report);return
  if a.action=='rollback':
   current=inspect(NAME);assert current['Image']==image;run('systemctl','stop','monitoring-perses.service');run('docker','rm',NAME);run('docker','rename',BACKUP,NAME);run('systemctl','start','monitoring-perses.service');assert health(BASE)['version']==previous_version;save(r,'image-rollback.json',{'passed':True,'time':time.time()});return
- validation=validation_status(r,image,a.defer_browser_validation)
+ validation=validation_status(r,image,a.defer_browser_validation,a.local_browser_validation)
  apply_image(r,image,version,previous_image,validation)
 if __name__=='__main__':main()

@@ -134,6 +134,13 @@ command-line SSH, SCP or port-forwarding subprocesses in these scripts.
    disclosed, `--defer-browser-validation` requires `deployment-authorization.json`
    and exact-image candidate API evidence. It records deferred checks in the
    publication report; it does not mark candidate browser or soak tests passed.
+   If the user explicitly selects local browser acceptance, use
+   `--local-browser-validation` with that instruction and
+   `validation_mode="local-browser"` in `deployment-authorization.json`.
+   It requires `local-browser-acceptance.json` tied to the exact archive config
+   digest plus successful remote candidate API evidence. The report explicitly
+   records that remote browser and the 1800-second remote soak were not run.
+   Evidence directories are resolved to absolute paths before Docker bind mounts.
 3. Run `image_release.py apply --evidence DIR`. It preserves the original container
    as `monitoring-perses-before-perf1`, keeps systemd/access controls, checks
    unchanged resources and protected monitoring services, and restores the old
