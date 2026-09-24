@@ -32,19 +32,22 @@ for hashed assets; HTML and manifests revalidate. ETags cover bytes after API
 prefix replacement. The deployment prefix remains fixed; changing it requires
 a fresh asset URL namespace/build to avoid reusing immutable URLs.
 
-Build in a **new** local directory with Node 22, Docker and Go's automatic
-1.26.5 toolchain support:
+Build in a **new** local directory with Node 22 (nvm), Docker and an installed
+Go 1.26.5 toolchain on PATH. Dependency preparation runs `go mod tidy` and
+`go mod vendor`; tests/builds use `-mod=vendor` with
+`GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local`:
 
 ```sh
-./build.sh /tmp/perses-performance-build-new 0.54.0-perf.2
+./build.sh /tmp/perses-performance-build-new 0.54.0-perf.3
 ```
 
 The output includes the binary, image archive, checksums and a generated
 `release-lock.json`. Preserve that generated lock with its exact archive.
 The checked-in release lock identifies the current candidate, not future builds.
-Versioned archives use `perses-<version>.tar.gz`. Deployment locks can additionally
-pin `previous_image_digest` and `previous_version` for an upgrade from an earlier
-patch release. `image_release.py --lock FILE` selects a version-specific lock.
+Versioned archives use `perses-<version>.tar.gz`. New deployment locks must pin
+`previous_image_digest` and `previous_version` for upgrade and rollback. The build
+reads these from `release-lock.json`, or an explicit previous-release lock passed
+as its third argument. `image_release.py --lock FILE` selects a version-specific lock.
 
 ## Second batch
 
@@ -61,13 +64,30 @@ files change. There are no recording rules, schema changes or history rewrites.
 
 ## Validation and evidence
 
+The local **perf.3** candidate adds tab-scoped time range inheritance (explicit
+URL ranges win), visibility-aware relative refresh, paused fixed windows, and
+focus/reconnect suppression for chart and variable queries. It preserves manual
+refresh and existing dashboard specs. The toolbar explains fixed-window pause.
+Absolute URL ranges retain milliseconds. The earlier builtin plugin collector's
+`ListVariable` metadata kind is corrected to upstream's `Variable` kind.
+See [behavior and acceptance](../../docs/time-navigation-cache-20260924.md).
+This is not a production publication; the existing `release-lock.json` still
+identifies the previous release. Use `release-lock-perf3.json` for the new artifact.
+The perf.3 lock pins the deployed perf.2 image as its previous release. Resource
+validation logs in using the server-local `admin-credentials.json` (or
+`PERSES_CREDENTIALS_FILE`), keeps tokens separate for production and candidate,
+retries an expired token once, and enumerates every project, including XPU and
+custom projects. Credentials and tokens are never written to release reports.
+
 - `tests/ui.test.cjs`: real React Query/React provider tests for relative/fixed
   refresh, timers, inactive cleanup, variable changes, selective imports and retry.
 - `tests/test_image_admission.py`: default admission still requires browser
   evidence; explicitly authorized production validation retains deferred checks
   and requires exact-image API evidence.
+- `tests/test_image_auth.py`: authenticated resource snapshots, XPU change
+  detection, per-server tokens, expiry recovery and explicit upgrade baselines.
 - `tests/cache_test.go`: substituted response body, cache headers, 304 responses,
-  changed prefix validators and HTML revalidation. Runs with upstream `go test ./ui`.
+  changed prefix validators and HTML revalidation. Runs with upstream `go test -mod=vendor ./ui`.
 - `tests/quantiles.py`: 162 synthetic assertions against localhost VM 1.151.0.
 - `tests/dashboard_quantiles.py`: all 13 exact dashboard families, 52 range/step
   comparisons, alternating cold/warm seven-pair performance samples. The fixture

@@ -44,5 +44,28 @@
     }
   },
   "source_archive_sha256": "8b69b683288c9917b4b79dff3c4bbfdd5e7df4d2571deeb1318201ebd9e04f0d",
-  "npm_lock_sha256": "d0fe0e2257bb9a5d3d2345805f9737fd847a3f3d68ec512b5e29e23ed2bf8bef"
+  "npm_lock_sha256": "d0fe0e2257bb9a5d3d2345805f9737fd847a3f3d68ec512b5e29e23ed2bf8bef",
+  "candidate_version": "0.54.0-perf.3",
+  "candidate_archive_name": "perses-0.54.0-perf.3.tar.gz",
+  "candidate_archive_sha256": "8d04801254097dad14a42912586de2b13a7f8ad34958346470382e17f6d1cd37",
+  "candidate_config_digest": "sha256:978402ac5154e3ee2cf8c66f244fc7169be74125ef01a5fe9d28c1e8a24764e7",
+  "previous_version": "0.54.0-perf.2",
+  "previous_image_digest": "sha256:c5a17dc68da543e42b3c78618b0c452ea29328a027ec4439b402f3aa79a15bfa",
+  "patch_source_sha256": {
+    "plugin-system/runtime/TimeRangeProvider/TimeRangeProvider.tsx": "ad79215f226f55d415a3a270b3e8174cd415b5ecc177b5d1f079ac120e8b31e2",
+    "plugin-system/runtime/plugin-registry.ts": "48e4868d759b6d286b9c05e607b972f9acd45a8fe2c7e15ea89976f8d1c760cc",
+    "plugin-system/runtime/time-series-queries.ts": "0349b0266c250c6415d47f429159170a81ef70ee58f8f5cf7aef62c9aaf9ff26",
+    "plugin-system/remote/remotePluginLoader.ts": "985a0b0386a4a8e3c874556dea608ea38efbf25f2f2a4e84d3acda7771997d99",
+    "plugin-system/components/PluginRegistry/PluginRegistry.tsx": "3a0471a67e7a9621f38d163d66c54a72f6da82cd0f353e82eaf582baef6b097d",
+    "plugin-system/model/plugin-loading.ts": "8be332d1e2516cde12ec8c8a4f668f9b6e0f2269e94897f9141b22031fb15b96",
+    "dashboards/views/ViewDashboard/ViewDashboard.tsx": "65f446d669d92a35aa874d3efbca4d25bbb0638d0dc33a341b53fb230ed31bad",
+    "plugin-system/runtime/TimeRangeProvider/query-params.ts": "cb2e2187ad83508530d2da5f6ddfeef2dc890e5b1ba4bcf06bf135145c7720ce",
+    "plugin-system/components/TimeRangeControls/TimeRangeControls.tsx": "6bf44b8b939309dc508ce2ecbf7b4ea25c2dec3a412950bb26eb19fbbffc2d56",
+    "plugin-system/components/Variables/variable-model.ts": "f13006cba9178152ab5907e96f397aa0720c62dfd5f7b40c100b5b0d600c435b"
+  },
+  "prepared_go_sha256": {
+    "go.mod": "8c9b4181c5bb47fed1af360eb43ee365037e541125a7ae4f2fca5047ebfefcd0",
+    "go.sum": "0ba2cd658eebb70aa8ccb09e07a57f2987f4191983952ab1260b84f02ee4f6fb",
+    "vendor/modules.txt": "603cdd6999143600bc64be7c741e15683298ff5f8bed319d09c36dcee1efd58b"
+  }
 }

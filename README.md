@@ -4,6 +4,8 @@ DCU/XPU/A3 各 10 张专业看板，共 303 图；非缓存看板按公共核心
 
 # 独立监控
 
+2026-09-24 本地候选新增跨看板时间继承、Perses 后台/固定窗口暂停自动刷新，以及历史 API 多键缓存与在途请求合并。尚未发布生产；行为及验收见 [实现说明](docs/time-navigation-cache-20260924.md)。
+
 XPU 节点环境与初始部署拓扑见 [2026-09-21 环境记录](docs/xpu-environment-2026-09-21.md)，当前角色映射以 [2026-09-23 修复记录](docs/xpu-role-fix-20260923.md) 为准。
 
 ## 仓库范围
@@ -44,6 +46,8 @@ A3 主机 CPU 与 CPU I/O 等待由 monitoring-api 按 5 秒周期计算新增�
 - `/api/monitoring/history?hours=1`：支持大于 0、最多 720 小时，约 720 个展示点。新部署的 30 天查询只显示已经积累的数据，不代表已有 30 天观测。
 - `/health`：报告处理进度、核心来源状态及错误。
 - 查询不通返回不可用，不自动恢复 SSH 或读取旧 SQLite。
+
+历史接口支持 `view=summary`，供 code-eval 实时监控读取已有的节点、缓存、时延和网关聚合曲线。该视图在 VM 的数值、有效性与断档查询中排除 `resources` 逐卡、逐 rank 和存储段明细，同时清理最新补点中的资源明细；聚合数值、采样步长、空值和断档语义保持不变。省略 `view` 或使用 `view=full` 保留完整接口。发布时先更新 monitoring-api，再更新 code-eval Web；源码支持不表示已完成线上发布或性能验收。
 
 `/api/monitoring/history` 同时按所选 `environment` 查询网关原始时序，新增 `points[].gateway`：`stream_idle_max_seconds`（流式输出停顿）、`oldest_age_seconds`（所有在途请求的最大年龄）、该请求的 `backend` / `stage` / `stage_name`，以及 `gap_before`。按当前 Perses 网关生成监控的完整性、新鲜度和生命周期校验读取；有效空闲为零，无效观测为 null。网关时间点与原有派生时间点合并，后端数据缺失不抹掉有效网关点；阶段、后端切换或缺样断线。
 

@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "image": "sha256:4af0ebd8380ae318521c0ee9bc95db640296ac063a511515132c246b3e3658dd",
+  "results": {
+    "dcu-pd": {
+      "bytes": 719457,
+      "seconds": 5.633,
+      "points": 361
+    },
+    "a3-vllm": {
+      "bytes": 769668,
+      "seconds": 1.848,
+      "points": 360
+    },
+    "xpu-pd": {
+      "bytes": 700608,
+      "seconds": 4.549,
+      "points": 362
+    }
+  },
+  "rollback_container": "monitoring-api-before-history-summary-20260924",
+  "other_containers_unchanged": true
+}

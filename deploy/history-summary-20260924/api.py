@@ -1,6 +1,5 @@
 """Independent VM-backed query API and bounded chart materialization."""
 import asyncio,contextlib,json,math,os,time
-from collections import OrderedDict
 from pathlib import Path
 from contextlib import asynccontextmanager
 import httpx
@@ -11,9 +10,6 @@ from . import a3, gateway_live, host_cpu, xpu, xpu_cache
 from .latency import PATHS as LATENCY_PATHS
 from .request_scope import PATH_REGEX as REQUEST_PATH_REGEX, SCHEMA as REQUEST_SCHEMA, is_request_path
 ENVIRONMENTS=("dcu-pd", "a3-vllm", "xpu-pd")
-HISTORY_CACHE_SIZE=8
-HISTORY_CACHE_TTL=5
-HISTORY_TIMEOUT=8
 def validate_environment(environment):
  if environment not in ENVIRONMENTS:raise HTTPException(400,"未知监控环境")
  return environment
@@ -92,7 +88,7 @@ class Service:
   self.replay=a3.replay if environment=="a3-vllm" else xpu.replay if environment=="xpu-pd" else replay
   self.client=httpx.AsyncClient(trust_env=False,timeout=10,limits=httpx.Limits(max_connections=8))
   self.latest={'environment':self.environment,'ts':None,'nodes':{},'enabled':True,'source':'victoriametrics'};self.error=None;self.slots=asyncio.Semaphore(2)
-  self.latest_point=None;self.watermark=0;self.started=time.time();self.cache=OrderedDict();self.history_tasks={};self.host_cpu_status=None
+  self.latest_point=None;self.watermark=0;self.started=time.time();self.cache={};self.host_cpu_status=None
   if self.watermark_file.exists():self.watermark=json.loads(self.watermark_file.read_text())['ts']
  async def raw(self,start,end):
   selector='{job=~"sglang-prefill|sglang-decode|node-prefill|node-decode|dcu-prefill|dcu-decode|mooncake"}'
@@ -147,49 +143,10 @@ class Service:
   end=int((end or time.time())//5)*5;start=start if start is not None else end-hours*3600
   step=max(5,math.ceil((end-start)/719/5)*5)
   key=(start,end,step,hours,view)
-  now=time.monotonic()
-  for old_key,(created,_) in list(self.cache.items()):
-   if now-created>=HISTORY_CACHE_TTL:del self.cache[old_key]
   cached=self.cache.get(key)
-  if cached:
-   self.cache.move_to_end(key);return cached[1]
-  task=self.history_tasks.get(key)
-  if task is None:
-   task=asyncio.create_task(self._cached_history(key))
-   self.history_tasks[key]=task
-   # Retrieve failures even if every HTTP caller has disconnected.
-   task.add_done_callback(lambda done: None if done.cancelled() else done.exception())
-  return await asyncio.shield(task)
-
- async def _cached_history(self,key):
-  start,end,step,hours,view=key
-  try:
-   async with asyncio.timeout(HISTORY_TIMEOUT):
-    value=await self._history(hours,start,end,step,view)
-   self.cache[key]=(time.monotonic(),value)
-   self.cache.move_to_end(key)
-   while len(self.cache)>HISTORY_CACHE_SIZE:self.cache.popitem(last=False)
-   return value
-  finally:
-   self.history_tasks.pop(key,None)
-
- async def close(self):
-  tasks=list(self.history_tasks.values())
-  for task in tasks:task.cancel()
-  await asyncio.gather(*tasks,return_exceptions=True)
-  self.history_tasks.clear();self.cache.clear()
-  await self.client.aclose()
-
- async def _history(self,hours,start,end,step,view):
+  if cached and time.time()-cached[0]<5:return cached[1]
   async with self.slots:
-   queries=[asyncio.create_task(self.query(history_expression(self.environment,kind,step,view),start,end,step)) for kind in ('value','valid','gaps')]
-   queries.append(asyncio.create_task(gateway_live.history(self.query,self.environment,start,end,step)))
-   try:
-    values,valid,gaps,gateway_result=await asyncio.gather(*queries)
-   finally:
-    for query in queries:
-     if not query.done():query.cancel()
-    await asyncio.gather(*queries,return_exceptions=True)
+   values,valid,gaps,gateway_result=await asyncio.gather(*(self.query(history_expression(self.environment,kind,step,view),start,end,step) for kind in ('value','valid','gaps')),gateway_live.history(self.query,self.environment,start,end,step))
    xpu_cache_result=await xpu_cache.history(self.query,start,end,step) if self.environment=='xpu-pd' else None
   gateway,gateway_status=gateway_result
   def index(series):return {(s['metric']['path'],float(ts)):float(v) for s in series for ts,v in s['values']}
@@ -224,7 +181,7 @@ class Service:
   gateway_live.attach(points,gateway,step)
   if view=='summary':points=[summary_point(p) for p in points]
   value={'environment':self.environment,'hours':hours,'stride':step//5,'points':points,'source':'victoriametrics','retention_hours':720,'gateway_status':gateway_status}
-  return value
+  self.cache={key:(time.time(),value)};return value
 
 @asynccontextmanager
 async def lifespan(app):
@@ -235,7 +192,7 @@ async def lifespan(app):
  finally:
   for task in tasks:task.cancel()
   await asyncio.gather(*tasks,return_exceptions=True)
-  for s in app.state.services.values():await s.close()
+  for s in app.state.services.values():await s.client.aclose()
 app=FastAPI(lifespan=lifespan,docs_url=None,redoc_url=None)
 @app.middleware('http')
 async def restrict(request,call_next):
@@ -270,7 +227,7 @@ async def history(request:Request,hours:float=1,start:float|None=None,end:float|
  if start is not None or end is not None:
   if start is None or end is None or not all(math.isfinite(x) for x in (start,end)) or not now-720*3600-120<=start<end<=now+5:raise HTTPException(400,'时间范围无效')
  try:
-  async with asyncio.timeout(HISTORY_TIMEOUT):return await s.history(hours,start,end,view=view)
+  async with asyncio.timeout(8):return await s.history(hours,start,end,view=view)
  except (TimeoutError,httpx.HTTPError,ValueError):raise HTTPException(503,'监控历史查询暂不可用')
 
 from .request_profile import router as request_profile_router

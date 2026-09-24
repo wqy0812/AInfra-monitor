@@ -1,8 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 PATCH_ROOT=$(cd "$(dirname "$0")" && pwd)
-BUILD_ROOT=${1:?usage: build.sh NEW_BUILD_DIRECTORY}
-RELEASE_VERSION=${2:-0.54.0-perf.2}
+BUILD_ROOT=${1:?usage: build.sh NEW_BUILD_DIRECTORY [VERSION] [PREVIOUS_RELEASE_LOCK]}
+RELEASE_VERSION=${2:-0.54.0-perf.3}
+PREVIOUS_RELEASE_LOCK=${3:-$PATCH_ROOT/release-lock.json}
+PREVIOUS_RELEASE_LOCK=$(cd "$(dirname "$PREVIOUS_RELEASE_LOCK")" && pwd)/$(basename "$PREVIOUS_RELEASE_LOCK")
+test -f "$PREVIOUS_RELEASE_LOCK"
 [[ "$RELEASE_VERSION" =~ ^0\.54\.0-perf\.[1-9][0-9]*$ ]]
 test ! -e "$BUILD_ROOT/perses-0.54.0"
 mkdir -p "$BUILD_ROOT"
@@ -26,16 +29,25 @@ cp "$PATCH_ROOT/cache.go" ui/performance_cache.go
 cp "$PATCH_ROOT/tests/cache_test.go" ui/performance_cache_test.go
 bash scripts/compress_assets.sh
 PERSES_SOURCE="$PERSES_SOURCE" ui/node_modules/.bin/jest --config "$PATCH_ROOT/tests/jest.config.cjs" --runInBand
-go test ./ui
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X github.com/prometheus/common/version.Version=$RELEASE_VERSION -X github.com/prometheus/common/version.Revision=4c719fc19fa21d333797e84c4fe7e3d81c25f4f5+performance" -o "$BUILD_ROOT/perses" ./cmd/perses
+# Prepare dependencies separately; compilation must use the installed toolchain
+# and the module-local vendor tree without downloading anything.
+export GOTOOLCHAIN=local
+go mod tidy
+go mod vendor
+export GOPROXY=off GOSUMDB=off
+go test -mod=vendor ./ui
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=vendor -ldflags "-s -w -X github.com/prometheus/common/version.Version=$RELEASE_VERSION -X github.com/prometheus/common/version.Revision=4c719fc19fa21d333797e84c4fe7e3d81c25f4f5+performance" -o "$BUILD_ROOT/perses" ./cmd/perses
 cp "$PATCH_ROOT/Dockerfile" "$BUILD_ROOT/Dockerfile"
 docker build --platform linux/amd64 --build-arg PERF_VERSION="$RELEASE_VERSION" -t "monitoring-perses:$RELEASE_VERSION" "$BUILD_ROOT"
 docker save --platform linux/amd64 "monitoring-perses:$RELEASE_VERSION" | gzip -n > "$BUILD_ROOT/perses-$RELEASE_VERSION.tar.gz"
 shasum -a 256 "$BUILD_ROOT/perses" "$BUILD_ROOT/perses-$RELEASE_VERSION.tar.gz" > "$BUILD_ROOT/sha256sums.txt"
 
-python3 - "$PATCH_ROOT" "$BUILD_ROOT" "$RELEASE_VERSION" <<'PYLOCK'
+python3 - "$PATCH_ROOT" "$BUILD_ROOT" "$RELEASE_VERSION" "$PREVIOUS_RELEASE_LOCK" <<'PYLOCK'
 import sys,json,pathlib,hashlib,tarfile
 patch,build=map(pathlib.Path,sys.argv[1:3]);version=sys.argv[3];lock=json.loads((patch/'source-lock.json').read_text());archive=build/('perses-'+version+'.tar.gz')
+previous=json.loads(pathlib.Path(sys.argv[4]).read_text())
+assert previous['candidate_version']!=version,'Use a new release version'
+lock.update(previous_version=previous['candidate_version'],previous_image_digest=previous['candidate_config_digest'])
 with tarfile.open(archive) as t:
  manifest=json.load(t.extractfile('manifest.json'))[0];config=t.extractfile(manifest['Config']).read()
 lock.update(candidate_version=version,candidate_archive_name=archive.name,candidate_archive_sha256=hashlib.sha256(archive.read_bytes()).hexdigest(),candidate_config_digest='sha256:'+hashlib.sha256(config).hexdigest())

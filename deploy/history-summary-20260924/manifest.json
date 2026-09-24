@@ -1,0 +1,10 @@
+{
+  "name": "monitoring-api",
+  "port": 18430,
+  "before": {
+    "/monitoring/monitoring/api.py": "eda970e63c68f6f64d76e181035f48cc5c39a35ad586af4d5546d8d7f1b69111"
+  },
+  "after": {
+    "/monitoring/monitoring/api.py": "c9b782a2138ad68880b8bb839bce2c660002901847b0ac5d7c41ad6b5e118ec7"
+  }
+}

@@ -81,13 +81,23 @@ export function TimeRangeProvider(props: TimeRangeProviderProps): ReactElement {
   const handleSetTimeRange = useCallback(
     (value: TimeRangeValue) => {
       setTimeRange(value);
-      setAbsoluteTimeRange(isRelativeTimeRange(value) ? toAbsoluteTimeRange(value) : value);
     },
     [setTimeRange]
   );
 
   const currentRange = useRef(absoluteTimeRange);
   currentRange.current = absoluteTimeRange;
+
+  // URL navigation/back-forward can change props without a picker interaction.
+  const previousInput = useRef(timeRange);
+  useEffect(() => {
+    const previous = previousInput.current;
+    previousInput.current = timeRange;
+    if (JSON.stringify(previous) === JSON.stringify(timeRange)) return;
+    const next = isRelativeTimeRange(timeRange) ? toAbsoluteTimeRange(timeRange) : timeRange;
+    currentRange.current = next;
+    setAbsoluteTimeRange(next);
+  }, [timeRange]);
 
   // Changing the range already changes every panel query key. Invalidating here
   // would refetch the old range before React commits the new one.
@@ -115,18 +125,26 @@ export function TimeRangeProvider(props: TimeRangeProviderProps): ReactElement {
     refreshPanels();
     void queryClient.invalidateQueries({ queryKey: ['variable'] });
   }, [queryClient, refreshPanels]);
-  const autoRefresh = refreshPanels;
-
   const refreshIntervalInMs = useMemo(() => getRefreshIntervalInMs(refreshInterval), [refreshInterval]);
   useEffect(() => {
-    if (refreshIntervalInMs > 0) {
-      const interval = setInterval(() => {
-        autoRefresh();
-      }, refreshIntervalInMs);
-
-      return (): void => clearInterval(interval);
-    }
-  }, [autoRefresh, refreshIntervalInMs]);
+    if (refreshIntervalInMs <= 0 || !isRelativeTimeRange(timeRange) || timeRange.end) return;
+    let interval: ReturnType<typeof setInterval> | undefined;
+    let wasHidden = document.hidden;
+    const stop = (): void => { clearInterval(interval); interval = undefined; };
+    const start = (): void => {
+      stop();
+      if (!document.hidden) interval = setInterval(refreshPanels, refreshIntervalInMs);
+    };
+    const onVisibility = (): void => {
+      const hidden = document.hidden;
+      if (hidden) stop();
+      else if (wasHidden) { refreshPanels(); start(); }
+      wasHidden = hidden;
+    };
+    start();
+    document.addEventListener('visibilitychange', onVisibility);
+    return (): void => { stop(); document.removeEventListener('visibilitychange', onVisibility); };
+  }, [refreshPanels, refreshIntervalInMs, timeRange]);
 
   const ctx = useMemo(() => {
     return {

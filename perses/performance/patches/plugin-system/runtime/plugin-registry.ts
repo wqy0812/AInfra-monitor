@@ -134,7 +134,7 @@ export function usePluginBuiltinVariableDefinitions(requiredPluginNames?: string
     queryKey: ['usePluginBuiltinVariableDefinitions', requiredPluginNames],
     staleTime: Infinity,
     queryFn: async () => {
-      const metadata = await listPluginMetadata(['Datasource', 'TimeSeriesQuery', 'ListVariable', 'Annotation', 'LogQuery', 'TraceQuery', 'ProfileQuery']);
+      const metadata = await listPluginMetadata(['Datasource', 'TimeSeriesQuery', 'Variable', 'Annotation', 'LogQuery', 'TraceQuery', 'ProfileQuery']);
       const moduleKey = (item: PluginMetadataWithModule) => JSON.stringify(item.module);
       const requiredModules = new Set(metadata.filter((item) => requiredPluginNames?.includes(item.spec.name)).map(moduleKey));
       const datasources = metadata.filter((item) => item.kind === 'Datasource' &&

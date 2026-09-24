@@ -81,3 +81,128 @@ test('retry button restarts failed active plugin queries and preserves successfu
  await waitFor(()=>expect(client.getQueryData(key)).toBe('recovered'));
  expect(failedCalls).toBe(2);expect(successfulCalls).toBe(1);client.clear();
 });
+
+function visibility(hidden) {
+ Object.defineProperty(document,'hidden',{configurable:true,value:hidden});
+ document.dispatchEvent(new Event('visibilitychange'));
+}
+afterEach(()=>{delete document.hidden;sessionStorage.clear();window.history.replaceState({},'', '/')});
+test('hidden relative dashboard stops ticks and resumes exactly once',async()=>{
+ jest.useFakeTimers();visibility(false);
+ const x=fixture({pastDuration:'1h'},'15s');await act(async()=>{});
+ await act(async()=>visibility(true));
+ await act(async()=>jest.advanceTimersByTime(60000));expect(x.calls).toHaveLength(1);
+ await act(async()=>visibility(false));expect(x.calls).toHaveLength(2);
+ await act(async()=>visibility(false));expect(x.calls).toHaveLength(2);
+ await act(async()=>jest.advanceTimersByTime(15000));expect(x.calls).toHaveLength(3);
+ x.ui.unmount();await act(async()=>{visibility(true);visibility(false);jest.advanceTimersByTime(30000)});
+ expect(x.calls).toHaveLength(3);x.client.clear();
+});
+test.each(['fixed','off'])('%s window never resumes automatically but manual refresh works',async(kind)=>{
+ jest.useFakeTimers();visibility(false);
+ const range=kind==='fixed'?{start:new Date('2026-01-01'),end:new Date('2026-01-02')}:{pastDuration:'1h'};
+ const x=fixture(range,kind==='off'?'0s':'15s');await act(async()=>{});
+ await act(async()=>{visibility(true);jest.advanceTimersByTime(45000);visibility(false)});
+ expect(x.calls).toHaveLength(1);
+ await act(async()=>ctx.refresh());expect(x.calls).toHaveLength(2);x.client.clear();
+});
+test('controlled changes switch fixed/relative mode without duplicate queries',async()=>{
+ jest.useFakeTimers();visibility(false);const calls=[];let setRange;
+ const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+ function Parent(){const [range,set]=React.useState({pastDuration:'1h'});setRange=set;return React.createElement(TimeRangeProvider,{timeRange:range,refreshInterval:'15s',setTimeRange:set,setRefreshInterval:()=>{}},React.createElement(Probe,{calls}))}
+ render(React.createElement(QueryClientProvider,{client},React.createElement(Parent)));await act(async()=>{});
+ await act(async()=>ctx.setTimeRange({start:new Date('2026-01-01'),end:new Date('2026-01-02')}));
+ expect(calls).toHaveLength(2);expect(calls[1]).toBe(+new Date('2026-01-02'));
+ await act(async()=>jest.advanceTimersByTime(45000));expect(calls).toHaveLength(2);
+ await act(async()=>setRange({pastDuration:'6h'}));expect(calls).toHaveLength(3);
+ await act(async()=>jest.advanceTimersByTime(15000));expect(calls).toHaveLength(4);client.clear();
+});
+
+const { BrowserRouter, useNavigate, useLocation } = require('react-router-dom');
+const { QueryParamProvider } = require('use-query-params');
+const { ReactRouter6Adapter } = require('use-query-params/adapters/react-router-6');
+const { useInitialTimeRange, useInitialRefreshInterval } = require(path.join(base,'runtime/TimeRangeProvider/query-params'));
+const { TimeRangeProviderWithQueryParams } = require(path.join(base,'runtime/TimeRangeProvider/TimeRangeProviders'));
+function navigationFixture(initial='/projects/a/dashboards/one') {
+ window.history.replaceState({},'',initial);
+ let navigate;
+ const calls=[];const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+ function Dashboard(){
+  const range=useInitialTimeRange('1h');const refresh=useInitialRefreshInterval('0s');
+  return React.createElement(TimeRangeProviderWithQueryParams,{initialTimeRange:range,initialRefreshInterval:refresh},React.createElement(Probe,{calls}));
+ }
+ function Routes(){navigate=useNavigate();const loc=useLocation();return loc.pathname.includes('/dashboards/')?React.createElement(Dashboard):null}
+ const ui=render(React.createElement(QueryClientProvider,{client},React.createElement(BrowserRouter,{future:{v7_startTransition:true,v7_relativeSplatPath:true}},React.createElement(QueryParamProvider,{adapter:ReactRouter6Adapter},React.createElement(Routes)))));
+ return {client,calls,ui,navigate:(url)=>navigate(url)};
+}
+test('relative duration survives dashboard/project/list navigation, explicit URL wins',async()=>{
+ const x=navigationFixture('/projects/a/dashboards/one?start=6h');
+ await waitFor(()=>expect(ctx.timeRange).toEqual({pastDuration:'6h'}));
+ await act(async()=>x.navigate('/projects/b'));await act(async()=>x.navigate('/projects/b/dashboards/two'));
+ await waitFor(()=>expect(new URLSearchParams(location.search).get('start')).toBe('6h'));
+ expect(ctx.timeRange).toEqual({pastDuration:'6h'});
+ await act(async()=>x.navigate('/projects/a/dashboards/three?start=15m'));
+ await waitFor(()=>expect(ctx.timeRange).toEqual({pastDuration:'15m'}));
+ expect(+ctx.absoluteTimeRange.end - +ctx.absoluteTimeRange.start).toBe(900000);x.client.clear();
+});
+test('fixed range inherits exact milliseconds, preserves unrelated URL params and survives reload',async()=>{
+ const start=1767225600123,end=1767312000456;
+ const x=navigationFixture(`/projects/a/dashboards/one?start=${start}&end=${end}`);
+ await waitFor(()=>expect(+ctx.absoluteTimeRange.start).toBe(start));
+ await act(async()=>x.navigate('/projects/b/dashboards/two?var-node=node2&refresh=30s'));
+ await waitFor(()=>expect(new URLSearchParams(location.search).get('end')).toBe(String(end)));
+ expect(new URLSearchParams(location.search).get('var-node')).toBe('node2');
+ expect(ctx.refreshInterval).toBe('30s');expect(+ctx.absoluteTimeRange.start).toBe(start);
+ const url=location.pathname+location.search;x.ui.unmount();x.client.clear();
+ const y=navigationFixture(url);await waitFor(()=>expect(+ctx.absoluteTimeRange.end).toBe(end));y.client.clear();
+});
+test.each(['start=bad&end=bad','start=&end=','end=1767312000000'])('invalid explicit URL does not inherit remembered range: %s',async(query)=>{
+ sessionStorage.setItem('perses.dashboard.time-range.v1',JSON.stringify({start:'6h'}));
+ const x=navigationFixture('/projects/a/dashboards/one?'+query);
+ await waitFor(()=>expect(ctx.timeRange).toEqual({pastDuration:'1h'}));x.client.clear();
+});
+test('blocked session storage falls back to dashboard default and still allows changes',async()=>{
+ jest.spyOn(Storage.prototype,'getItem').mockImplementation(()=>{throw Error('blocked')});
+ jest.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw Error('blocked')});
+ const x=navigationFixture();await waitFor(()=>expect(ctx.timeRange).toEqual({pastDuration:'1h'}));
+ await act(async()=>ctx.setTimeRange({pastDuration:'24h'}));
+ await waitFor(()=>expect(ctx.timeRange).toEqual({pastDuration:'24h'}));x.client.clear();
+});
+test('back and forward restore URL range instead of newest remembered range',async()=>{
+ const x=navigationFixture('/projects/a/dashboards/one?start=6h');await waitFor(()=>expect(ctx.timeRange).toEqual({pastDuration:'6h'}));
+ await act(async()=>x.navigate('/projects/a/dashboards/two?start=15m'));await waitFor(()=>expect(ctx.timeRange).toEqual({pastDuration:'15m'}));
+ await act(async()=>x.navigate(-1));await waitFor(()=>expect(ctx.timeRange).toEqual({pastDuration:'6h'}));
+ await act(async()=>x.navigate(1));await waitFor(()=>expect(ctx.timeRange).toEqual({pastDuration:'15m'}));x.client.clear();
+});
+
+test('single chart and variable queries do not refetch on focus/reconnect; manual refresh still works',async()=>{
+ const {focusManager,onlineManager}=require('@tanstack/react-query');
+ const {useTimeSeriesQuery}=require(path.join(base,'runtime/time-series-queries'));
+ const {useListVariablePluginValues}=require(path.join(base,'components/Variables/variable-model'));
+ const {PluginRegistryContext}=require(path.join(base,'runtime/plugin-registry'));
+ const {VariableContext}=require(path.join(base,'runtime/variables'));
+ const {BuiltinVariableContext}=require(path.join(base,'runtime/builtin-variables'));
+ const {DatasourceStoreContext}=require(path.join(base,'runtime/datasources'));
+ let chartCalls=0,variableCalls=0;
+ const chartPlugin={getTimeSeriesData:async()=>{chartCalls++;return {series:[]}}};
+ const variablePlugin={getVariableOptions:async()=>{variableCalls++;return {data:[{value:'prefill'}]}}};
+ const registry={getPlugin:async({kind})=>kind==='Variable'?variablePlugin:chartPlugin};
+ const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+ function P(){ctx=useTimeRange();useTimeSeriesQuery({kind:'TimeSeriesQuery',spec:{plugin:{kind:'TestChart',spec:{}}}});useListVariablePluginValues({kind:'ListVariable',spec:{name:'role',plugin:{kind:'TestVariable',spec:{}}}});return null}
+ let tree=React.createElement(P);
+ for(const [Provider,props] of [
+  [DatasourceStoreContext.Provider,{value:{}}],
+  [BuiltinVariableContext.Provider,{value:{variables:[]}}],
+  [VariableContext.Provider,{value:{state:{}}}],
+  [PluginRegistryContext.Provider,{value:registry}],
+  [TimeRangeProvider,{timeRange:{start:new Date('2026-01-01'),end:new Date('2026-01-02')},refreshInterval:'15s',setTimeRange:()=>{},setRefreshInterval:()=>{}}],
+  [QueryClientProvider,{client}],
+ ]) tree=React.createElement(Provider,props,tree);
+ render(tree);
+ try {
+  await waitFor(()=>expect([chartCalls,variableCalls]).toEqual([1,1]));
+  await act(async()=>{focusManager.setFocused(false);focusManager.setFocused(true);onlineManager.setOnline(false);onlineManager.setOnline(true)});
+  expect([chartCalls,variableCalls]).toEqual([1,1]);
+  await act(async()=>ctx.refresh());await waitFor(()=>expect([chartCalls,variableCalls]).toEqual([2,2]));
+ } finally {focusManager.setFocused(undefined);onlineManager.setOnline(true);client.clear()}
+});

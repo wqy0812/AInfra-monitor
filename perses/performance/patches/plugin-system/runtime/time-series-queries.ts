@@ -74,7 +74,7 @@ function getQueryOptions({
   // Determine queryEnabled
   let waitToLoad = false;
   if (variableDependencies) {
-    waitToLoad = variableDependencies.some((v) => !variableState[v] || variableState[v].loading);
+    waitToLoad = variableDependencies.some((v) => !variableState[v] || variableState[v]?.loading);
   }
 
   const queryEnabled = plugin !== undefined && !waitToLoad;
@@ -97,7 +97,10 @@ export const useTimeSeriesQuery = (
   const context = useTimeSeriesQueryContext();
   const { queryEnabled, queryKey } = getQueryOptions({ plugin, definition, context });
   return useQuery({
+    ...queryOptions,
     enabled: (queryOptions?.enabled ?? true) && queryEnabled,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     queryKey: queryKey,
     queryFn: ({ signal }) => {
       // The 'enabled' option should prevent this from happening, but make TypeScript happy by checking
