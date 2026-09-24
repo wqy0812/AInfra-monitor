@@ -35,6 +35,6 @@ Perses 使用 `release-lock-perf3.json`，升级/回退基线为 perf.2。归档
 - `/data2/monitoring/releases/time-navigation-20260925`
 - `/data2/monitoring/perses/evidence/time-navigation-20260925`，含候选数据子目录 `candidate-data`。
 
-凭据、容器配置快照和完整原始证据仅保留在服务器。API 证据为 `candidate-api.json`、`complete.json`、`post-perses-health.json`；Perses 证据为 `candidate-api-validation.json`、`candidate-proxy-validation.json`、`image-publication.json`、`production-verification.json`、`candidate-cleanup.json`，另存本机浏览器报告与用户验收范围记录。
+凭据、容器配置快照仅保留在服务器。API 验收报告为 `candidate-api.json`、`complete.json`、`post-perses-health.json`；Perses 验收报告为 `candidate-api-validation.json`、`candidate-proxy-validation.json`、`candidate-health.json`、`image-publication.json`、`production-verification.json`、`candidate-cleanup.json`，另存本机浏览器报告与用户验收范围记录。
 
-全部部署及线上核验完成后，下载证据副本再次遇到 SSH MCP `Connection closed`，按约束停止远程操作。本地仅下载了 `image-publication.json`、`candidate-api-validation.json`，位于忽略目录 `evidence/time-navigation-20260925`；其余仍在服务器。该下载失败不影响此前已确认的发布结果，后续补下载需要恢复 SSH MCP 文件传输连接。
+全部部署及线上核验完成后，SCP 下载曾遇到 SSH MCP `Connection closed`，当时按约束停止远程操作，仅取回两个报告。用户随后要求重试，本次通过 SSH MCP `ssh_exec` 读取上述九个非敏感 JSON 报告并保存至本地忽略目录 `evidence/time-navigation-20260925`，逐文件 SHA256 均与服务器一致；摘要清单为 `download-manifest.json`。报告补下载已完成，本次没有新增服务器目录，也没有再次切换服务。
