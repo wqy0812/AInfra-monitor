@@ -27,6 +27,10 @@ __pycache__/
 # Deployment evidence and local working records.
 /evidence/
 /work/
+# Release inputs (manifest/panels/locks) remain tracked; these are execution results.
+/deploy/**/complete.json
+/deploy/**/*-complete.json
+/deploy/**/perses-proxy-verification.json
 /docs/streaming-scope-20260915.md
 /docs/streaming-scope-20260915.patch
 # Historical browser acceptance depends on ignored evidence and sibling Web files.

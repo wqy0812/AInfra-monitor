@@ -76,12 +76,12 @@ def cpu_vm():
 @pytest.mark.parametrize('case', CASES)
 @pytest.mark.parametrize('step', [5, 15, 60])
 @pytest.mark.parametrize('node', ['.*', 'a3-1', 'a3-2'])
-@pytest.mark.parametrize('panel,normal', [('p0', 40), ('extra-iowait', 10)])
+@pytest.mark.parametrize('panel,normal', [('core-p0', 40), ('core-extra-iowait', 10)])
 def test_panel_reads_valid_materialized_values_and_filters_nodes(cpu_vm, case, step, node, panel, normal):
     query, ends = cpu_vm
     document = json.loads((Path(__file__).parents[1] / 'perses/projects/a3-monitoring/dashboards/a3-hosts.json').read_text())
     expr = document['spec']['panels'][panel]['spec']['queries'][0]['spec']['plugin']['spec']['query']
-    result = query(expr.replace('$node', node).replace('$__interval', f'{step}s'), ends[case], ends[case])
+    result = query(expr.replace('$node', node).replace('$role', '.*').replace('$__interval', f'{step}s'), ends[case], ends[case])
     if case not in ('normal', 'zero'):
         assert result == []
     else:

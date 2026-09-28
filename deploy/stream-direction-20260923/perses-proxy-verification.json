@@ -1,8 +1,0 @@
-{
-  "dcu-monitoring/live-idle-max": 0,
-  "dcu-monitoring/live-oldest": 0,
-  "a3-monitoring/live-idle-max": 13,
-  "a3-monitoring/live-oldest": 13,
-  "xpu-monitoring/live-idle-max": 13,
-  "xpu-monitoring/live-oldest": 13
-}

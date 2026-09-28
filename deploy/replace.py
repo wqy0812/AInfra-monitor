@@ -62,7 +62,7 @@ def restore(name, old, backup, image):
     require(inspect(name)['Id'] == old['Id'] and inspect(old['Id'])['State']['Running'], 'Original container did not recover')
 
 
-def replace(name, image, driver_readonly=False, loadavg=False):
+def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=None):
     old = inspect(name)
     require(old['Config'].get('Labels', {}).get('monitoring.owner') == 'independent', 'Container is not independently owned')
     require(old['State']['Running'], 'Original container must be running')
@@ -75,6 +75,13 @@ def replace(name, image, driver_readonly=False, loadavg=False):
     config = copy.deepcopy({k: old['Config'][k] for k in fields if k in old['Config']})
     config.update(Image=image, HostConfig=copy.deepcopy(old['HostConfig']))
     config.setdefault('Labels', {})['monitoring.transaction'] = backup
+    # The API allowlist checks transport peers, including the local Perses proxy.
+    if name == 'monitoring-api' and '--no-proxy-headers' not in config['Cmd']:
+        config['Cmd'].append('--no-proxy-headers')
+    if allowed_clients is not None:
+        require(name == 'monitoring-api', '--allowed-clients is only for monitoring-api')
+        config['Env'] = [v for v in config.get('Env', []) if not v.startswith('ALLOWED_CLIENTS=')]
+        config['Env'].append('ALLOWED_CLIENTS=' + allowed_clients)
     if driver_readonly:
         require(name == 'monitoring-dcu', '--driver-readonly is only for monitoring-dcu')
         binds = config['HostConfig'].setdefault('Binds', [])
@@ -106,8 +113,9 @@ def main():
     parser.add_argument('image')
     parser.add_argument('--driver-readonly', action='store_true')
     parser.add_argument('--loadavg', action='store_true')
+    parser.add_argument('--allowed-clients')
     args = parser.parse_args()
-    print(json.dumps(replace(args.name, args.image, args.driver_readonly, args.loadavg)))
+    print(json.dumps(replace(args.name, args.image, args.driver_readonly, args.loadavg, args.allowed_clients)))
 
 
 if __name__ == '__main__':

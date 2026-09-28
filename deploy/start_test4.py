@@ -14,6 +14,6 @@ start('monitoring-vmagent','monitoring-vm:1.151.0',[
  ['--cpus','0.5','--memory','512m','-v',str(ROOT/'buffer')+':/buffer',
  '-v',str(RELEASE/'deploy')+':/config:ro'],'/vmagent')
 start('monitoring-api','monitoring-api:xpu-20260921',[
- '-m','uvicorn','monitoring.api:app','--host','0.0.0.0','--port','18430','--no-access-log'],
+ '-m','uvicorn','monitoring.api:app','--host','0.0.0.0','--port','18430','--no-access-log','--no-proxy-headers'],
  ['--cpus','1','--memory','512m','-v',str(ROOT/'state')+':/state',
- '-e','ALLOWED_CLIENTS=127.0.0.1,122.247.53.162,122.247.53.250,122.247.53.180'],'python')
+ '-e','ALLOWED_CLIENTS=*'],'python')

@@ -109,7 +109,11 @@
                   "spec": {
                     "minStep": "5s",
                     "query": "(100 * (1 - avg by(job,instance,node) (rate(node_cpu_seconds_total{mode=\"idle\",node=~\"$node\",environment=\"dcu-pd\",node=~\"$role\"}[1m]) + ignoring(mode) rate(node_cpu_seconds_total{mode=\"iowait\",node=~\"$node\",environment=\"dcu-pd\",node=~\"$role\"}[1m])))) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"node-.*\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"node-.*\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"node-.*\",node=~\"$role\"}) < 15))",
-                    "seriesNameFormat": "{{node}}"
+                    "seriesNameFormat": "{{node}}",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "perses-accelerated"
+                    }
                   }
                 }
               }
@@ -438,7 +442,11 @@
                   "spec": {
                     "minStep": "5s",
                     "query": "100 * avg by(environment,node) ((rate(node_cpu_seconds_total{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",mode=\"iowait\",node=~\"$role\"}[1m]) and ((time() - timestamp(node_cpu_seconds_total{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",mode=\"iowait\",node=~\"$role\"}) < 15) and (count_over_time(node_cpu_seconds_total{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",mode=\"iowait\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}) < 15))) and (count_over_time(node_cpu_seconds_total{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",mode=\"iowait\",node=~\"$role\"}[1m]) >= 12) and (resets(node_cpu_seconds_total{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",mode=\"iowait\",node=~\"$role\"}[1m]) == 0) and (resets(node_cpu_seconds_total{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",mode=\"iowait\",node=~\"$role\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}) < 15))))))",
-                    "seriesNameFormat": "{{node}}"
+                    "seriesNameFormat": "{{node}}",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "perses-accelerated"
+                    }
                   }
                 }
               }

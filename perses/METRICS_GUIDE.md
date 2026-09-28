@@ -2,6 +2,8 @@
 
 按项目和看板定位；请求总量包含流式与非流式。首增量、首输出等待及流停顿按源端实际可观测样本统计；非流式请求数是总请求中的一个子集。
 
+查询合并、预计算和回源规则见 [查询加速与原有口径](../docs/perses-query-acceleration.md)。
+
 ## a3-monitoring / 缓存与存储
 
 [打开看板](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/a3-cache)

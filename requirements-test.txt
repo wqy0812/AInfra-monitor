@@ -1,0 +1,5 @@
+# Local Python regression tests; excludes the optional code-eval integration environment.
+-r requirements.txt
+-r requirements-tools.txt
+pytest==9.1.1
+pytest-asyncio==1.4.0

@@ -112,6 +112,16 @@ def test_replacement_removes_backup_only_after_acceptance(monkeypatch):
     assert list(docker.containers) == ['monitoring-api']
 
 
+def test_api_replacement_can_explicitly_allow_all_clients(monkeypatch):
+    docker = Docker()
+    docker.containers['monitoring-api']['Config']['Env'] = ['ALLOWED_CLIENTS=127.0.0.1', 'OTHER=preserve']
+    docker.patch(monkeypatch)
+    replacement.replace('monitoring-api', 'candidate-tag', allowed_clients='*')
+    config = docker.containers['monitoring-api']['Config']
+    assert config['Env'] == ['OTHER=preserve', 'ALLOWED_CLIENTS=*']
+    assert config['Cmd'].count('--no-proxy-headers') == 1
+
+
 def test_replacement_preflight_rejects_collision_and_unknown_component(monkeypatch):
     docker = Docker()
     docker.patch(monkeypatch)

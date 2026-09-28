@@ -109,6 +109,7 @@ def main():
         (ROOT / "metric_coverage.json").write_text(json.dumps(coverage, ensure_ascii=False, indent=2) + "\n")
     descriptions = {}
     guide = ["# Perses 图表指标说明", "", "按项目和看板定位；请求总量包含流式与非流式。首增量、首输出等待及流停顿按源端实际可观测样本统计；非流式请求数是总请求中的一个子集。", ""]
+    guide += ["查询合并、预计算和回源规则见 [查询加速与原有口径](../docs/perses-query-acceleration.md)。", ""]
     for d in resources["dashboards"]:
         project, name = d["metadata"]["project"], d["metadata"]["name"]
         descriptions.setdefault(project, {})[name] = {k: p["spec"]["display"].get("description", "") for k, p in d["spec"]["panels"].items()}

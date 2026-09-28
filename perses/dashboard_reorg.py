@@ -178,13 +178,15 @@ def verify(before, after, manifest):
 
 
 def write_resources(resources, root):
+    from acceleration_publication import published
+    resources = published(resources)
     for category, documents in resources.items():
         for d in documents:
             project = d['metadata'].get('project',d['metadata']['name'])
             if project not in PROJECTS: continue
             folder = root/project/('dashboards' if category == 'dashboards' else '')
             folder.mkdir(parents=True, exist_ok=True)
-            filename = d['metadata']['name'] if category == 'dashboards' else 'project' if category == 'projects' else 'datasource'
+            filename = d['metadata']['name'] if category == 'dashboards' else 'project' if category == 'projects' else 'datasource' if d['metadata']['name'] == 'victoriametrics' else d['metadata']['name'] + '-datasource'
             (folder/(filename+'.json')).write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
     retired = copy.deepcopy(RETIRED)
     if any(d['metadata']['project']=='a3-monitoring' and d['metadata']['name']=='backend-prefill' for d in resources['dashboards']):

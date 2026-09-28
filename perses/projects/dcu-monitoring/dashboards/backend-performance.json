@@ -164,33 +164,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p50\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p50\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p50\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p50\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p50\"}) < 15)) * 1",
-                    "seriesNameFormat": "{{path}}"
-                  }
-                }
-              }
-            },
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p95\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p95\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p95\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p95\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p95\"}) < 15)) * 1",
-                    "seriesNameFormat": "{{path}}"
-                  }
-                }
-              }
-            },
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p99\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p99\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p99\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p99\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.p99\"}) < 15)) * 1",
+                    "query": "sort_by_label((label_replace((label_replace((label_replace(((monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.(p50|p95|p99)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.(p50|p95|p99)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.(p50|p95|p99)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.(p50|p95|p99)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.ttft.(p50|p95|p99)\"}) < 15)) * 1), \"perses_order\", \"00\", \"path\", \".*[.]p50\")), \"perses_order\", \"01\", \"path\", \".*[.]p95\")), \"perses_order\", \"02\", \"path\", \".*[.]p99\")), \"perses_order\", \"path\")",
                     "seriesNameFormat": "{{path}}"
                   }
                 }
@@ -234,33 +208,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "((monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p50\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p50\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p50\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p50\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p50\"}) < 15)) * 1) * 1000.0",
-                    "seriesNameFormat": "{{path}}"
-                  }
-                }
-              }
-            },
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "((monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p95\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p95\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p95\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p95\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p95\"}) < 15)) * 1) * 1000.0",
-                    "seriesNameFormat": "{{path}}"
-                  }
-                }
-              }
-            },
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "((monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p99\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p99\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p99\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p99\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.p99\"}) < 15)) * 1) * 1000.0",
+                    "query": "sort_by_label((label_replace((label_replace((label_replace((((monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.(p50|p95|p99)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.(p50|p95|p99)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.(p50|p95|p99)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.(p50|p95|p99)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.itl.(p50|p95|p99)\"}) < 15)) * 1) * 1000.0), \"perses_order\", \"00\", \"path\", \".*[.]p50\")), \"perses_order\", \"01\", \"path\", \".*[.]p95\")), \"perses_order\", \"02\", \"path\", \".*[.]p99\")), \"perses_order\", \"path\")",
                     "seriesNameFormat": "{{path}}"
                   }
                 }
@@ -304,33 +252,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p50\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p50\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p50\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p50\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p50\"}) < 15)) * 1",
-                    "seriesNameFormat": "{{path}}"
-                  }
-                }
-              }
-            },
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p95\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p95\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p95\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p95\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p95\"}) < 15)) * 1",
-                    "seriesNameFormat": "{{path}}"
-                  }
-                }
-              }
-            },
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p99\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p99\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p99\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p99\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.p99\"}) < 15)) * 1",
+                    "query": "sort_by_label((label_replace((label_replace((label_replace(((monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.(p50|p95|p99)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.(p50|p95|p99)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.(p50|p95|p99)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.(p50|p95|p99)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"request-metrics-v2\",path=~\"nodes.$role.percentiles.e2e.(p50|p95|p99)\"}) < 15)) * 1), \"perses_order\", \"00\", \"path\", \".*[.]p50\")), \"perses_order\", \"01\", \"path\", \".*[.]p95\")), \"perses_order\", \"02\", \"path\", \".*[.]p99\")), \"perses_order\", \"path\")",
                     "seriesNameFormat": "{{path}}"
                   }
                 }

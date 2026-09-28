@@ -21,7 +21,7 @@ def main():
   print(run('docker','build','-f',str(RELEASE/'Dockerfile.api'),'-t','monitoring-api:20260913.1',str(RELEASE)))
   start('monitoring-vm','monitoring-vm:1.151.0',['-storageDataPath=/storage','-retentionPeriod=30d','-httpListenAddr=127.0.0.1:18428','-memory.allowedBytes=1536MiB','-storage.minFreeDiskSpaceBytes=20GiB'],['--cpus','2','--memory','2g','-v',str(ROOT/'vm')+':/storage'],'/vm')
   start('monitoring-vmagent','monitoring-vm:1.151.0',['-promscrape.config=/config/scrape.yml','-remoteWrite.url=http://127.0.0.1:18428/api/v1/write','-remoteWrite.tmpDataPath=/buffer','-remoteWrite.maxDiskUsagePerURL=5GiB','-httpListenAddr=127.0.0.1:18429','-memory.allowedBytes=384MiB'],['--cpus','0.5','--memory','512m','-v',str(ROOT/'buffer')+':/buffer','-v',str(RELEASE/'deploy')+':/config:ro'],'/vmagent')
-  start('monitoring-api','monitoring-api:20260913.1',['-m','uvicorn','monitoring.api:app','--host','0.0.0.0','--port','18430','--no-access-log'],['--cpus','1','--memory','512m','-v',str(ROOT/'state')+':/state','-e','ALLOWED_CLIENTS=127.0.0.1,122.247.53.250,122.247.53.180,122.247.53.162'],'python')
+  start('monitoring-api','monitoring-api:20260913.1',['-m','uvicorn','monitoring.api:app','--host','0.0.0.0','--port','18430','--no-access-log','--no-proxy-headers'],['--cpus','1','--memory','512m','-v',str(ROOT/'state')+':/state','-e','ALLOWED_CLIENTS=*'],'python')
  else:
   assert args.bind
   image=run('docker','inspect','kongmx-deepseek-v4-0828','--format','{{.Image}}').strip()

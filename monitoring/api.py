@@ -10,6 +10,7 @@ from .resource_series import resource_paths
 from . import a3, gateway_live, host_cpu, xpu, xpu_cache
 from .latency import PATHS as LATENCY_PATHS
 from .request_scope import PATH_REGEX as REQUEST_PATH_REGEX, SCHEMA as REQUEST_SCHEMA, is_request_path
+from .perses_acceleration import AccelerationService, install_routes as install_perses_routes
 ENVIRONMENTS=("dcu-pd", "a3-vllm", "xpu-pd")
 HISTORY_CACHE_SIZE=8
 HISTORY_CACHE_TTL=5
@@ -231,16 +232,29 @@ async def lifespan(app):
  app.state.services={env:Service(env) for env in ENVIRONMENTS}
  app.state.service=app.state.services['dcu-pd']
  tasks=[asyncio.create_task(s.run()) for s in app.state.services.values()]
+ app.state.perses_acceleration=None
+ app.state.perses_acceleration_error=None
+ catalog_path=os.environ.get('PERSES_ACCELERATION_CATALOG')
+ if catalog_path:
+  try:
+   catalog=json.loads(Path(catalog_path).read_text())
+   ready=lambda:all(v.error is None and v.watermark>time.time()-20 for v in app.state.services.values())
+   app.state.perses_acceleration=AccelerationService(VM,STATE,catalog,source_ready=ready)
+   tasks.append(asyncio.create_task(app.state.perses_acceleration.run()))
+  except (OSError,ValueError,KeyError,TypeError) as error:
+   app.state.perses_acceleration_error=type(error).__name__+': '+str(error)[:160]
  try:yield
  finally:
   for task in tasks:task.cancel()
   await asyncio.gather(*tasks,return_exceptions=True)
   for s in app.state.services.values():await s.close()
+  if app.state.perses_acceleration:await app.state.perses_acceleration.close()
 app=FastAPI(lifespan=lifespan,docs_url=None,redoc_url=None)
+install_perses_routes(app)
 @app.middleware('http')
 async def restrict(request,call_next):
  from fastapi.responses import JSONResponse
- if request.client.host not in ALLOWED:return JSONResponse({'detail':'Forbidden'},403)
+ if '*' not in ALLOWED and request.client.host not in ALLOWED:return JSONResponse({'detail':'Forbidden'},403)
  return await call_next(request)
 @app.get('/health')
 async def health(request:Request):
@@ -251,7 +265,9 @@ async def health(request:Request):
  a3_service=request.app.state.services.get('a3-vllm')
  if a3_service:
   environments['a3-vllm']['host_cpu']={'query_status':a3_service.host_cpu_status,'sources':{role:n.get('host_cpu',{}).get('status') for role,n in a3_service.latest.get('nodes',{}).items()}}
- return {'status':'ok' if good and not s.error and s.watermark>time.time()-20 else 'degraded','error':s.error,'sources':sources,'processed_at':s.watermark,'started_at':s.started,'environments':environments}
+ accelerator=getattr(request.app.state,'perses_acceleration',None)
+ acceleration=accelerator.status() if accelerator else {'enabled':False,'error':getattr(request.app.state,'perses_acceleration_error',None)}
+ return {'status':'ok' if good and not s.error and s.watermark>time.time()-20 else 'degraded','error':s.error,'sources':sources,'processed_at':s.watermark,'started_at':s.started,'environments':environments,'perses_acceleration':acceleration}
 def selected_service(request,environment):
  validate_environment(environment)
  return request.app.state.services[environment]
