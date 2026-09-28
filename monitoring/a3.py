@@ -3,14 +3,52 @@ import bisect
 import collections
 import json
 import math
+import os
+from pathlib import Path
 from .calculator import quantile_buckets
 from .request_scope import SCHEMA
 from .latency import snapshot, increments as histogram_increments
 
 ENVIRONMENT = 'a3-vllm'
 NODES = {'prefill': ('a3-1', '122.209.21.24'), 'decode': ('a3-2', '122.209.21.25')}
+INSTANCE_COUNTS = {'prefill': 4, 'decode': 16}
 LATENCIES = {'ttft': 'time_to_first_token_seconds', 'itl': 'inter_token_latency_seconds', 'e2e': 'e2e_request_latency_seconds'}
 MAX_INTERVAL = 10  # A missed 5-second scrape invalidates the affected window.
+
+
+def collection_coverage():
+    """Deployment evidence only; never infer or rewrite historical completeness."""
+    path = Path(os.environ.get('STATE_DIR', '/state')) / 'a3-collection-coverage.json'
+    try:
+        evidence = json.loads(path.read_text())
+    except (OSError, ValueError):
+        evidence = {}
+    return {
+        'expected_instances': dict(INSTANCE_COUNTS),
+        'repair_complete_at': evidence.get('repair_complete_at'),
+        'incomplete_confirmed_at': evidence.get('incomplete_confirmed_at'),
+        'historical_policy': 'preserve_with_notice',
+        'notice': 'A3 Decode 采集修复前仅覆盖 7100–7103；已确认的 DP=16 漏采期间历史不代表全量。历史原样保留，不乘倍数补算；更早拓扑未经核实，不推定漏采。修复后 Prefill 按 4、Decode 按 16 个引擎严格校验。',
+    }
+
+
+def valid_engine(rows, identity):
+    """Each configured endpoint must expose exactly its own engine identity."""
+    engine = str(int(identity[1].rsplit(':', 1)[1]) - 7100)
+    seen = set()
+    found = False
+    for row in rows:
+        if not row['name'].startswith('vllm:'):
+            continue
+        labels = row['labels']
+        if labels.get('engine') != engine or labels.get('instance') != identity[1] or labels.get('node') != identity[0]:
+            return False
+        key = (row['name'], json.dumps(labels, sort_keys=True))
+        if key in seen:
+            return False
+        seen.add(key)
+        found = True
+    return found
 
 
 def decode_export(lines):
@@ -154,16 +192,21 @@ def replay(groups, start, end, emit_start=None):
         snapshot = {'ts': tick, 'environment': ENVIRONMENT, 'nodes': {}, 'enabled': True, 'source': 'victoriametrics', 'interval_seconds': 5, 'retention_hours': 720}
         point = {'ts': tick, 'environment': ENVIRONMENT, 'nodes': {}, 'mooncake': {}, 'source': 'victoriametrics'}
         for role, (node, address) in NODES.items():
-            expected = {(node, address + ':' + str(port)) for port in range(7100, 7104)}
-            active = set(); available = []
+            count = INSTANCE_COUNTS[role]
+            expected = {(node, address + ':' + str(port)) for port in range(7100, 7100 + count)}
+            active = set(); available = []; unexpected = set()
             for identity, (times, samples) in groups.items():
                 if identity[0] != node:
                     continue
                 i = bisect.bisect_right(times, tick) - 1
                 ts = times[i] if i >= 0 else None
                 rows = samples[ts] if ts is not None else []
+                if identity not in expected:
+                    if ts is not None and 0 <= tick - ts < 10:
+                        unexpected.add(identity)
+                    continue
                 up = [r['value'] for r in rows if r['name'] == 'up']
-                if ts is None or not 0 <= tick - ts < 10 or up != [1]:
+                if ts is None or not 0 <= tick - ts < 10 or up != [1] or not valid_engine(rows, identity):
                     histories.pop(identity, None); previous.pop(identity, None)
                     continue
                 active.add(identity)
@@ -176,7 +219,7 @@ def replay(groups, start, end, emit_start=None):
                         h.pop(0)
                 if identity in expected:
                     available.append(h)
-            complete = active == expected and len(available) == 4
+            complete = active == expected and len(available) == count and not unexpected
             if not complete:
                 for h in available:
                     h[:] = h[-1:]
@@ -186,8 +229,8 @@ def replay(groups, start, end, emit_start=None):
             point['nodes'][role] = p
             observed = min((h[-1][0] for h in available), default=None)
             snapshot['nodes'][role] = {'node': node, 'metrics': {'status': 'ok' if complete else 'error', 'observed_at': observed,
-                'error': None if complete else '需要 4 个完整实例，当前可用 ' + str(len(available)),
-                'data': {**p, 'rates': {k: p[k] for k in ('requests', 'decode_tokens', 'output_tokens')}, 'expected_instances': 4, 'available_instances': len(available)}}}
+                'error': None if complete else f'需要 {count} 个完整实例，当前可用 {len(available)}，异常新增 {len(unexpected)}',
+                'data': {**p, 'rates': {k: p[k] for k in ('requests', 'decode_tokens', 'output_tokens')}, 'expected_instances': count, 'available_instances': len(available)}}}
         if emit_start is None or tick >= emit_start:
             snapshots.append(snapshot); points.append(point)
     return snapshots, points

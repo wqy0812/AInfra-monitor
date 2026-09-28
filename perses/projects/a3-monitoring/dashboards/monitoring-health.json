@@ -7,7 +7,7 @@
   "spec": {
     "display": {
       "name": "采集与监控健康",
-      "description": "统一核心图表；来源特有指标列于专属诊断。单位见标题，统计差异见图表提示。"
+      "description": "统一核心图表；来源特有指标列于专属诊断。单位见标题，统计差异见图表提示。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
     },
     "panels": {
       "overview-p0": {
@@ -15,7 +15,7 @@
         "spec": {
           "display": {
             "name": "采集目标状态（1 = 正常）",
-            "description": "指标含义\nPrometheus 采集目标的抓取状态：1 表示本次指标抓取成功，0 表示失败。图例区分采集 job；采集成功只证明监控端点可读取，不证明模型能够正常完成推理。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+            "description": "指标含义\nPrometheus 采集目标的抓取状态：1 表示本次指标抓取成功，0 表示失败。图例区分采集 job；采集成功只证明监控端点可读取，不证明模型能够正常完成推理。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -59,7 +59,7 @@
         "spec": {
           "display": {
             "name": "指标采集耗时（秒）",
-            "description": "指标含义\n每次抓取指标所耗时间；接近 scrape timeout 时需检查源端或网络。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+            "description": "指标含义\n每次抓取指标所耗时间；接近 scrape timeout 时需检查源端或网络。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -103,7 +103,7 @@
         "spec": {
           "display": {
             "name": "采集样本年龄（秒）",
-            "description": "指标含义\n最近 up 观测距当前查询时刻的年龄。超出查询回看范围时源序列消失，留空。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+            "description": "指标含义\n最近 up 观测距当前查询时刻的年龄。超出查询回看范围时源序列消失，留空。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -147,7 +147,7 @@
         "spec": {
           "display": {
             "name": "派生指标有效性（字段数）",
-            "description": "指标含义\n按 schema 展示当前有效及已观测派生字段数。无请求造成部分字段无效属于正常口径，不是服务故障率。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+            "description": "指标含义\n按 schema 展示当前有效及已观测派生字段数。无请求造成部分字段无效属于正常口径，不是服务故障率。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -204,7 +204,7 @@
         "spec": {
           "display": {
             "name": "VM / vmagent 采集状态（1 = 正常）",
-            "description": "指标含义\n公共服务监控端点的抓取状态，不代表推理服务可用。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
+            "description": "指标含义\n公共服务监控端点的抓取状态，不代表推理服务可用。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -248,7 +248,7 @@
         "spec": {
           "display": {
             "name": "监控服务 CPU（CPU 核）",
-            "description": "指标含义\n进程 CPU 用时增长率，1 表示占用约一个逻辑 CPU 核。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
+            "description": "指标含义\n进程 CPU 用时增长率，1 表示占用约一个逻辑 CPU 核。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -292,7 +292,7 @@
         "spec": {
           "display": {
             "name": "监控服务常驻内存（GiB）",
-            "description": "指标含义\nVM / vmagent 进程实际常驻内存。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
+            "description": "指标含义\nVM / vmagent 进程实际常驻内存。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -336,7 +336,7 @@
         "spec": {
           "display": {
             "name": "VM 数据容量（GiB）",
-            "description": "指标含义\n按 VM 原始数据类型及分区展示存储容量，保留标签避免隐藏不同组成。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
+            "description": "指标含义\n按 VM 原始数据类型及分区展示存储容量，保留标签避免隐藏不同组成。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -380,7 +380,7 @@
         "spec": {
           "display": {
             "name": "VM 磁盘余量（GiB）",
-            "description": "指标含义\nVM 所在文件系统空闲量及配置的最低余量阈值。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
+            "description": "指标含义\nVM 所在文件系统空闲量及配置的最低余量阈值。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -437,7 +437,7 @@
         "spec": {
           "display": {
             "name": "VM 存储只读状态（1 = 只读）",
-            "description": "指标含义\n1 表示 VM 存储当前处于只读状态，0 表示未处于该状态。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
+            "description": "指标含义\n1 表示 VM 存储当前处于只读状态，0 表示未处于该状态。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -481,7 +481,7 @@
         "spec": {
           "display": {
             "name": "VM 写入速率（样本/秒）",
-            "description": "指标含义\nVM 接收的指标样本写入计数速率，按输入类型汇总。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
+            "description": "指标含义\nVM 接收的指标样本写入计数速率，按输入类型汇总。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -525,7 +525,7 @@
         "spec": {
           "display": {
             "name": "vmagent 发送积压（MiB）",
-            "description": "指标含义\n持久发送队列等待传输的字节数，持续增长说明发送落后。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
+            "description": "指标含义\n持久发送队列等待传输的字节数，持续增长说明发送落后。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -569,7 +569,7 @@
         "spec": {
           "display": {
             "name": "vmagent 数据丢弃速率（MiB/秒）",
-            "description": "指标含义\n持久队列丢弃数据的字节速率；有效零表示窗口内未记录丢弃。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
+            "description": "指标含义\n持久队列丢弃数据的字节速率；有效零表示窗口内未记录丢弃。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -613,7 +613,7 @@
         "spec": {
           "display": {
             "name": "监控数据解析错误（次/秒）",
-            "description": "指标含义\n公共监控组件解析输入指标数据时记录的错误速率。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。"
+            "description": "指标含义\n公共监控组件解析输入指标数据时记录的错误速率。\n\ntest4，共享于 DCU / A3；不表示某一个推理集群的资源。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",

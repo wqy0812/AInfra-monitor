@@ -10,7 +10,7 @@
   "spec": {
     "display": {
       "name": "缓存与存储",
-      "description": "按指标观测位置分类；单位见图表标题，详细统计含义见图表提示。"
+      "description": "按指标观测位置分类；单位见图表标题，详细统计含义见图表提示。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
     },
     "variables": [
       {
@@ -52,7 +52,7 @@
         "spec": {
           "display": {
             "name": "外部前缀缓存查询与命中（Token/秒）",
-            "description": "指标含义\n前缀缓存按 Token 统计的查询/命中速率；外部缓存指跨实例 KV 共享。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+            "description": "指标含义\n前缀缓存按 Token 统计的查询/命中速率；外部缓存指跨实例 KV 共享。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -109,7 +109,7 @@
         "spec": {
           "display": {
             "name": "本地前缀缓存查询与命中（Token/秒）",
-            "description": "指标含义\n前缀缓存按 Token 统计的查询/命中速率；外部缓存指跨实例 KV 共享。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+            "description": "指标含义\n前缀缓存按 Token 统计的查询/命中速率；外部缓存指跨实例 KV 共享。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -166,7 +166,7 @@
         "spec": {
           "display": {
             "name": "实例 KV 缓存占用（%）",
-            "description": "指标含义\nvLLM 实例已分配 KV Cache 的占用比例乘以 100。按实例/角色区分；分母是该实例的 KV Cache 容量，不是整张 NPU 的显存容量。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+            "description": "指标含义\nvLLM 实例已分配 KV Cache 的占用比例乘以 100。按实例/角色区分；分母是该实例的 KV Cache 容量，不是整张 NPU 的显存容量。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -210,7 +210,7 @@
         "spec": {
           "display": {
             "name": "本地前缀缓存命中率（%）",
-            "description": "指标含义\n最近约 60 秒本地前缀缓存命中 Token ÷ 查询 Token × 100%。合并实例时按 Token 加权，不能直接平均各实例百分比。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+            "description": "指标含义\n最近约 60 秒本地前缀缓存命中 Token ÷ 查询 Token × 100%。合并实例时按 Token 加权，不能直接平均各实例百分比。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -254,7 +254,7 @@
         "spec": {
           "display": {
             "name": "外部前缀缓存命中率（%）",
-            "description": "指标含义\n最近约 60 秒跨实例共享的外部前缀缓存命中 Token ÷ 查询 Token × 100%。这是外部 KV 共享口径，不表示 HiCache CPU、Mooncake Store 或 SSD 命中。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+            "description": "指标含义\n最近约 60 秒跨实例共享的外部前缀缓存命中 Token ÷ 查询 Token × 100%。这是外部 KV 共享口径，不表示 HiCache CPU、Mooncake Store 或 SSD 命中。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -298,7 +298,7 @@
         "spec": {
           "display": {
             "name": "Mooncake 内存容量（GiB）",
-            "description": "Master 管理的内存 segment 总容量及分配量，不是 NPU 显存。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+            "description": "Master 管理的内存 segment 总容量及分配量，不是 NPU 显存。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -355,7 +355,7 @@
         "spec": {
           "display": {
             "name": "Mooncake 内存分配比例（%）",
-            "description": "分配量 / 总容量；零容量时留空。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+            "description": "分配量 / 总容量；零容量时留空。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -399,7 +399,7 @@
         "spec": {
           "display": {
             "name": "Mooncake 文件层容量（GiB）",
-            "description": "源定义为 3fs/nfs 文件存储容量；零容量不表示已启用 SSD offload，也不代表物理磁盘 I/O。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+            "description": "源定义为 3fs/nfs 文件存储容量；零容量不表示已启用 SSD offload，也不代表物理磁盘 I/O。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -456,7 +456,7 @@
         "spec": {
           "display": {
             "name": "Mooncake Key 数（个）",
-            "description": "Master 管理的 Key 数，不是模型请求数。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+            "description": "Master 管理的 Key 数，不是模型请求数。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -500,7 +500,7 @@
         "spec": {
           "display": {
             "name": "Mooncake 活跃客户端（个）",
-            "description": "Master 报告的活跃客户端数。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+            "description": "Master 报告的活跃客户端数。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -544,7 +544,7 @@
         "spec": {
           "display": {
             "name": "Mooncake 操作请求速率（次/秒）",
-            "description": "分别展示单次及批量 RPC 调用；不将批量 RPC 次数解释为 Key 数或缓存命中。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+            "description": "分别展示单次及批量 RPC 调用；不将批量 RPC 次数解释为 Key 数或缓存命中。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -588,7 +588,7 @@
         "spec": {
           "display": {
             "name": "Mooncake 操作失败速率（次/秒）",
-            "description": "Master 操作失败计数速率；不是模型生成失败率或缓存未命中率。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+            "description": "Master 操作失败计数速率；不是模型生成失败率或缓存未命中率。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -632,7 +632,7 @@
         "spec": {
           "display": {
             "name": "Mooncake 驱逐操作速率（次/秒）",
-            "description": "驱逐操作尝试和成功次数，保留源计数定义。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+            "description": "驱逐操作尝试和成功次数，保留源计数定义。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -689,7 +689,7 @@
         "spec": {
           "display": {
             "name": "Mooncake 驱逐 Key 速率（个/秒）",
-            "description": "被驱逐对象数量的增长速率。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+            "description": "被驱逐对象数量的增长速率。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -733,7 +733,7 @@
         "spec": {
           "display": {
             "name": "Mooncake 驱逐数据速率（MiB/秒）",
-            "description": "被驱逐对象字节计数，不代表物理 SSD 吞吐。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。"
+            "description": "被驱逐对象字节计数，不代表物理 SSD 吞吐。\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",

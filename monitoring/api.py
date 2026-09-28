@@ -120,6 +120,7 @@ class Service:
    self.watermark=selected[-1]['ts'];STATE.mkdir(parents=True,exist_ok=True)
    temp=self.watermark_file.with_suffix('.tmp');temp.write_text(json.dumps({'ts':self.watermark}));temp.replace(self.watermark_file)
   if snaps:self.latest={**snaps[-1],'environment':self.environment};self.latest_point=points[-1]
+  if self.environment=='a3-vllm':self.latest['collection_coverage']=a3.collection_coverage()
   try:
    r=await self.client.get(VM+'/api/v1/query',params={'query':'{__name__=~"vm_free_disk_space_bytes|vmagent_remotewrite_pending_data_bytes"}'})
    r.raise_for_status();values=r.json()['data']['result']
@@ -225,6 +226,7 @@ class Service:
   gateway_live.attach(points,gateway,step)
   if view=='summary':points=[summary_point(p) for p in points]
   value={'environment':self.environment,'hours':hours,'stride':step//5,'points':points,'source':'victoriametrics','retention_hours':720,'gateway_status':gateway_status}
+  if self.environment=='a3-vllm':value['collection_coverage']=a3.collection_coverage()
   return value
 
 @asynccontextmanager

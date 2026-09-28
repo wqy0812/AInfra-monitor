@@ -38,8 +38,8 @@ def test_native_unlabelled_itl_and_a3_metrics_remain_usable():
         p = window.add(data, ts)
     assert p['percentiles']['itl']['samples'] == 130
     p = point(fixture())
-    assert p['requests'] == 12 and p['decode_tokens'] == 40
-    assert p['percentiles']['ttft']['samples'] == 480
+    assert p['requests'] == 48 and p['decode_tokens'] == 160
+    assert p['percentiles']['ttft']['samples'] == 1920
     assert p['resources']['queue'] and p['cache_60s']['ratio'] == .6
 
 

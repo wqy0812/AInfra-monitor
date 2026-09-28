@@ -418,6 +418,8 @@ def main():
     BOUNDS.update(json.loads(args.bounds.read_text()))
     source = json.loads(args.snapshot.read_text()) if args.snapshot else read_resources(args.output)
     resources = build(source)
+    from a3_coverage import annotate
+    resources['dashboards'] = [annotate(d) for d in resources['dashboards']]
     validate(resources)
     from dashboard_reorg import write_resources
     write_resources(resources, args.output)
