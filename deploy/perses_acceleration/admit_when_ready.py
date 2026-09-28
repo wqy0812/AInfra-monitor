@@ -2,7 +2,7 @@
 
 No datasource bindings are published. Every batch still needs an explicit
 publisher invocation against its fresh snapshot after all gates pass. Stop at
-the first publishable batch; resume after its observation or rollback finishes.
+the first publishable batch; resume after its observation finishes.
 """
 import argparse
 import fcntl
@@ -37,7 +37,7 @@ def _main(build, batches, browser, hours, observation=None, resume_prepared=None
             release.require_serial_preparation(root)
         if (root / 'batch-before.json').exists() and not resuming:
             summary['groups'][group] = {'state': 'waiting_for_publication_or_recovery', 'at': time.time()}
-            summary['next'] = 'Finish or roll back this prepared batch before resuming later batches'
+            summary['next'] = 'Repair and finish this prepared batch before resuming later batches'
             save(build, 'admission-progress.json', summary)
             return
         summary['groups'][group] = {'state': 'waiting_for_verified_coverage'}

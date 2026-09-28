@@ -142,9 +142,8 @@ def switch():
         results = verify()
         save('complete.json', {'passed': True, 'image': prepared['image'], 'results': results, 'rollback_container': BACKUP, 'other_containers_unchanged': True})
         print(json.dumps(results), flush=True)
-    except BaseException:
-        restore(NAME, old, BACKUP, prepared['image'])
-        save('rollback.json', {'restored_id': inspect(NAME)['Id'], 'at': time.time()})
+    except BaseException as error:
+        error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
         raise
 
 

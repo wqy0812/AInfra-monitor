@@ -80,8 +80,8 @@ def main():
             assert CONFIG.read_bytes()==old
             reload_config(new)
             assert r.fingerprint()==json.loads((root/'services-before.json').read_text())
-        except Exception:
-            if CONFIG.read_bytes()==new:reload_config(old)
+        except Exception as error:
+            error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
             raise
         print('Collection reloaded without restart');return
     assert CONFIG.read_bytes()==new

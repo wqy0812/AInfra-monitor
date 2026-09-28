@@ -82,7 +82,9 @@ def switch():
     time.sleep(2)
   assert protected()==baseline['protected'] and business()==baseline['business']
   save('switched.json',{'at':time.time(),'container':NAME,'id':inspect(NAME)['Id'],'protected_unchanged':True,'business_unchanged':True})
- except BaseException:rollback();raise
+ except BaseException as error:
+  error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
+  raise
  print(json.dumps(read('switched.json')))
 
 def finalize():

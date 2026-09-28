@@ -26,13 +26,14 @@ def releases(monkeypatch):
     return hosts, hardware
 
 
-@pytest.mark.parametrize('fault', ['read', 'restore', 'both', 'concurrent'])
-def test_publish_rollbacks_are_independent_and_preserve_original_error(releases, monkeypatch, tmp_path, fault):
+@pytest.mark.parametrize('fault', ['publish_response', 'readback', 'reload', 'concurrent'])
+def test_publish_failure_keeps_current_config_and_dashboard(releases, monkeypatch, tmp_path, fault):
     release, _ = releases
     config = tmp_path / 'scrape.yml'
     config.write_bytes(b'old')
     old = {'metadata': {'name': 'hosts-xpu'}, 'spec': {'revision': 'old'}}
     new = {'metadata': {'name': 'hosts-xpu'}, 'spec': {'revision': 'new'}}
+    current = copy.deepcopy(old)
     for name, value in [('dashboards-before.json', {'xpu-monitoring': [old]}), ('hosts-xpu.json', new)]:
         (tmp_path / name).write_text(json.dumps(value))
     (tmp_path / 'scrape-before.yml').write_bytes(b'old')
@@ -43,50 +44,35 @@ def test_publish_rollbacks_are_independent_and_preserve_original_error(releases,
     monkeypatch.setattr(release.subprocess, 'check_output', lambda *a: json.dumps([
         {'Config': {'Entrypoint': ['vmagent']}, 'Image': 'mock'}]).encode())
     monkeypatch.setattr(release.subprocess, 'check_call', lambda *a: None)
-    failure = OSError('publish response lost')
-    attempted = False
+    failure = OSError('injected ' + fault)
     writes = []
     def api(path, data=None):
-        nonlocal attempted
         if data is not None:
-            if not attempted:
-                attempted = True
-                if fault == 'concurrent':
-                    config.write_bytes(b'concurrent')
-                raise failure
             writes.append(copy.deepcopy(data))
-            raise OSError('dashboard restore unavailable')
-        if attempted and fault in ('read', 'both'):
-            raise OSError('dashboard read unavailable')
-        current = copy.deepcopy(new if attempted else old)
-        if attempted and fault == 'concurrent':
-            current['spec'] = {'revision': 'concurrent'}
-        current['metadata']['version'] = 'current'
-        return current
-    restored = []
+            current.clear(); current.update(copy.deepcopy(data))
+            if fault == 'concurrent':
+                config.write_bytes(b'concurrent')
+                current['spec'] = {'revision': 'concurrent'}
+            if fault != 'readback':
+                raise failure
+        elif writes:
+            raise failure
+        return copy.deepcopy(current)
+    config_writes = []
     def write_config(content):
-        restored.append(content)
-        if fault == 'both' and content == b'old':
-            raise OSError('config restore unavailable')
+        config_writes.append(content)
         config.write_bytes(content)
+        if fault == 'reload':
+            raise failure
     monkeypatch.setattr(release, 'api', api)
     monkeypatch.setattr(release, 'write_config', write_config)
     with pytest.raises(OSError) as caught:
         release.publish()
     assert caught.value is failure
-    if fault == 'concurrent':
-        assert config.read_bytes() == b'concurrent'
-        assert restored == [b'new']
-        assert writes == []
-    else:
-        assert restored == [b'new', b'old']
-        assert config.read_bytes() == (b'new' if fault == 'both' else b'old')
-        assert any('Dashboard rollback failed' in note for note in failure.__notes__)
-    if fault == 'both':
-        assert any('Scrape configuration rollback failed' in note for note in failure.__notes__)
-    if fault == 'restore':
-        assert writes[0]['metadata']['version'] == 'current'
-        assert writes[0]['spec'] == old['spec']
+    assert config_writes == [b'new']
+    assert config.read_bytes() == (b'concurrent' if fault == 'concurrent' else b'new')
+    assert writes == ([] if fault == 'reload' else [new])
+    assert current['spec']['revision'] == ('old' if fault == 'reload' else 'concurrent' if fault == 'concurrent' else 'new')
     assert not (tmp_path / 'published.json').exists()
 
 

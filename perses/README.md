@@ -19,7 +19,7 @@
 
 在 `perses/` 目录执行 `python3 project_split.py` 更新本地项目资源，再用 `python3 project_coverage.py --docs-only` 同步说明；后者沿用已保存的指标覆盖清单，无需历史证据目录。覆盖清单有采集基线日期，不代表当前在线覆盖数量。`seed.py` 仅创建缺失资源，保留服务器已有资源。
 
-服务器发布一律经 SSH MCP。对显式看板更新，使用 `project_release.py prepare --evidence DIR`、`check_project_semantics.py DIR`、`project_release.py audit --evidence DIR`、`project_release.py apply --evidence DIR`；`--resources` 可指定资源目录。发布前保存快照并检查并发编辑，发布后读回核对，回退使用同批次的 `rollback --evidence DIR`。`audit-published --evidence DIR` 校验已发布资源；`validate.py`、`compare.py` 的 CLI 转到该模式，必须提供证据目录。
+服务器发布一律经 SSH MCP。对显式看板更新，使用 `project_release.py prepare --evidence DIR`、`check_project_semantics.py DIR`、`project_release.py audit --evidence DIR`、`project_release.py apply --evidence DIR`；`--resources` 可指定资源目录。发布前保存快照并检查并发编辑，发布后读回核对；失败时保留已写资源与日志，修复当前版本后重新验证，不自动回退。`audit-published --evidence DIR` 校验已发布资源；`validate.py`、`compare.py` 的 CLI 转到该模式，必须提供证据目录。
 
 本地资源是版本化输入，发布还需核对线上快照并保留网页编辑。首次安装历史见归档；当前镜像构建和升级见 [performance/README.md](performance/README.md)。查询口径见 [图表说明](METRICS_GUIDE.md)、[覆盖说明](METRIC_COVERAGE.md)；Python 回归见 [测试说明](../tests/README.md)。
 

@@ -49,6 +49,8 @@ def next_action(build):
         if terminal: continue
         if (root / 'batch-publication.json').exists():
             return 'incomplete_observation', group, states
+        if (root / 'batch-journal.json').exists():
+            return 'incomplete_publication', group, states
         if (root / 'batch-before.json').exists():
             accepted = root / 'batch-admission.json'
             if accepted.exists() and json.loads(accepted.read_text())['passed']:
@@ -83,7 +85,7 @@ def main(build, browser, hours):
                                   passed=all(v == 'observed' for v in states.values()), ended_at=time.time())
                     save(build, 'continuation-progress.json', report)
                     return
-                assert action not in ('incomplete_observation', 'interrupted_admission'), 'Existing incomplete batch requires recovery: ' + str(group)
+                assert action not in ('incomplete_publication', 'incomplete_observation', 'interrupted_admission'), 'Existing incomplete batch requires forward repair: ' + str(group)
                 if action == 'admit':
                     admission.main(build, build, browser, min(8, max(.01, (deadline-time.time())/3600)))
                     continue

@@ -73,10 +73,7 @@ def switch():
     if i==44:raise
     time.sleep(1)
   results=verify();save('complete.json',{'passed':True,'image':prepared['image'],'results':results,'rollback_container':BACKUP,'other_containers_unchanged':True});print(json.dumps(results),flush=True)
- except BaseException:
-  if identity:rollback()
-  else:
-   if renamed:cmd('docker','rename',BACKUP,NAME)
-   cmd('docker','start',NAME)
+ except BaseException as error:
+  error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
   raise
 {'prepare':prepare,'switch':switch,'verify':lambda:print(json.dumps(verify())),'rollback':rollback}[sys.argv[1]]()

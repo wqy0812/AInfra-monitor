@@ -1,4 +1,4 @@
-"""Run on test4 via SSH MCP; retain the old API container for rollback."""
+"""Run on test4 via SSH MCP; preserve failed deployments for forward repair."""
 import argparse
 import hashlib
 import http.client
@@ -133,8 +133,8 @@ def switch():
         save('api-switched.json', {'at': time.time(), 'id': inspect('monitoring-api')['Id'],
                                    'image': new_image, 'health': health, 'protected_unchanged': True})
         print(json.dumps(read('api-switched.json')), flush=True)
-    except BaseException:
-        rollback()
+    except BaseException as error:
+        error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
         raise
 
 

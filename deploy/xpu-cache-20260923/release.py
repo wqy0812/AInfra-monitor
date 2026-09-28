@@ -1,4 +1,4 @@
-"""Run via SSH MCP. Minimal source overlay and rollback-preserving container switch."""
+"""Run via SSH MCP. Minimal source overlay and forward-only container switch."""
 import hashlib,http.client,json,os,socket,subprocess,sys,time,urllib.request
 from pathlib import Path
 ROLE,MODE=sys.argv[1:3];ROOT=Path('/data2/monitoring/releases' if ROLE=='monitoring' else '/data2/code-eval/releases')/'xpu-cache-20260923'
@@ -73,9 +73,6 @@ else:
   assert protected()==prepared['protected']
   result={'passed':True,'image':prepared['image'],'rollback_container':BACKUP,'other_containers_unchanged':True,'latest_ratio':latest['nodes']['prefill']['metrics']['data']['cache_60s']['ratio'],'history_points':len(values),'valid':sum(v is not None for v in values),'max':max(v for v in values if v is not None)}
   save('complete.json',result);print(json.dumps(result),flush=True)
- except BaseException:
-  if subprocess.run(['docker','inspect',BACKUP],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0:
-   if subprocess.run(['docker','inspect',NAME],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0:
-    cmd('docker','stop','--time','10',NAME);cmd('docker','rename',NAME,NAME+'-failed-xpu-cache-20260923')
-   cmd('docker','rename',BACKUP,NAME);cmd('docker','start',NAME)
-  save('rolled-back.json',{'at':time.time()});raise
+ except BaseException as error:
+  error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
+  raise

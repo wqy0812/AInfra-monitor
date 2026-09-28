@@ -137,9 +137,6 @@ else:
         result = {'passed': True, 'image': prepared['image'], 'rollback_container': BACKUP, 'other_containers_unchanged': True, 'health': health, 'history': checks, 'hashes': manifest['after']}
         save('complete.json', result)
         print(json.dumps(result), flush=True)
-    except BaseException:
-        if exists(BACKUP):
-            rollback(old, prepared)
-        elif inspect(NAME)['Id'] == old['Id']:
-            cmd('docker', 'start', NAME)
+    except BaseException as error:
+        error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
         raise

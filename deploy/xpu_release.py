@@ -89,8 +89,9 @@ def switch():
    except Exception:
     if attempt==19:raise
     time.sleep(2)
- except BaseException:
-  subprocess.run(['docker','rm','-f','monitoring-api']);cmd('docker','rename',backup,'monitoring-api');cmd('docker','start','monitoring-api');raise
+ except BaseException as error:
+  error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
+  raise
  print('API switched and three environment watermarks verified')
 
 if __name__=='__main__':globals()[sys.argv[1]]()

@@ -20,7 +20,7 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
-from merge_release import api, equivalent, fingerprint, normalized, path, save, sha, snapshot, query
+from merge_release import api, equivalent, fingerprint, normalized, path, record_failure, save, sha, snapshot, query
 from generator_transaction import plan as generator_plan, install as generator_install, rollback as generator_rollback
 from admin import update as admin_update
 from acceleration_publication import published, NAME
@@ -167,12 +167,14 @@ def readiness(catalog, group, *, accelerator=None):
 
 
 def batch_terminal(root):
-    """Only a completed observation, rollback or failed admission closes a batch."""
+    """Incomplete publication blocks later batches, even after failed admission."""
     if (root / 'batch-rollback.json').exists():
         return 'rolled_back'
     publication, observation = root / 'batch-publication.json', root / 'batch-observation.json'
     if publication.exists():
         return 'observed' if observation.exists() and json.loads(observation.read_text())['passed'] else None
+    if (root / 'batch-journal.json').exists():
+        return None
     admission = root / 'batch-admission.json'
     if admission.exists() and json.loads(admission.read_text())['passed'] is False:
         return 'admission_failed'
@@ -432,8 +434,8 @@ def apply(root, group, impact_exception=None):
         publication = {'group': group, 'at': time.time(), 'panels': len(changes)}
         if decision is not None: publication['user_release_exception'] = decision
         save(root, 'batch-publication.json', publication)
-    except BaseException:
-        rollback(root, group)
+    except BaseException as error:
+        record_failure(root, 'batch-apply-failure.json', error)
         raise
 
 
@@ -487,12 +489,14 @@ def observe(root, group):
             save(root, 'batch-observation.json', report)
             time.sleep(5)
     except BaseException as error:
+        error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
         report.update(passed=False, state='failed', end=time.time(),
-                      error=type(error).__name__ + ': ' + str(error)[:300])
+                      error=type(error).__name__ + ': ' + str(error)[:300],
+                      recovery='fix_forward', automatic_rollback=False)
         try:
             save(root, 'batch-observation.json', report)
-        finally:
-            rollback(root, group)
+        except OSError as reporting_error:
+            error.add_note('Failure report could not be saved: ' + str(reporting_error))
         raise
 
 

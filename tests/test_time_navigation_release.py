@@ -19,7 +19,7 @@ def test_wrong_live_source_blocks_before_building(tmp_path, monkeypatch):
     assert not list(tmp_path.iterdir())
 
 
-def test_uncertain_create_uses_identity_checked_restore(monkeypatch):
+def test_uncertain_create_preserves_state_without_restoring(monkeypatch):
     old = {'Id': 'old-id', 'Config': {'Env': ['X=preserve'], 'Cmd': ['uvicorn']}, 'HostConfig': {'NetworkMode': 'host'}}
     records = {
         'container-before.json': old,
@@ -49,9 +49,9 @@ def test_uncertain_create_uses_identity_checked_restore(monkeypatch):
     monkeypatch.setattr(release, 'restore', lambda *args: restored.append(args))
     with pytest.raises(OSError, match='lost response'):
         release.switch()
-    assert restored == [(release.NAME, old, release.BACKUP, 'candidate-image')]
+    assert not restored
     assert calls == [('docker', 'stop', 'old-id'), ('docker', 'rename', 'old-id', release.BACKUP)]
-    assert records['rollback.json']['restored_id'] == 'old-id'
+    assert 'rollback.json' not in records
     assert 'Labels' not in old['Config']
 
 

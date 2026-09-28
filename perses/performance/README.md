@@ -149,15 +149,15 @@ command-line SSH, SCP or port-forwarding subprocesses in these scripts.
 3. Run `image_release.py apply --evidence DIR`. It preserves the original container
    as `monitoring-perses-before-perf3` for perf.3 (the suffix follows the selected
    version), keeps systemd/access controls, checks
-   unchanged resources and protected monitoring services, and restores the old
-   container on failure. Explicit rollback is `image_release.py rollback`.
+   unchanged resources and protected monitoring services. On failure it preserves
+   the current container state and raises the original error for forward repair.
 4. Capture a fresh dashboard snapshot after the first batch. Prepare changes from
    that snapshot, then copy `changes.json`, `quantile-semantics.json` and the
    query publication scripts into the evidence directory. Run
    `publish_quantiles.py audit --evidence DIR`; it checks exact old/new and proxy
    values and refuses acceptance when actual samples are absent or performance
    fails. Run `apply` only after the first batch was accepted. Journaled updates
-   affect three dashboards; `rollback` restores only matching candidate specs.
+   affect three dashboards; failures keep the applied changes and journal for repair.
    `--samples N` fixes the cold and warm paired sample count per panel for both
    audit and apply (minimum 7). The final production cohort uses 41 samples;
    the 20% median improvement and 5% maximum regression gates are unchanged.
@@ -214,9 +214,13 @@ Evidence: `image-publication.json`, `quantiles-publication.json`,
 `production-service-observation.json`, and `final-deployment.json` in the remote
 evidence root and local `../../evidence/performance-20260916/`.
 
-### Rollback
+### Historical rollback procedure (superseded 2026-09-28)
 
-Run through SSH MCP on test4. Roll back quantile changes with
+Current policy requires forward repair; do not execute these historical commands.
+Automatic rollback has been removed from image and query publication.
+The following describes the former procedure only.
+
+The former test4 procedure rolled back quantile changes with
 `publish_quantiles.py rollback --evidence DIR` (set
 `PYTHONPATH=/data2/monitoring/perses/release`). It checks current content before
 restoring the latest pre-publication specs.

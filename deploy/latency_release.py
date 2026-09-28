@@ -142,8 +142,8 @@ def switch():
         assert get(DASH)['spec'] == live['spec']
         check_protected()
         save('switched.json', {'at': time.time(), 'id': inspect(NAME)['Id'], 'image': new_image, 'protected_unchanged': True})
-    except BaseException:
-        rollback()
+    except BaseException as error:
+        error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
         raise
 
 

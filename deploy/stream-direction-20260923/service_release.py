@@ -1,4 +1,4 @@
-"""Minimal image layer and rollback-preserving replacement, via SSH MCP."""
+"""Minimal image layer and forward-only replacement, via SSH MCP."""
 import http.client,json,os,socket,subprocess,sys,time,urllib.request
 from pathlib import Path
 ROLE=sys.argv[1];ROOT=Path('/data2/monitoring/releases' if ROLE=='monitoring' else '/data2/code-eval/releases')/'stream-direction-20260923'
@@ -51,8 +51,6 @@ try:
    assert all(k in data['points'][-1]['gateway'] for k in ('backend_wait_max_seconds','write_active_max_seconds'))
    save('history-'+environment+'.json',data)
  save('complete.json',{'passed':True,'image':new,'backup':BACKUP,'other_containers_unchanged':True,'health':health});print(json.dumps({'passed':NAME,'image':new,'backup':BACKUP}),flush=True)
-except BaseException:
- if subprocess.run(['docker','inspect',BACKUP],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0:
-  if subprocess.run(['docker','inspect',NAME],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0:cmd('docker','rm','-f',NAME)
-  cmd('docker','rename',BACKUP,NAME);cmd('docker','start',NAME)
- save('rolled-back.json',{'at':time.time()});raise
+except BaseException as error:
+ error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
+ raise

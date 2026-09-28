@@ -64,9 +64,9 @@ def switch():
    except Exception:
     if time.time()>=deadline:raise
     time.sleep(2)
- except BaseException:
-  subprocess.run(['docker','rm','-f',NAME],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-  cmd('docker','rename',backup,NAME);cmd('docker','start',NAME);raise
+ except BaseException as error:
+  error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
+  raise
  print('monitoring-api switched; request rate valid; protected containers unchanged')
 
 def finalize():

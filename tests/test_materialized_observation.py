@@ -54,7 +54,7 @@ def test_permanent_maintenance_times_out_without_passing(tmp_path, monkeypatch, 
         release.observe(tmp_path, 'cpu')
     report = json.loads((tmp_path / 'batch-observation.json').read_text())
     assert not report['passed'] and report['state'] == 'failed'
-    assert clock[0] == 3600 and rollbacks == ['cpu']
+    assert clock[0] == 3600 and not rollbacks
 
 
 def test_normal_observation_completes_at_30_minutes(tmp_path, monkeypatch):
@@ -73,7 +73,7 @@ def test_transient_health_failure_restarts_normal_window(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize('fault', ['model', 'unknown_scheduling', 'container'])
-def test_sustained_failure_is_saved_and_rolled_back(tmp_path, monkeypatch, fault):
+def test_sustained_failure_is_saved_without_rollback(tmp_path, monkeypatch, fault):
     _, rollbacks = environment(tmp_path, monkeypatch,
         scheduling=lambda elapsed: {'parallel_a3_backfill': None} if fault == 'unknown_scheduling' else {},
         unhealthy=lambda elapsed: fault == 'model')
@@ -84,7 +84,8 @@ def test_sustained_failure_is_saved_and_rolled_back(tmp_path, monkeypatch, fault
         release.observe(tmp_path, 'cpu')
     report = json.loads((tmp_path / 'batch-observation.json').read_text())
     assert not report['passed'] and report['state'] == 'failed'
-    assert rollbacks == ['cpu'] and report['error']
+    assert not rollbacks and report['error']
+    assert report['automatic_rollback'] is False and report['recovery'] == 'fix_forward'
 
 
 @pytest.mark.parametrize('fault', ['state_error', 'disabled', 'worker', 'backfill'])
@@ -102,7 +103,7 @@ def test_maintenance_does_not_hide_worker_failures(tmp_path, monkeypatch, fault)
     monkeypatch.setattr(release, 'read_health', faulty)
     with pytest.raises(AssertionError):
         release.observe(tmp_path, 'cpu')
-    assert clock[0] == 120 and rollbacks == ['cpu']
+    assert clock[0] == 120 and not rollbacks
     assert not json.loads((tmp_path / 'batch-observation.json').read_text())['passed']
 
 
@@ -119,3 +120,22 @@ def test_wall_clock_jump_cannot_finish_observation_early(tmp_path, monkeypatch):
     report = json.loads((tmp_path / 'batch-observation.json').read_text())
     assert report['passed'] and report['normal_seconds'] == 1800
     assert clock[0] == 1800 and not rollbacks
+
+
+def test_observation_report_write_failure_preserves_original_error(tmp_path, monkeypatch):
+    _, rollbacks = environment(tmp_path, monkeypatch)
+    failure = KeyboardInterrupt('observation interrupted')
+    def health():
+        raise failure
+    original_save = release.save
+    def save(root, name, value):
+        if value.get('state') == 'failed':
+            raise OSError('disk unavailable')
+        original_save(root, name, value)
+    monkeypatch.setattr(release, 'read_health', health)
+    monkeypatch.setattr(release, 'save', save)
+    with pytest.raises(KeyboardInterrupt) as caught:
+        release.observe(tmp_path, 'cpu')
+    assert caught.value is failure and not rollbacks
+    assert any('disk unavailable' in note for note in failure.__notes__)
+    assert not json.loads((tmp_path / 'batch-observation.json').read_text())['passed']

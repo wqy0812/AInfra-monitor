@@ -40,10 +40,12 @@ def notice(message):
 
 
 def record_failure(name, error):
+    error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
     try:
-        save(name, {'at': time.time(), 'type': type(error).__name__, 'error': str(error)[:500]})
-    except OSError:
-        pass  # Failure reporting must not prevent the actual rollback.
+        save(name, {'at': time.time(), 'type': type(error).__name__, 'error': str(error)[:500],
+                    'recovery': 'fix_forward', 'automatic_rollback': False})
+    except OSError as reporting_error:
+        error.add_note('Failure report could not be saved: ' + str(reporting_error))
 
 
 def health():
@@ -143,7 +145,6 @@ def switch():
              'container_id': identity, 'panels_switched': 0, 'backup': BACKUP})
     except BaseException as error:
         record_failure('switch-failure.json', error)
-        rollback()
         raise
     notice('Shadow worker started; all dashboards retain original datasources')
 
@@ -183,7 +184,6 @@ def observe():
         save('shadow-observation.json', {'passed': True, 'started_at': observed_at, 'release_started_at': started['at'], 'ended_at': time.time(), 'records': records})
     except BaseException as error:
         record_failure('observation-failure.json', error)
-        rollback()
         raise
     notice('30-minute shadow observation passed; 12-hour performance admission is still required')
 

@@ -8,6 +8,8 @@ DCU/XPU/A3 各 10 张专业看板，共 303 图；非缓存看板按公共核心
 
 XPU 节点环境与初始部署拓扑见 [2026-09-21 环境记录](docs/xpu-environment-2026-09-21.md)，当前角色映射以 [2026-09-23 修复记录](docs/xpu-role-fix-20260923.md) 为准。
 
+监控故障统一修复当前版本，不回退；发布脚本失败时保留现场并停止，详见 [故障处理约定](deploy/README.md)。
+
 ## 仓库范围
 
 本仓库保存监控服务源码、测试、部署及校验脚本、采集配置、Perses 看板定义和上游版本校验清单。`perses/projects/<project>/dashboards/*.json` 是现行需要发布的看板定义，顶层 `perses/dashboards/` 保留历史基线；`vendor/releases.json`、`vendor/manifest.json`、校验和与 `perses/image-lock.json` 用于固定及校验依赖，均应入库。

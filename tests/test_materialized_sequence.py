@@ -164,3 +164,54 @@ def test_old_failed_admission_cannot_unlock_incomplete_publication(tmp_path):
     assert release.batch_terminal(tmp_path) is None
     (tmp_path / 'batch-observation.json').write_text('{"passed":false}')
     assert release.batch_terminal(tmp_path) is None
+
+
+@pytest.mark.parametrize('fault', ['put_response', 'generator_install'])
+@pytest.mark.parametrize('report_writable', [True, False])
+def test_partial_publication_keeps_changes_and_blocks_next_batch(tmp_path, monkeypatch, fault, report_writable):
+    import merge_release
+    import continue_materialized
+    resources, writes = environment(tmp_path, monkeypatch)
+    root = tmp_path / 'batch-cpu'
+    release.prepare(root, 'cpu'); accepted(root, 'cpu')
+    # A prior failed admission must not unlock a later, partially applied release.
+    (root / 'batch-admission.json').write_text('{"passed":false}')
+    failure = OSError('injected ' + fault)
+    original_api = release.api
+    def api(route, method='GET', data=None):
+        result = original_api(route, method, data)
+        if method == 'PUT' and fault == 'put_response':
+            raise failure
+        return result
+    monkeypatch.setattr(release, 'api', api)
+    runtime = tmp_path / 'generator-state.json'
+    def install(*args):
+        runtime.write_text('{"groups":["cpu"]}')
+        raise failure
+    monkeypatch.setattr(release, 'generator_install', install)
+    monkeypatch.setattr(release, 'rollback', lambda *a: pytest.fail('Rollback must never run'))
+    monkeypatch.setattr(release, 'admin_update', lambda *a, **k: pytest.fail('Do not disable acceleration'))
+    original_save = merge_release.save
+    def save(root, name, data):
+        if name == 'batch-apply-failure.json' and not report_writable:
+            raise OSError('disk unavailable')
+        original_save(root, name, data)
+    monkeypatch.setattr(merge_release, 'save', save)
+    with pytest.raises(OSError) as caught:
+        release.apply(root, 'cpu')
+    assert caught.value is failure
+    doc = next(d for d in resources['dashboards'] if d['metadata']['name'] == 'cpu')
+    assert doc['spec']['panels']['target']['spec']['queries'][0]['spec']['plugin']['spec']['datasource']['name'] == release.NAME
+    if fault == 'generator_install':
+        assert json.loads(runtime.read_text())['groups'] == ['cpu']
+    assert len(json.loads((root / 'batch-journal.json').read_text())) == 1
+    assert not (root / 'batch-publication.json').exists()
+    assert not (root / 'batch-rollback.json').exists()
+    if report_writable:
+        assert json.loads((root / 'batch-apply-failure.json').read_text())['automatic_rollback'] is False
+    assert release.batch_terminal(root) is None
+    assert continue_materialized.next_action(tmp_path)[0] == 'incomplete_publication'
+    previous_writes = list(writes)
+    with pytest.raises(AssertionError, match='Finish prepared batch'):
+        release.prepare(tmp_path / 'batch-dcu', 'dcu')
+    assert writes == previous_writes

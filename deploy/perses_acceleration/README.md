@@ -2,6 +2,8 @@
 
 目标图表、统计窗口、采集/刷新频率及 perf.3 前端保持不变。监控测试和验收可直接在实际环境进行；所有远程操作/传输使用 SSH MCP。
 
+自 2026-09-28 起，监控发布失败统一保留现场并修复当前版本，不执行自动或手动回退。现有容器、面板、生成器及加速状态保持故障发生时的状态；保留快照和逐项日志用于核对。历史 `rollback` 接口仅保留在源码中，不属于当前操作流程。
+
 ## 存储和查询
 
 `monitoring/perses_acceleration_catalog.json` 冻结 18 个原始表达式和有限筛选值，按 5/15/20/60/120/600/3600 秒分别计算。其他表达式、参数或无法证明相同时间网格的请求转发原 VM。
@@ -28,9 +30,9 @@ VM 导入返回 204 并不保证查询可见。任务先冻结 `perses-pending-*
 
 服务器上的 `deploy/perses_acceleration/admin.py` 支持 `enable` / `disable --group cpu|dcu|a3` 和 `invalidate --start UNIX --end UNIX --panel ID --reason TEXT`；默认状态目录 `/data2/monitoring/state`。原始历史被补写或修正时，先作废相应时间区间。作废后在线查询使用原式，数据不删除。
 
-`release_api.py prepare|switch|observe|rollback` 支持 `--build-dir`、`--backup`、`--tag`。每次升级使用新的证据目录及备份名，保留原镜像。prepare 从锁定镜像构建并核对 API 兼容性；switch 检查容器指纹、健康及受保护容器；observe 至少 30 分钟。图表已经绑定加速源时，必须先回退目标面板和生成器状态，再回退 API。
+`release_api.py prepare|switch|observe` 支持 `--build-dir`、`--backup`、`--tag`。每次升级使用新的证据目录及备份名，保留原镜像。prepare 从锁定镜像构建并核对 API 兼容性；switch 检查容器指纹、健康及受保护容器；observe 至少 30 分钟。失败时记录原因并退出，修复当前 API；不恢复旧容器，也不自动停用预计算组。
 
-后台任务将 stdout/stderr 重定向到本批证据目录中的日志文件；SSH MCP 任务 ID 不保证跨实例保留，重连后通过 SSH MCP 读取服务器报告、日志和实际进程状态。完成后的状态输出位于回退事务外，输出管道断开不得触发健康版本回退。真正失败保留 `switch-failure.json` / `observation-failure.json`。
+后台任务将 stdout/stderr 重定向到本批证据目录中的日志文件；SSH MCP 任务 ID 不保证跨实例保留，重连后通过 SSH MCP 读取服务器报告、日志和实际进程状态。完成后的状态输出独立于发布检查，输出管道断开不改变发布结果。真正失败保留 `switch-failure.json` / `observation-failure.json`；合并及预计算发布分别保存 `merge-apply-failure.json` / `batch-apply-failure.json`，标记 `recovery=fix_forward`、`automatic_rollback=false`。报告写入失败时仍抛出原始异常并附注日志错误。
 
 `merge_release.py` 保存全量只读快照、表达式/资源指纹、逐项发布日志和生成器备份，检测并发编辑后仅更新目标面板。查询合并不减少曲线。初始压测是所有面板按 JSON 顺序发出的代理查询，不能等同于浏览器首屏；`browser_cohort.cjs` 捕获实际 1920×1080 首屏请求集合和顺序供环境对照。
 
@@ -44,24 +46,24 @@ VM 导入返回 204 并不保证查询可见。任务先冻结 `perses-pending-*
 2. `audit`：要求全部支持步长至少 12 小时完整覆盖；验证完成标记、有限筛选、24h 跨历史和非整秒窗口，再对 60/120 秒绘图步长做禁用/允许缓存各 41 对固定 12h 窗口测试。报告写入窗口长度，发布时复核，不能将 12h 结果冒充原 24h 性能结果。
 3. `impact`：非目标查询在独立执行器中与目标查询同时开始，按相同负载位置交替比较 41 对；任何门槛失败均阻止发布。
 4. 将匹配 catalog SHA 的 `materialized-browser.json` 复制到该批证据目录；`apply` 再检查快照和全部准入记录，仅切换该组面板，逐项读回，同步生成器。
-5. `observe` 连续观察 30 分钟，持续异常自动执行 `rollback`；回退仅恢复该组面板/生成器状态，然后停用该组预计算，保留非默认数据源和加速数据。
+5. `observe` 连续观察 30 分钟；持续异常或超时记录失败并退出。面板、生成器、专用数据源、预计算开关及加速数据保留现状，修复后重新验收。
 
-生成器发布包必须携带 `docs/perses-query-acceleration.md`。发布事务直接读取这份独立说明，将其安装为运行目录中的 `perses-query-acceleration.md`，并向已有 `METRICS_GUIDE.md` 和 `README.md` 追加入口链接；保留原文，重复发布不重复追加。不再从生成文档中截取旧标题段落。新文件及文档变更一并记录在 `generator-journal.json`，安装前检查并发修改；回退保留可被后续批次引用的说明，旧文件字节仍在日志中。
+生成器发布包必须携带 `docs/perses-query-acceleration.md`。发布事务直接读取这份独立说明，将其安装为运行目录中的 `perses-query-acceleration.md`，并向已有 `METRICS_GUIDE.md` 和 `README.md` 追加入口链接；保留原文，重复发布不重复追加。不再从生成文档中截取旧标题段落。新文件及文档变更一并记录在 `generator-journal.json`，安装前检查并发修改；安装中途失败保留已写内容和旧文件字节日志，用于修复核对。
 
-批次 `observe` 每 5 秒检查调度状态，只有 `backfill_priority_active` 和 `parallel_a3_backfill` 均明确为 false，且模型健康、目标组覆盖与实时水位正常时才累计有效时间。临时调度或短暂健康异常会清零已累计时间，恢复后重新连续观察满 30 分钟；使用单调时钟计时，整个观察最长一小时。临时补算期间允许模型处理变慢，但状态错误、目标组停用、计算错误和容器变化仍受检查。连续三次检查失败或总时限到期，记录失败并按原流程回退该批次。报告记录调度标志、观察状态、最后一次有效窗口起点 `normal_start` 和时长 `normal_seconds`，等待与临时调度不算通过证据。
+批次 `observe` 每 5 秒检查调度状态，只有 `backfill_priority_active` 和 `parallel_a3_backfill` 均明确为 false，且模型健康、目标组覆盖与实时水位正常时才累计有效时间。临时调度或短暂健康异常会清零已累计时间，恢复后重新连续观察满 30 分钟；使用单调时钟计时，整个观察最长一小时。临时补算期间允许模型处理变慢，但状态错误、目标组停用、计算错误和容器变化仍受检查。连续三次检查失败或总时限到期，记录失败并停止，不自动修改该批次资源或停用预计算。报告记录调度标志、观察状态、最后一次有效窗口起点 `normal_start` 和时长 `normal_seconds`，等待与临时调度不算通过证据。
 
 实际 VM 的 DCU 原式在 12h/5s 查询中产生约 912 万个中间点，触发 HTTP 422 查询内存限制。正确性对照遇到这一明确错误时，报告保留整窗错误，使用原生 `vector(time())` 获取完整时间网格，再以最多 600 个原时间点分段比较新旧表达式；步长、窗口覆盖、rank、有效点和空白均保持不变。分段比较只计作逐点正确性证据，不声明原式整窗成功。未知错误仍中断，含范围绑定 `@` 的表达式不分段。性能测试始终使用完整 12h 窗口和原有 41 对样本，内存错误不算性能通过。
 
 每批使用新的证据目录；不得复用之前的成功标记冒充新批次验收。没有完整 12h 数据时 `audit` 必须退出，不能以已运行时间代替逐时间点覆盖。`environment_probe.py` 可以在影子阶段验证已有覆盖、旧历史、筛选和尾部，但其报告不属于性能准入。
 
-同一发布波次必须串行完成 `prepare → audit → impact → apply → observe`，随后下一批再获取新快照。提前准备 CPU/DCU/A3 会因后建数据源或前批面板发布使旧全量快照失效；不得忽略数据源差异或覆盖旧快照来绕过 `Concurrent resource edit`。`prepare` 在同级证据目录检查尚未结束的批次，并通过 `batch-preparation.lock` 防止两个准备进程同时通过检查。只有观察通过、回退完成，或验收驱动器记录该批失败，才允许继续下一批。独立调用 audit/impact 失败时，可按既有 rollback 关闭该批，再准备下一批；重试使用新目录和新证据。
+同一发布波次必须串行完成 `prepare → audit → impact → apply → observe`，随后下一批再获取新快照。提前准备 CPU/DCU/A3 会因后建数据源或前批面板发布使旧全量快照失效；不得忽略数据源差异或覆盖旧快照来绕过 `Concurrent resource edit`。`prepare` 在同级证据目录检查尚未结束的批次，并通过 `batch-preparation.lock` 防止两个准备进程同时通过检查。只有观察通过，或验收驱动器记录了尚未开始发布的准入失败，才允许继续下一批。已写入 `batch-journal.json` 的未完成发布保持阻塞，即使该批以前有准入失败记录也不能跳过。独立调用 audit/impact 失败后保留证据并修复原因；不得通过回退或删除日志跳过未完成发布。工具兼容识别历史回退完成记录，但不生成新回退记录。
 
-`admit_when_ready.py --build api-build-v5 --batches api-build-v5 --browser api-build-v5/materialized-browser.json --hours 8` 可由 SSH MCP 后台任务运行：按 CPU → DCU → A3 等待完整覆盖及本版本的 30 分钟观察完成，执行当前批 prepare/audit/impact。遇到第一批可发布结果即返回，不提前准备后续批次。完成该批 apply/observe 并同步本地发布清单后，再运行同一命令续办下一批；已观察、已回退或已记录验收失败的批次自动跳过。若当前批仍待发布或观察，重复调用只报告等待，不改写其快照或准备后续批次。失败批次通过 `batch-admission.json` 留证，可继续其余批次。8 小时是最长等待期限，不是稳定性测试时长。需预先明确创建 `batch-cpu`、`batch-dcu`、`batch-a3`。该任务不切换面板；进度见 `api-build-v5/admission-progress.json`。
+`admit_when_ready.py --build api-build-v5 --batches api-build-v5 --browser api-build-v5/materialized-browser.json --hours 8` 可由 SSH MCP 后台任务运行：按 CPU → DCU → A3 等待完整覆盖及本版本的 30 分钟观察完成，执行当前批 prepare/audit/impact。遇到第一批可发布结果即返回，不提前准备后续批次。完成该批 apply/observe 并同步本地发布清单后，再运行同一命令续办下一批；已观察或发布前已记录准入失败的批次自动跳过；历史回退记录仅用于识别已结束的旧批次。若当前批仍待发布或观察，重复调用只报告等待，不改写其快照或准备后续批次。发布前准入失败通过 `batch-admission.json` 留证，可继续其余批次；发布中途失败必须先修复。8 小时是最长等待期限，不是稳定性测试时长。需预先明确创建 `batch-cpu`、`batch-dcu`、`batch-a3`。该任务不切换面板；进度见 `api-build-v5/admission-progress.json`。
 
 若仅恢复相同 API 镜像，可使用 `--observation PRIOR_BUILD_DIR` 明确引用该镜像已完成的观察；工具核对完整镜像 ID，不允许复用不同镜像的观察，不将旧报告复制伪装成新观察。恢复后仍需核对模型健康和实时进度追赶，再启动积压监视。
 
 仅修改验收标准、不更换服务或资源时，可在停止原验收进程并保留旧报告后，使用 `admit_when_ready.py ... --resume-prepared cpu` 续办未发布的中断批次（或 `materialized_release.py audit ... --resume`）。恢复仍核对完整资源/服务/catalog/候选指纹及已覆盖时间点；冻结原报告的窗口，按新标准重判已有 41 对样本，只计算缺失案例。重复、失败或不匹配的证据不能复用，既有发布/回退不得恢复为未发布。后续批次仍等待当前批完成发布及观察。验收工具变更不改变运行镜像，因此可以继续使用该镜像已通过的稳定性记录。
 
-`continue_materialized.py --build api-build-v6 --browser api-build-v6/materialized-browser.json --hours 12` 衔接已授权的预计算批次发布。控制器使用独占锁，等待已有 CPU 发布/观察/验收进程及其排队后续任务的 shell 退出；随后只发布完整验收通过的批次，观察 30 分钟后才准备下一批。API 镜像改变、无进程负责的未完成验收/观察或并发编辑会停止并记录原因，不重写快照或把失败判成通过。失败批次留证，其他已通过批次可继续。状态写入 `continuation-progress.json`，全部预计算组观察通过才报告 `observed`，存在失败则为 `needs_followup`；该状态不代表剩余查询合并已完成。
+`continue_materialized.py --build api-build-v6 --browser api-build-v6/materialized-browser.json --hours 12` 衔接已授权的预计算批次发布。控制器使用独占锁，等待已有 CPU 发布/观察/验收进程及其排队后续任务的 shell 退出；随后只发布完整验收通过的批次，观察 30 分钟后才准备下一批。API 镜像改变、无进程负责的未完成验收/观察或并发编辑会停止并记录原因，不重写快照或把失败判成通过。发布前准入失败留证后可继续其他批次；未完成发布或观察会停止整个续办流程，等待修复。状态写入 `continuation-progress.json`，全部预计算组观察通过才报告 `observed`，存在失败则为 `needs_followup`；该状态不代表剩余查询合并已完成。
 
 查询合并的只读复验可以在 CPU 发布观察期间进行。`merge_recheck.py --evidence api-build-v6/merge-recheck --build api-build-v6 --hours 8` 接收新快照上的语义、浏览器和合成证据后，复验 1080p 首轮请求、全部目标图表查询及独立非目标探针。绘图范围为 1h/12h，两种缓存模式各 41 对；另做 24h 正确性对照。目标查询中位耗时更低即可通过；首轮页面 P95 和非目标 P95 保留 5% 不退化门槛。Mooncake 图不在首屏时，另计目标查询队列，不能拿未变化的首屏请求充当合并收益。`admission-work.lock` 只串行化会互相干扰的性能验收；被动稳定性观察无需等待此锁。合并性能通过的看板仍待 CPU 本批观察完成、最新资源快照核对通过后才发布，然后后续预计算批次获取新快照；不会提前准备后批使本批快照过期。

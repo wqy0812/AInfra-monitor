@@ -1,4 +1,4 @@
-"""A lost status-output pipe must not roll back a healthy, accepted release."""
+"""Release failures preserve live state and evidence for forward repair."""
 import json
 import sys
 from pathlib import Path
@@ -38,15 +38,16 @@ def test_closed_output_after_success_never_rolls_back(tmp_path, monkeypatch):
     assert not rollback
 
 
-def test_real_health_failure_is_recorded_and_still_rolls_back(tmp_path, monkeypatch):
+def test_real_health_failure_is_recorded_without_rollback(tmp_path, monkeypatch):
     rollback = setup_observation(tmp_path, monkeypatch)
     monkeypatch.setattr(release, 'health', lambda: {'status': 'error',
         'environments': {'env': {'error': 'source stopped', 'processed_at': 0}}})
     with pytest.raises(RuntimeError, match='Sustained health'):
         release.observe()
-    assert rollback == [True]
+    assert not rollback
     failure = json.loads((tmp_path / 'observation-failure.json').read_text())
     assert failure['type'] == 'RuntimeError'
+    assert failure['automatic_rollback'] is False and failure['recovery'] == 'fix_forward'
 
 
 def test_deferred_observation_counts_from_actual_start(tmp_path, monkeypatch):
@@ -74,4 +75,42 @@ def test_maintenance_or_worker_fault_cannot_pass_normal_observation(tmp_path, mo
         return value
     monkeypatch.setattr(release, 'health', faulty)
     with pytest.raises(RuntimeError, match='Sustained health'): release.observe()
-    assert rollback == [True]
+    assert not rollback
+
+
+@pytest.mark.parametrize('error_type', [OSError, KeyboardInterrupt])
+@pytest.mark.parametrize('report_writable', [True, False])
+def test_uncertain_switch_never_restores_or_disables_groups(tmp_path, monkeypatch, error_type, report_writable):
+    old = {'Id': 'old', 'Config': {'Env': [], 'Cmd': ['uvicorn']}, 'HostConfig': {}}
+    records = {'container-before.json': old, 'prepared.json': {'image': 'candidate', 'protected': []},
+               'manifest.json': {'before_sha256': 'hash'}, 'candidate-api.json': {'image': 'candidate'}}
+    monkeypatch.setattr(release, 'ROOT', tmp_path)
+    monkeypatch.setattr(release, 'read', records.__getitem__)
+    monkeypatch.setattr(release, 'inspect', lambda _: old)
+    monkeypatch.setattr(release, 'source_hash', lambda _: 'hash')
+    monkeypatch.setattr(release, 'find', lambda _: None)
+    monkeypatch.setattr(release, 'protected', lambda: [])
+    monkeypatch.setattr(release, 'health', lambda: {'status': 'ok'})
+    commands = []
+    monkeypatch.setattr(release, 'cmd', lambda *args: commands.append(args))
+    monkeypatch.setattr(release, 'rollback', lambda: pytest.fail('Rollback must never run'))
+    failure = error_type('create response lost')
+    def create(*args):
+        raise failure
+    monkeypatch.setattr(release, 'create', create)
+    save = release.save
+    def save_report(name, value):
+        if name == 'switch-failure.json' and not report_writable:
+            raise OSError('disk unavailable')
+        save(name, value)
+    monkeypatch.setattr(release, 'save', save_report)
+    with pytest.raises(error_type) as caught:
+        release.switch()
+    assert caught.value is failure
+    assert commands == [('docker', 'stop', 'old'), ('docker', 'rename', 'old', release.BACKUP)]
+    assert (tmp_path / 'transaction.json').exists()
+    assert not (tmp_path / 'shadow-started.json').exists()
+    if report_writable:
+        assert json.loads((tmp_path / 'switch-failure.json').read_text())['automatic_rollback'] is False
+    else:
+        assert any('disk unavailable' in note for note in failure.__notes__)

@@ -27,8 +27,8 @@ def collect(root):
         assert CONFIG.read_bytes()==old
         write_config(new)
         assert r.fingerprint()==json.loads((root/'services-before.json').read_text())
-    except Exception:
-        if CONFIG.read_bytes()==new:write_config(old)
+    except Exception as error:
+        error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
         raise
     print('Mooncake scrape config reloaded; no service restart',flush=True)
 

@@ -41,6 +41,8 @@ class Docker:
     def fail(self, stage):
         if self.failure == stage:
             self.failure = None
+            self.at_failure = copy.deepcopy(self.containers)
+            self.calls_at_failure = list(self.calls)
             raise RuntimeError('injected ' + stage)
 
     def locate(self, value):
@@ -92,15 +94,14 @@ class Docker:
 
 @pytest.mark.parametrize('failure', ['stop-before', 'stop-after', 'rename-before', 'rename-after',
                                      'create-before', 'create-after', 'start-before', 'start-after', 'acceptance'])
-def test_replacement_recovers_original_after_every_transaction_failure(monkeypatch, failure):
+def test_replacement_preserves_failure_state_without_more_docker_calls(monkeypatch, failure):
     docker = Docker(failure)
     docker.patch(monkeypatch)
     with pytest.raises(RuntimeError, match='injected'):
         replacement.replace('monitoring-api', 'candidate-tag')
-    assert docker.containers['monitoring-api']['Id'] == 'original'
-    assert docker.containers['monitoring-api']['State']['Running']
-    assert all(c['Id'] != 'new' for c in docker.containers.values())
-    assert not any(c[:2] == ('docker', 'rm') and c[-1] == 'original' for c in docker.calls)
+    assert docker.containers == docker.at_failure
+    assert docker.calls == docker.calls_at_failure
+    assert any(c['Id'] == 'original' for c in docker.containers.values())
 
 
 def test_replacement_removes_backup_only_after_acceptance(monkeypatch):
@@ -265,14 +266,14 @@ class PersesDocker(Docker):
 
 @pytest.mark.parametrize('failure', ['stop-before', 'stop-after', 'rename-before', 'rename-after',
                                      'create-before', 'create-after', 'start-before', 'start-after', 'acceptance'])
-def test_perses_recovers_original_even_after_uncertain_mutation(monkeypatch, tmp_path, failure):
+def test_perses_preserves_failure_state_even_after_uncertain_mutation(monkeypatch, tmp_path, failure):
     docker = PersesDocker(failure)
     docker.patch_perses(monkeypatch)
     with pytest.raises(RuntimeError, match='injected'):
         image_release.apply_image(tmp_path, 'candidate', '0.54.0-perf.2', 'previous', {})
-    assert docker.containers['monitoring-perses']['Id'] == 'original'
-    assert docker.containers['monitoring-perses']['State']['Running']
-    assert not any(c[:2] == ('docker', 'rm') and c[-1] == 'original' for c in docker.calls)
+    assert docker.containers == docker.at_failure
+    assert docker.calls == docker.calls_at_failure
+    assert any(c['Id'] == 'original' for c in docker.containers.values())
 
 
 def test_perses_backup_collision_rejected_before_stopping(monkeypatch, tmp_path):

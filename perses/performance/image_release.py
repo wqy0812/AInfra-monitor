@@ -86,8 +86,8 @@ def apply_image(root,image,version,previous_image,validation):
   assert resources()==before,'Resources changed'
   assert protected()==fp,'Protected services changed'
   save(root,'image-publication.json',{'passed':True,'image':image,'time':time.time(),'resources_unchanged':True,'protected_unchanged':True,'validation':validation})
- except BaseException:
-  restore_original(old,image)
+ except BaseException as error:
+  error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
   raise
 def health(base):
  for _ in range(80):

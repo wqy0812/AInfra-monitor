@@ -255,8 +255,8 @@ def apply(resources, root):
              "panels": sum(len(d["spec"]["panels"]) for d in resources["dashboards"]),
              "services_unchanged": True, "completed_at": time.time()})
         print("Publication accepted", flush=True)
-    except Exception:
-        rollback(root)
+    except Exception as error:
+        error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
         raise
 
 

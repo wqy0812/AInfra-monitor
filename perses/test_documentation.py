@@ -2,8 +2,11 @@
 import copy
 import json
 from pathlib import Path
+import runpy
 import shutil
 import sys
+
+import pytest
 
 import project_coverage
 import project_split
@@ -21,7 +24,9 @@ def test_docs_only_is_complete_stable_and_preserves_historical_inventory(tmp_pat
     project_coverage.main()
     files = ['panel_descriptions.json', 'METRICS_GUIDE.md', 'METRIC_COVERAGE.md']
     first = {name: (tmp_path / name).read_bytes() for name in files}
-    project_coverage.main()
+    with pytest.raises(SystemExit) as completed:
+        runpy.run_path(str(ROOT / 'annotate_panels.py'), run_name='__main__')
+    assert completed.value.code == 0
     assert first == {name: (tmp_path / name).read_bytes() for name in files}
     assert (tmp_path / 'metric_coverage.json').read_bytes() == catalog
     assert all((ROOT / name).read_bytes() == content for name, content in first.items())

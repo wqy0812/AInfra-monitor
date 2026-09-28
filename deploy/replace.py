@@ -99,8 +99,8 @@ def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=N
         cmd('docker', 'start', identity)
         wait_ready(inspect, identity, image, probe)
         require(inspect(name)['Id'] == identity, 'Candidate name changed before acceptance completed')
-    except BaseException:
-        restore(name, old, backup, image)
+    except BaseException as error:
+        error.add_note('Automatic rollback is disabled; preserve current containers and fix forward. Backup: ' + backup)
         raise
     require(inspect(backup)['Id'] == old['Id'], 'Backup identity changed before cleanup')
     cmd('docker', 'rm', old['Id'])

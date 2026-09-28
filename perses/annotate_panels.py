@@ -59,7 +59,7 @@ def meaning(name, key, panel):
         if key.startswith('generation-'):return GENERATION[int(key.split('-')[-1])]
         if key.startswith('live-stages-'):
             return '当前流式请求按处理阶段分组计数，一个请求同时只归属一个阶段。阶段包括：路由与模型发现、构造下游请求、等待响应头、等待首个有效输出、读取后续流、读取错误响应、向客户端写入和流结束收尾。阶段切换使曲线变化，不等于请求失败；某阶段持续累积可辅助定位等待位置。'
-            'live-idle-max':'按指标范围统计。当前在途状态，5 秒采集、15 秒刷新；采集失败、缺样、过期、升级前或跨进程重启窗口留空。正常空闲显示零。仅累计等待后端有效输出的时间，排除网关写出耗时；首次输出前从读取响应体开始计时。心跳和 usage 不算有效输出。',
+        if key.startswith('live-idle-') and key!='live-idle-max':
             t=key.split('-')[-1]
             return f'当前已出现有效输出、尚未结束且连续至少 {t} 秒没有新有效内容的流数量。有效内容包含正文、推理、拒绝或工具增量；心跳、空事件和 usage 不重置停顿时钟。阈值为累计包含：≥60 秒的流也计入 ≥30/15/5 秒，四图不能相加。'
         return {

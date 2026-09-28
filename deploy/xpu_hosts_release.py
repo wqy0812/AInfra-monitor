@@ -67,12 +67,8 @@ def publish():
         '-promscrape.config=/candidate.yml', '-promscrape.config.dryRun'])
     assert CONFIG.read_bytes() == old_config
     assert api(PATH)['spec'] == old['spec']
-    config_written = False
-    dashboard_attempted = False
     try:
-        config_written = True
         write_config(candidate)
-        dashboard_attempted = True
         api(PATH, new)
         got = api(PATH)
         for field in ('panels', 'layouts', 'variables', 'duration', 'refreshInterval'):
@@ -81,19 +77,7 @@ def publish():
         save('published.json', {'published_at': time.time(), 'dashboard': PATH, 'panels': len(new['spec']['panels'])})
         print('Published XPU hosts; unrelated dashboards unchanged')
     except BaseException as failure:
-        if dashboard_attempted:
-            try:
-                current = api(PATH)
-                if current['spec'] == new['spec']:
-                    old['metadata'] = current['metadata']
-                    api(PATH, old)
-            except BaseException as rollback_error:
-                failure.add_note('Dashboard rollback failed: ' + repr(rollback_error))
-        try:
-            if config_written and CONFIG.read_bytes() == candidate:
-                write_config(old_config)
-        except BaseException as rollback_error:
-            failure.add_note('Scrape configuration rollback failed: ' + repr(rollback_error))
+        failure.add_note('Automatic rollback is disabled; preserve current collection and dashboard state and fix forward.')
         raise
 
 

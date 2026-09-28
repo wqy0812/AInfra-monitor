@@ -84,6 +84,15 @@ def sha(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
 
+def record_failure(root, name, error):
+    error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
+    try:
+        save(root, name, {'passed': False, 'at': time.time(), 'type': type(error).__name__,
+                         'error': str(error)[:500], 'recovery': 'fix_forward', 'automatic_rollback': False})
+    except OSError as reporting_error:
+        error.add_note('Failure report could not be saved: ' + str(reporting_error))
+
+
 def expressions(document):
     return [q['spec']['plugin']['spec']['query'] for p in document['spec']['panels'].values()
             for q in p['spec'].get('queries', [])]
@@ -323,8 +332,8 @@ def apply(root, admitted_only=False, viewport=False):
         assert fingerprint() == json.loads((root / (prefix + '-services.json')).read_text())
         save(root, 'merge-publication.json', {'passed': True, 'time': time.time(), 'dashboards': len(journal),
              'panels': len(selected), 'admitted': sorted(admitted), 'queries': sum(len(expressions(d)) for d in after['dashboards'])})
-    except BaseException:
-        rollback(root)
+    except BaseException as error:
+        record_failure(root, 'merge-apply-failure.json', error)
         raise
 
 

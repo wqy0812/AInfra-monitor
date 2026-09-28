@@ -85,7 +85,7 @@ def main():
     if docpath(x)==path:new['spec']['panels'][x['panel']]=x['after']
    journal.append({'path':path,'before':old,'after':new});save(r,'quantiles-journal.json',journal);http(path,new);assert http(path)['spec']==new['spec']
   audit(changes,r,a.samples);save(r,'quantiles-publication.json',{'passed':True,'time':time.time(),'dashboards':len(docs),'panels':len(changes)})
- except Exception:
-  # Rollback only confirmed candidate content; leave uncertain/concurrent state for inspection.
-  rollback(r);raise
+ except Exception as error:
+  error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
+  raise
 if __name__=='__main__':main()

@@ -5,7 +5,7 @@ import json
 import time
 from pathlib import Path
 
-from merge_release import api, expressions, fingerprint, normalized, path, prepare, rollback, save, sha, snapshot
+from merge_release import api, expressions, fingerprint, normalized, path, prepare, record_failure, save, sha, snapshot
 from generator_transaction import plan, install
 
 
@@ -63,8 +63,8 @@ def main():
                  'panels': 13, 'dashboards_changed': len(journal), 'total_panels': 303,
                  'total_queries': 368, 'resources_match': True, 'services_unchanged': True,
                  'performance': 'waived_by_user', 'observation': 'waived_by_user'})
-        except BaseException:
-            rollback(root)
+        except BaseException as error:
+            record_failure(root, 'merge-apply-failure.json', error)
             raise
     print('Published 13 merge panels; 303 panels / 368 queries; readback verified', flush=True)
 

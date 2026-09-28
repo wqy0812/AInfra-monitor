@@ -131,8 +131,8 @@ def publish_panels():
         count = check_resources(after=True)
         release.save('panels-published.json', {'at': time.time(), 'resources_checked': count, 'panels': PANELS})
         print(json.dumps(release.read('panels-published.json')))
-    except BaseException:
-        rollback_panels()
+    except BaseException as error:
+        error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
         raise
 
 
