@@ -3,11 +3,20 @@ import argparse
 import copy
 import http.client
 import json
+from pathlib import Path
 import socket
 import subprocess
+import sys
 import time
 
 from container_validation import ComponentProbe, require, wait_ready
+
+
+def api_clients(value):
+    # Direct execution from deploy/ must find the shared, stdlib-only validator.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from monitoring.access import client_allowlist
+    return ','.join(client_allowlist(value))
 
 
 def cmd(*args, timeout=30):
@@ -82,6 +91,11 @@ def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=N
         require(name == 'monitoring-api', '--allowed-clients is only for monitoring-api')
         config['Env'] = [v for v in config.get('Env', []) if not v.startswith('ALLOWED_CLIENTS=')]
         config['Env'].append('ALLOWED_CLIENTS=' + allowed_clients)
+    if name == 'monitoring-api':
+        environment = dict(v.split('=', 1) for v in config.get('Env', []) if '=' in v)
+        clients = api_clients(environment.get('ALLOWED_CLIENTS', '127.0.0.1,::1'))
+        config['Env'] = [v for v in config.get('Env', []) if not v.startswith('ALLOWED_CLIENTS=')]
+        config['Env'].append('ALLOWED_CLIENTS=' + clients)
     if driver_readonly:
         require(name == 'monitoring-dcu', '--driver-readonly is only for monitoring-dcu')
         binds = config['HostConfig'].setdefault('Binds', [])

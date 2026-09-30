@@ -113,14 +113,51 @@ def test_replacement_removes_backup_only_after_acceptance(monkeypatch):
     assert list(docker.containers) == ['monitoring-api']
 
 
-def test_api_replacement_can_explicitly_allow_all_clients(monkeypatch):
+def test_api_replacement_normalizes_explicit_clients_and_preserves_other_settings(monkeypatch):
     docker = Docker()
-    docker.containers['monitoring-api']['Config']['Env'] = ['ALLOWED_CLIENTS=127.0.0.1', 'OTHER=preserve']
+    docker.containers['monitoring-api']['Config']['Env'] = ['ALLOWED_CLIENTS=*', 'OTHER=preserve']
     docker.patch(monkeypatch)
-    replacement.replace('monitoring-api', 'candidate-tag', allowed_clients='*')
+    replacement.replace('monitoring-api', 'candidate-tag', allowed_clients=' 127.0.0.1, ::1,127.0.0.1 ')
     config = docker.containers['monitoring-api']['Config']
-    assert config['Env'] == ['OTHER=preserve', 'ALLOWED_CLIENTS=*']
+    assert config['Env'] == ['OTHER=preserve', 'ALLOWED_CLIENTS=127.0.0.1,::1']
     assert config['Cmd'].count('--no-proxy-headers') == 1
+
+
+@pytest.mark.parametrize('clients', ['', ' ', '*', '127.0.0.1,*', '127.0.0.1,', 'localhost', '0.0.0.0/0', '192.0.2.999'])
+@pytest.mark.parametrize('explicit', [False, True])
+def test_invalid_api_clients_are_rejected_before_container_changes(monkeypatch, clients, explicit):
+    docker = Docker()
+    docker.containers['monitoring-api']['Config']['Env'] = [
+        'ALLOWED_CLIENTS=' + ('127.0.0.1' if explicit else clients), 'OTHER=preserve']
+    before = copy.deepcopy(docker.containers)
+    docker.patch(monkeypatch)
+    with pytest.raises(ValueError):
+        replacement.replace('monitoring-api', 'candidate-tag', allowed_clients=clients if explicit else None)
+    assert docker.containers == before
+    assert docker.calls == [('docker', 'image', 'inspect', 'candidate-tag')]
+
+
+@pytest.mark.parametrize('environment,expected', [
+    (['OTHER=preserve'], '127.0.0.1,::1'),
+    (['OTHER=preserve', 'ALLOWED_CLIENTS= 127.0.0.1, ::1,127.0.0.1 '], '127.0.0.1,::1'),
+    (['OTHER=preserve', 'ALLOWED_CLIENTS=192.0.2.1'], '192.0.2.1'),
+])
+def test_api_replacement_validates_inherited_clients_and_pins_default(monkeypatch, environment, expected):
+    docker = Docker()
+    docker.containers['monitoring-api']['Config']['Env'] = environment
+    docker.patch(monkeypatch)
+    replacement.replace('monitoring-api', 'candidate-tag')
+    assert docker.containers['monitoring-api']['Config']['Env'] == ['OTHER=preserve', 'ALLOWED_CLIENTS=' + expected]
+
+
+def test_api_client_validation_works_outside_repository_cwd(tmp_path):
+    import subprocess
+    result = subprocess.run([sys.executable, '-I', '-c',
+        "import runpy,sys; sys.path.insert(0,sys.argv[1]); "
+        "module=runpy.run_path(sys.argv[1]+'/replace.py'); "
+        "print(module['api_clients']('127.0.0.1, ::1'))", str(ROOT/'deploy')],
+        cwd=tmp_path, check=True, capture_output=True, text=True)
+    assert result.stdout.strip() == '127.0.0.1,::1'
 
 
 def test_replacement_preflight_rejects_collision_and_unknown_component(monkeypatch):

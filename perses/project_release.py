@@ -132,6 +132,20 @@ def query(base, expression, start, end, step):
     return sorted(data["data"]["result"], key=lambda x: json.dumps(x["metric"], sort_keys=True))
 
 
+def panel_datasource(resources, dashboard, query_spec):
+    """Match explicit references or the project's default Prometheus datasource."""
+    reference = query_spec.get('datasource') or {}
+    if reference.get('name'):
+        return reference['name']
+    project = dashboard['metadata']['project']
+    defaults = [d['metadata']['name'] for d in resources['datasources']
+                if d['metadata'].get('project') == project and d['spec'].get('default')
+                and d['spec']['plugin']['kind'] == 'PrometheusDatasource']
+    if len(defaults) != 1:
+        raise ValueError('Expected one default Prometheus datasource for ' + project)
+    return defaults[0]
+
+
 def audit(resources, root, published=False):
     end = int(time.time() // 60) * 60 - 180
     start = end - 1800
@@ -140,14 +154,17 @@ def audit(resources, root, published=False):
         for pid, p in d["spec"]["panels"].items():
             for i, item in enumerate(p["spec"]["queries"]):
                 for step in (15, 60):
-                    work.append((d, pid, i, item["spec"]["plugin"]["spec"]["query"], step))
+                    work.append((d, pid, i, item["spec"]["plugin"]["spec"], step))
     def check(entry):
-        d, pid, i, expression, step = entry
+        d, pid, i, query_spec, step = entry
         project = d["metadata"]["project"]
         proxy_project = project if published else "dcu-monitoring"
-        proxy = BASE + "/proxy/projects/" + proxy_project + "/datasources/victoriametrics"
         result = {"project": project, "dashboard": d["metadata"]["name"], "panel": pid, "query": i, "step": step}
         try:
+            datasource = panel_datasource(resources, d, query_spec)
+            result['datasource'] = datasource
+            proxy = BASE + "/proxy/projects/" + urllib.parse.quote(proxy_project, safe='') + "/datasources/" + urllib.parse.quote(datasource, safe='')
+            expression = query_spec['query']
             a = query(VM, expression, start, end, step)
             b = query(proxy, expression, start, end, step)
             if not equivalent(a, b):
