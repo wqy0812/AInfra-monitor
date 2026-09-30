@@ -61,9 +61,8 @@ def test_dashboard_write_response_loss_keeps_candidate_and_journal(tmp_path, mon
             raise failure
         return copy.deepcopy(current)
     if module_name == 'project_release':
-        reports = {'semantics.json': {'passed': True},
-                   'audit-candidate.json': {'passed': True, 'resource_sha256': release.digest(after)},
-                   'before.json': before, 'services-before.json': []}
+        monkeypatch.setattr(release, 'validate', lambda *a: None)
+        reports = {'before.json': before}
         monkeypatch.setattr(release, 'http', api)
         monkeypatch.setattr(release, 'query', lambda *a: [1])
         action = lambda: release.apply(after, tmp_path)

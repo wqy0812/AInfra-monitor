@@ -86,7 +86,7 @@ class ComponentProbe:
 
         if self.name == 'monitoring-api':
             require(fetch('/health', True)['status'] == 'ok', 'API health degraded')
-            for environment in ('dcu-pd', 'a3-vllm'):
+            for environment in ('dcu-pd', 'a3-vllm', 'xpu-pd'):
                 data = fetch('/api/monitoring/latest?environment=' + environment, True)
                 require(data['environment'] == environment and 0 <= time.time() - data['ts'] < 20, 'API data stale: ' + environment)
                 require(set(data['nodes']) == {'prefill', 'decode'} and
@@ -133,29 +133,21 @@ class ComponentProbe:
                 require(all(v <= 100 for _, v in rows['dcu_utilization_percent']), 'Invalid DCU utilization')
 
 
-def wait_ready(inspect, identity, image, probe, timeout=90, stable_seconds=10):
+def wait_ready(inspect, identity, image, probe, timeout=90):
+    """Accept once the new component is ready; retries cover startup only."""
     deadline = time.monotonic() + timeout
-    stable_since = None
-    started_at = None
     last_error = 'No successful observation'
     while time.monotonic() < deadline:
         try:
             current = inspect(identity, timeout=min(4, deadline - time.monotonic()))
             require(current['Id'] == identity and current['Image'] == image, 'Candidate identity changed')
-            require(current['State']['Running'] and not current['State'].get('Restarting') and
-                    current.get('RestartCount', 0) == 0, 'Candidate stopped or restarted')
-            start = current['State']['StartedAt']
-            require(started_at is None or start == started_at, 'Candidate start time changed')
-            started_at = start
+            require(current['State']['Running'] and not current['State'].get('Restarting'), 'Candidate not running')
             health = current['State'].get('Health')
             require(not health or health['Status'] == 'healthy', 'Container health check not healthy')
             probe.check(deadline)
-            now = time.monotonic()
-            stable_since = now if stable_since is None else stable_since
-            if now < deadline and now - stable_since >= stable_seconds:
+            if time.monotonic() < deadline:
                 return
         except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
-            stable_since = None
             last_error = str(exc)
         remaining = deadline - time.monotonic()
         if remaining > 0:

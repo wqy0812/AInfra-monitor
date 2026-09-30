@@ -1,6 +1,8 @@
 # Perses acceleration — controlled 12h backfill
 
-Updated 2026-09-26 14:42 UTC. Latest user instruction supersedes the old gain/latency thresholds: a target query passes when its median is strictly faster than the original, using the same fixed 12-hour window, step and cache mode with 41 alternating pairs. No fixed percentage reduction or absolute latency ceiling remains. Correctness, 24-hour mixed-history checks, 30-minute stability and non-target impact checks remain. Existing materialized data is retained. Monitoring testing/acceptance is authorized directly in the actual environment; all remote operations use SSH MCP.
+Current upgrade policy (2026-09-30): use an allowed downtime window and accept the new version after relevant health, data and function checks. API/batch `observe` now checks readiness with a 90-second retry limit; candidate parallel probes and 30-minute stability are no longer publication gates. Coverage, query correctness and relevant performance checks still apply to acceleration changes. See [current operations](README.md) and [maintenance-window upgrades](../../docs/maintenance-window-upgrade.md). This policy update does not claim a new server deployment or change the historical results below.
+
+Historical execution snapshot, updated 2026-09-26 14:42 UTC. At that time, the user instruction superseded the old gain/latency thresholds: a target query passed when its median was strictly faster than the original, using the same fixed 12-hour window, step and cache mode with 41 alternating pairs. No fixed percentage reduction or absolute latency ceiling remained. Correctness, 24-hour mixed-history checks, 30-minute stability and non-target impact checks were then required. Existing materialized data was retained. All remote operations used SSH MCP. Historical pending steps and timings below are not current upgrade requirements.
 
 ## Current checkpoint (supersedes historical checkpoints below)
 

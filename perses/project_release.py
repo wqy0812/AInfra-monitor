@@ -146,15 +146,40 @@ def panel_datasource(resources, dashboard, query_spec):
     return defaults[0]
 
 
-def audit(resources, root, published=False):
+def affected_panels(resources, before):
+    """Select query checks affected by panel, dashboard or datasource changes."""
+    previous = flattened(before)
+    changed_projects = set()
+    for document in resources['datasources']:
+        old = previous.get(key(document))
+        settings = {k: v for k, v in spec(document).items() if k != 'display'}
+        old_settings = {k: v for k, v in spec(old).items() if k != 'display'} if old else None
+        if settings != old_settings:
+            changed_projects.add(document['metadata']['project'])
+    selected = []
+    for document in resources['dashboards']:
+        old = previous.get(key(document))
+        settings = {k: v for k, v in spec(document).items() if k not in ('panels', 'display', 'layouts')}
+        old_settings = {k: v for k, v in spec(old).items() if k not in ('panels', 'display', 'layouts')} if old else None
+        whole_dashboard = document['metadata']['project'] in changed_projects or settings != old_settings
+        for pid, panel in document['spec']['panels'].items():
+            old_panel = old['spec']['panels'].get(pid) if old else None
+            if whole_dashboard or old_panel is None or old_panel['spec'].get('queries') != panel['spec'].get('queries'):
+                selected.append((document, pid, panel))
+    return selected
+
+
+def audit(resources, root, published=False, full=False):
     end = int(time.time() // 60) * 60 - 180
     start = end - 1800
     work = []
-    for d in resources["dashboards"]:
-        for pid, p in d["spec"]["panels"].items():
-            for i, item in enumerate(p["spec"]["queries"]):
-                for step in (15, 60):
-                    work.append((d, pid, i, item["spec"]["plugin"]["spec"], step))
+    before_path = root / 'before.json'
+    full = full or not before_path.exists()
+    panels = [(d, pid, p) for d in resources['dashboards'] for pid, p in d['spec']['panels'].items()] if full else affected_panels(resources, json.loads(before_path.read_text()))
+    for d, pid, p in panels:
+        for i, item in enumerate(p["spec"]["queries"]):
+            for step in (15, 60):
+                work.append((d, pid, i, item["spec"]["plugin"]["spec"], step))
     def check(entry):
         d, pid, i, query_spec, step = entry
         project = d["metadata"]["project"]
@@ -181,7 +206,7 @@ def audit(resources, root, published=False):
             if len(checks) % 60 == 0:
                 print(json.dumps({"checked": len(checks), "total": len(work), "errors": sum("error" in x for x in checks)}), flush=True)
     report = {"passed": all("error" not in x for x in checks), "resource_sha256": digest(resources), "start": start, "end": end,
-              "checks": checks, "queries": len(checks), "empty": [x for x in checks if x.get("points") == 0]}
+              "checks": checks, "queries": len(checks), "scope": "full" if full else "affected-panels", "empty": [x for x in checks if x.get("points") == 0]}
     save(root, "audit-after.json" if published else "audit-candidate.json", report)
     print(json.dumps({"passed": report["passed"], "queries": len(checks), "empty": len(report["empty"]),
                       "errors": [x for x in checks if "error" in x]}), flush=True)
@@ -189,13 +214,9 @@ def audit(resources, root, published=False):
 
 
 def apply(resources, root):
-    assert json.loads((root / "semantics.json").read_text())["passed"], "Semantic checks required"
-    audit_report = json.loads((root / "audit-candidate.json").read_text())
-    assert audit_report["passed"], "Candidate audit required"
-    assert audit_report["resource_sha256"] == digest(resources), "Candidate changed after audit"
+    validate(resources)
     before = json.loads((root / "before.json").read_text())
     assert snapshot() == before, "Concurrent resource edit detected before publication"
-    assert fingerprint() == json.loads((root / "services-before.json").read_text()), "Service changed"
     existing = flattened(before)
     mutations = []
     save(root, "candidate.json", resources)
@@ -225,23 +246,14 @@ def apply(resources, root):
         existing[identity] = actual
         print("Published", identity, flush=True)
     try:
-        # A3 first; old DCU/A3 resources remain available until the target works.
+        # Publish affected resources in the maintenance window.
         for project in ("a3-monitoring", "dcu-monitoring", "xpu-monitoring"):
             for category in ("projects", "datasources", "dashboards"):
                 for d in resources[category]:
                     owner = d["metadata"]["name"] if category == "projects" else d["metadata"]["project"]
                     if owner == project:
                         publish(d)
-            if project == "a3-monitoring":
-                for d in resources["dashboards"]:
-                    if d["metadata"]["project"] == project:
-                        assert spec(http(endpoint("Dashboard", d) + "/" + d["metadata"]["name"])) == spec(d)
-                probe = 'up{environment="a3-vllm"}'
-                at = int(time.time() // 60) * 60 - 180
-                a = query(VM, probe, at - 300, at, 15)
-                b = query(BASE + "/proxy/projects/a3-monitoring/datasources/victoriametrics", probe, at - 300, at, 15)
-                assert a == b and a, "A3 datasource acceptance failed"
-        # A full post-publication query audit gates removal of migrated sources.
+        # Check affected queries after publication, before deleting retired resources.
         assert audit(resources, root, published=True)["passed"]
         from dashboard_reorg import RETIRED
         candidates = flattened(resources)
@@ -266,11 +278,10 @@ def apply(resources, root):
         assert set(expected) == set(actual), (set(expected) ^ set(actual))
         for identity, d in expected.items():
             assert spec(actual[identity]) == spec(d), identity
-        assert fingerprint() == json.loads((root / "services-before.json").read_text())
         save(root, "after.json", after)
         save(root, "publication.json", {"passed": True, "projects": len(resources['projects']), "dashboards": len(resources['dashboards']),
              "panels": sum(len(d["spec"]["panels"]) for d in resources["dashboards"]),
-             "services_unchanged": True, "completed_at": time.time()})
+             "upgrade_mode": "maintenance-window", "completed_at": time.time()})
         print("Publication accepted", flush=True)
     except Exception as error:
         error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
@@ -315,12 +326,12 @@ def main():
     parser.add_argument("action", choices=("prepare", "audit", "audit-published", "apply", "rollback"))
     parser.add_argument("--resources", type=Path, default=Path(__file__).parent / "projects")
     parser.add_argument("--evidence", type=Path, required=True)
+    parser.add_argument("--full-audit", action="store_true", help="Explicitly audit every panel instead of affected panels")
     args = parser.parse_args()
     assert args.evidence.is_dir(), "Announce and create evidence directory first"
     if args.action == "prepare":
         assert not (args.evidence / "before.json").exists(), "Use a fresh evidence directory"
         save(args.evidence, "before.json", snapshot())
-        save(args.evidence, "services-before.json", fingerprint())
         return
     if args.action == "rollback":
         rollback(args.evidence)
@@ -328,7 +339,7 @@ def main():
     resources = read_resources(args.resources)
     validate(resources)
     if args.action.startswith("audit"):
-        assert audit(resources, args.evidence, args.action == "audit-published")["passed"]
+        assert audit(resources, args.evidence, args.action == "audit-published", args.full_audit)["passed"]
     else:
         apply(resources, args.evidence)
 

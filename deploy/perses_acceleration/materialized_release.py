@@ -32,8 +32,7 @@ GROUPS = ('cpu', 'dcu', 'a3')
 PERFORMANCE_POLICY = 'faster-median-v1'
 WINDOW_SECONDS = 43200
 CORRECTNESS_BATCH_POINTS = 600
-OBSERVATION_SECONDS = 1800
-OBSERVATION_TIMEOUT_SECONDS = 3600
+OBSERVATION_TIMEOUT_SECONDS = 90
 
 
 def evaluate_benchmark(benchmark):
@@ -440,49 +439,40 @@ def apply(root, group, impact_exception=None):
 
 
 def observe(root, group):
-    baseline = fingerprint()
     catalog = json.loads(CATALOG.read_text())
     deadline = time.monotonic() + OBSERVATION_TIMEOUT_SECONDS
-    normal_since = None
     bad = 0
-    report = {'passed': False, 'start': time.time(), 'normal_start': None,
+    report = {'passed': False, 'mode': 'maintenance-window', 'start': time.time(), 'normal_start': None,
               'normal_seconds': 0, 'timeout_seconds': OBSERVATION_TIMEOUT_SECONDS,
               'state': 'waiting_for_normal_scheduling', 'records': []}
     try:
         save(root, 'batch-observation.json', report)
         while True:
             if time.monotonic() >= deadline:
-                raise TimeoutError('Normal-load observation did not complete within one hour')
+                raise TimeoutError('Startup observation did not complete within the readiness timeout')
             try:
                 result = read_health()
                 accelerator = result['perses_acceleration']
                 scheduling = {key: accelerator[key] for key in ('backfill_priority_active', 'parallel_a3_backfill')}
                 assert all(isinstance(value, bool) for value in scheduling.values()), 'Unknown scheduling state'
-                assert fingerprint() == baseline
                 if any(scheduling.values()):
-                    # Temporary backfill may intentionally slow model processing.
-                    # It contributes no stability time, including before a pause.
+                    # Wait for temporary scheduling to finish before accepting readiness.
                     checked_jobs(catalog, group, accelerator)
-                    normal_since = None
                     report.update(state='waiting_for_normal_scheduling', normal_start=None, normal_seconds=0)
                 else:
                     validate_health(result)
                     readiness(catalog, group, accelerator=accelerator)
-                    if normal_since is None:
-                        normal_since = time.monotonic()
-                        report['normal_start'] = time.time()
-                    report.update(state='observing', normal_seconds=time.monotonic() - normal_since)
+                    report.update(state='ready', normal_start=time.time())
                 bad = 0
                 report['records'].append({'at': time.time(), 'state': report['state'], **scheduling,
                     'model_lags': {k: time.time()-v['processed_at'] for k,v in result['environments'].items()}})
             except (OSError, ValueError, KeyError, AssertionError) as error:
-                normal_since = None
                 report.update(state='unhealthy', normal_start=None, normal_seconds=0)
                 report['records'].append({'at': time.time(), 'state': 'unhealthy',
                                           'error': type(error).__name__ + ': ' + str(error)[:300]})
                 bad += 1
                 if bad >= 3: raise
-            if report['state'] == 'observing' and report['normal_seconds'] >= OBSERVATION_SECONDS:
+            if report['state'] == 'ready':
                 report.update(passed=True, state='observed', end=time.time())
                 save(root, 'batch-observation.json', report)
                 return

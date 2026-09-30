@@ -70,7 +70,7 @@
 
 ## 证据与回退
 
-本地验收证据：`/Users/qyw/Downloads/AI/analysis/metric-scope-v2-20260915/evidence`。桌面截图和发布工具位于同级目录。
+本地验收证据：[work/metric-scope-v2-20260915/evidence](../../work/metric-scope-v2-20260915/evidence/)。桌面截图和发布工具位于该专题目录。
 
 远端目录：
 

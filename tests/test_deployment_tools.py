@@ -180,17 +180,19 @@ class Clock:
         self.now += seconds
 
 
-@pytest.mark.parametrize('fault', [None, 'data', 'restart', 'identity', 'start-time'])
-def test_acceptance_requires_stable_identity_and_data_with_bounded_deadline(monkeypatch, fault):
+@pytest.mark.parametrize('fault', [None, 'data', 'stopped', 'restarting', 'identity', 'image', 'health'])
+def test_acceptance_checks_new_version_and_data_with_bounded_startup_retry(monkeypatch, fault):
     clock = Clock()
     monkeypatch.setattr(cv, 'time', clock)
     state = container()
     state.update(Id='new', Image='candidate')
     def inspect(*args, **kwargs):
         value = copy.deepcopy(state)
-        if fault == 'restart':value['RestartCount'] = 1
+        if fault == 'stopped':value['State']['Running'] = False
+        if fault == 'restarting':value['State']['Restarting'] = True
         if fault == 'identity':value['Id'] = 'other'
-        if fault == 'start-time':value['State']['StartedAt'] = str(clock.now)
+        if fault == 'image':value['Image'] = 'wrong'
+        if fault == 'health':value['State']['Health'] = {'Status': 'unhealthy'}
         return value
     def check(deadline):
         if fault == 'data':raise RuntimeError('health OK, data stale')
@@ -200,17 +202,24 @@ def test_acceptance_requires_stable_identity_and_data_with_bounded_deadline(monk
         assert clock.now == 90
     else:
         cv.wait_ready(inspect, 'new', 'candidate', SimpleNamespace(check=check))
-        assert clock.now == 10
+        assert clock.now == 0
 
 
-def test_acceptance_stability_restarts_after_a_bad_observation(monkeypatch):
+def test_acceptance_retries_startup_without_a_continuity_window(monkeypatch):
     clock = Clock()
     monkeypatch.setattr(cv, 'time', clock)
-    state = container();state.update(Id='new', Image='candidate')
+    state = container();state.update(Id='new', Image='candidate', RestartCount=1)
     def check(deadline):
-        if clock.now == 6:raise RuntimeError('transient data outage')
+        if clock.now < 6:raise RuntimeError('startup data not ready')
     cv.wait_ready(lambda *a, **k: state, 'new', 'candidate', SimpleNamespace(check=check))
-    assert clock.now == 18
+    assert clock.now == 6
+
+
+def test_replacement_accepts_a_service_stopped_for_maintenance(monkeypatch):
+    docker = Docker()
+    docker.containers['monitoring-api']['State']['Running'] = False
+    docker.patch(monkeypatch)
+    assert replacement.replace('monitoring-api', 'candidate-tag')['acceptance'] == 'passed'
 
 
 def make_probe(name):
@@ -297,7 +306,7 @@ class PersesDocker(Docker):
         monkeypatch.setattr(image_release, 'BACKUP', 'monitoring-perses-before-perf2')
         for name, fn in [('inspect', self.inspect), ('find_container', self.find), ('run', self.command),
                          ('create', self.create_perses), ('health', self.health), ('resources', lambda: {}),
-                         ('protected', lambda: []), ('save', lambda *a: None)]:
+                         ('protected', lambda: pytest.fail('Continuity snapshot is not an upgrade prerequisite')), ('save', lambda *a: None)]:
             monkeypatch.setattr(image_release, name, fn)
 
 

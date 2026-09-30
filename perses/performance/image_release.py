@@ -71,10 +71,10 @@ def apply_image(root,image,version,previous_image,validation):
  assert candidate['Config'].get('Labels',{}).get('monitoring.patch')=='perses-'+version,'Candidate version mismatch'
  assert find_container(BACKUP) is None,'Backup name already exists; reconcile before publication'
  old=inspect(NAME)
- assert old['Image']==previous_image and old['State']['Running'],'Original image or state changed'
- before=resources();fp=protected()
- save(root,'image-apply-before.json',{'container':old,'resources':before,'protected':fp})
- assert resources()==before and protected()==fp and inspect(NAME)['Id']==old['Id'],'Concurrent change before cutover'
+ assert old['Image']==previous_image,'Original image changed'
+ before=resources()
+ save(root,'image-apply-before.json',{'container':old,'resources':before})
+ assert resources()==before and inspect(NAME)['Id']==old['Id'],'Concurrent change before cutover'
  try:
   run('systemctl','stop','monitoring-perses.service')
   run('docker','rename',old['Id'],BACKUP)
@@ -82,10 +82,9 @@ def apply_image(root,image,version,previous_image,validation):
   run('systemctl','start','monitoring-perses.service')
   assert health(BASE)['version']==version
   current=inspect(NAME)
-  assert current['Image']==image and current['State']['Running'] and current.get('RestartCount',0)==0
+  assert current['Image']==image and current['State']['Running'] and not current['State'].get('Restarting')
   assert resources()==before,'Resources changed'
-  assert protected()==fp,'Protected services changed'
-  save(root,'image-publication.json',{'passed':True,'image':image,'time':time.time(),'resources_unchanged':True,'protected_unchanged':True,'validation':validation})
+  save(root,'image-publication.json',{'passed':True,'image':image,'time':time.time(),'resources_unchanged':True,'validation':validation})
  except BaseException as error:
   error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
   raise
@@ -107,27 +106,11 @@ def resources(base=BASE):
  return result
 def protected():return [(n,inspect(n)['Id'],inspect(n)['State']['StartedAt']) for n in PROTECTED]
 def save(root,name,data):(root/name).write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
-def validation_status(root,image,defer_browser,local_browser=False):
- assert not (defer_browser and local_browser),'Choose one validation mode'
- if local_browser:
-  authorization=json.loads((root/'deployment-authorization.json').read_text())
-  assert authorization['explicit_user_instruction'] and authorization['image']==image
-  assert authorization['scope']=='deploy-perses-performance' and authorization['validation_mode']=='local-browser'
-  acceptance=json.loads((root/'local-browser-acceptance.json').read_text())
-  assert acceptance['passed'] and acceptance['environment']=='local-candidate' and acceptance['archive_config_digest']==image
-  api=json.loads((root/'candidate-api-validation.json').read_text())
-  assert api['passed'] and api['image']==image
-  return {'mode':'user-authorized-local-browser-validation','user_instruction':authorization['user_instruction'],'remote_candidate_api':'passed','local_browser':'passed','checks_not_run':['remote-candidate-browser','remote-candidate-1800-second-soak']}
- if defer_browser:
-  authorization=json.loads((root/'deployment-authorization.json').read_text())
-  assert authorization['explicit_user_instruction'] and authorization['image']==image
-  assert authorization['scope']=='deploy-perses-performance'
-  api=json.loads((root/'candidate-api-validation.json').read_text())
-  assert api['passed'] and api['image']==image
-  return {'mode':'user-authorized-production-validation','user_instruction':authorization['user_instruction'],'deferred_checks':['remote-candidate-browser','remote-candidate-1800-second-soak']}
- acceptance=json.loads((root/'remote-browser-acceptance.json').read_text());assert acceptance['passed'] and acceptance['environment']=='remote-candidate' and acceptance['image']==image
- soak=json.loads((root/'remote-soak.json').read_text());assert soak['passed'] and soak['elapsed_seconds']>=1800 and soak['image']==image
- return {'mode':'candidate-validated','deferred_checks':[]}
+def validation_status(root,image,defer_browser=False,local_browser=False):
+ # Legacy flags remain accepted by older callers; all upgrades use a downtime window.
+ return {'mode':'maintenance-window','image':image,
+         'post_upgrade_checks':['version','resources'],
+         'checks_not_run':['candidate-browser','candidate-1800-second-soak']}
 def create(old,name,image,binds,listen):
  cfg=old['Config'];host=old['HostConfig']
  assert host['NetworkMode']=='host' and not host['Privileged']
@@ -147,7 +130,7 @@ def create(old,name,image,binds,listen):
 def main():
  global BACKUP,CANDIDATE
  os.umask(0o077)
- p=argparse.ArgumentParser();p.add_argument('action',choices=['load','candidate','apply','rollback']);p.add_argument('--evidence',type=Path,required=True);p.add_argument('--lock',type=Path,help='Explicit release lock for version-specific deployment or rollback.');p.add_argument('--defer-browser-validation',action='store_true',help='Requires recorded explicit user deployment authorization; validate on production after cutover.');p.add_argument('--local-browser-validation',action='store_true',help='Requires explicit user selection, exact-image local browser evidence and remote candidate API validation.');a=p.parse_args();r=a.evidence.resolve();assert r.is_dir()
+ p=argparse.ArgumentParser();p.add_argument('action',choices=['load','candidate','apply','rollback']);p.add_argument('--evidence',type=Path,required=True);p.add_argument('--lock',type=Path,help='Explicit release lock for version-specific deployment or rollback.');p.add_argument('--defer-browser-validation',action='store_true',help='Legacy compatibility flag; upgrades always use a maintenance window.');p.add_argument('--local-browser-validation',action='store_true',help='Legacy compatibility flag; run affected browser checks after upgrade.');a=p.parse_args();r=a.evidence.resolve();assert r.is_dir()
  assert not a.defer_browser_validation or a.action=='apply'
  assert not a.local_browser_validation or a.action=='apply'
  lock=json.loads((a.lock or r/'release-lock.json').read_text());image=lock['candidate_config_digest']

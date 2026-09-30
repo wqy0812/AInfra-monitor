@@ -55,7 +55,7 @@ def _main(build, batches, browser, hours, observation=None, resume_prepared=None
                 assert all(not j['error'] and not (j.get('backfill') or {}).get('error') for j in selected), 'Materialization failure'
                 try:
                     release.readiness(catalog, group)
-                    assert json.loads((observed_build / 'shadow-observation.json').read_text())['passed'], 'Stability observation still running'
+                    assert json.loads((observed_build / 'shadow-observation.json').read_text())['passed'], 'Startup acceptance still pending'
                     break
                 except AssertionError:
                     time.sleep(30)

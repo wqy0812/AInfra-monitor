@@ -15,7 +15,7 @@ def setup_observation(tmp_path, monkeypatch):
     monkeypatch.setattr(release, 'ROOT', tmp_path)
     monkeypatch.setattr(release, 'time', SimpleNamespace(
         time=lambda: clock[0], monotonic=lambda: clock[0],
-        sleep=lambda seconds: clock.__setitem__(0, clock[0] + 600)))
+        sleep=lambda seconds: clock.__setitem__(0, clock[0] + seconds)))
     (tmp_path / 'shadow-started.json').write_text(json.dumps({'at': 1000, 'container_id': 'candidate'}))
     (tmp_path / 'prepared.json').write_text(json.dumps({'protected': {'vm': 'unchanged'}}))
     monkeypatch.setattr(release, 'inspect', lambda name: {'Id': 'candidate'})
@@ -50,14 +50,15 @@ def test_real_health_failure_is_recorded_without_rollback(tmp_path, monkeypatch)
     assert failure['automatic_rollback'] is False and failure['recovery'] == 'fix_forward'
 
 
-def test_deferred_observation_counts_from_actual_start(tmp_path, monkeypatch):
+def test_acceptance_records_actual_start_without_a_soak_delay(tmp_path, monkeypatch):
     setup_observation(tmp_path, monkeypatch)
     (tmp_path / 'shadow-started.json').write_text(json.dumps({'at': 100, 'container_id': 'candidate'}))
     release.observe()
     report = json.loads((tmp_path / 'shadow-observation.json').read_text())
     assert report['release_started_at'] == 100
     assert report['started_at'] == 1000
-    assert report['ended_at'] - report['started_at'] >= 1800
+    assert report['ended_at'] == report['started_at']
+    assert report['mode'] == 'maintenance-window'
 
 
 @pytest.mark.parametrize('acceleration', [

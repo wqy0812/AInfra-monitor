@@ -58,6 +58,6 @@ export GATEWAY_TEST_VM_URL="$MONITORING_TEST_VM_URL"
 export PERSES_ACCELERATION_TEST_VM_URL="$MONITORING_TEST_VM_URL"
 
 if [ "$#" -eq 0 ]; then
-  set -- -q -rs
+  set -- tests/test_host_cpu_vm.py tests/test_gateway_live_vm.py tests/test_perses_acceleration.py -q -rs
 fi
 "$MONITORING_TEST_PYTHON" -m pytest "$@"

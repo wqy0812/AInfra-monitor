@@ -116,3 +116,17 @@ def test_hardware_health_uses_same_evaluation_time_and_detects_mismatch(releases
     assert len(calls) == 2
     assert calls[0] == calls[1]
     assert 'time' in calls[0]
+
+
+@pytest.mark.parametrize('up,age,passed', [(1, 5, True), (0, 5, False), (1, 25, False)])
+def test_topology_collection_accepts_current_scrapes_without_a_soak(monkeypatch, tmp_path, up, age, passed):
+    monkeypatch.syspath_prepend(str(ROOT / 'perses'))
+    spec = importlib.util.spec_from_file_location('topology_acceptance', ROOT / 'deploy/xpu_topology_release.py')
+    release = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(release)
+    def instant(expression):
+        assert 'min_over_time' not in expression and 'count_over_time' not in expression
+        return [{'metric': {}, 'value': [100, str(age if expression.startswith('time()') else up)]}]
+    monkeypatch.setattr(release, 'instant', instant)
+    assert release.collection(tmp_path) is passed
+    assert len(json.loads((tmp_path / 'collection.json').read_text())['checks']) == 6

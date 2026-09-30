@@ -1,4 +1,4 @@
-"""Only a continuous normal-scheduling window may finish batch observation."""
+"""A maintenance-window batch completes when normal scheduling is ready."""
 import json
 import sys
 from pathlib import Path
@@ -14,7 +14,7 @@ def environment(tmp_path, monkeypatch, scheduling=lambda elapsed: {}, unhealthy=
     clock = [0.0]
     monkeypatch.setattr(release, 'time', SimpleNamespace(
         time=lambda: 100000 + clock[0], monotonic=lambda: clock[0],
-        sleep=lambda seconds: clock.__setitem__(0, clock[0] + 60)))
+        sleep=lambda seconds: clock.__setitem__(0, clock[0] + seconds)))
     catalog = tmp_path / 'catalog.json'
     catalog.write_text(json.dumps({'steps': [60], 'panels': [{'id': 'cpu', 'revision': 'v1', 'group': 'cpu'}]}))
     monkeypatch.setattr(release, 'CATALOG', catalog)
@@ -34,16 +34,16 @@ def environment(tmp_path, monkeypatch, scheduling=lambda elapsed: {}, unhealthy=
 
 
 @pytest.mark.parametrize('flag', ['backfill_priority_active', 'parallel_a3_backfill'])
-def test_maintenance_restarts_the_full_normal_observation(tmp_path, monkeypatch, flag):
+def test_maintenance_waits_only_until_normal_scheduling_recovers(tmp_path, monkeypatch, flag):
     environment(tmp_path, monkeypatch,
-        scheduling=lambda elapsed: {flag: 600 <= elapsed < 900},
-        unhealthy=lambda elapsed: 600 <= elapsed < 900)
+        scheduling=lambda elapsed: {flag: elapsed < 10},
+        unhealthy=lambda elapsed: elapsed < 10)
     release.observe(tmp_path, 'cpu')
     report = json.loads((tmp_path / 'batch-observation.json').read_text())
     assert report['passed']
-    assert report['end'] - report['start'] == 2700
-    assert report['normal_start'] == report['start'] + 900
-    assert report['normal_seconds'] >= 1800
+    assert report['end'] - report['start'] == 10
+    assert report['normal_start'] == report['start'] + 10
+    assert report['normal_seconds'] == 0
     assert any(r['state'] == 'waiting_for_normal_scheduling' for r in report['records'])
 
 
@@ -54,32 +54,30 @@ def test_permanent_maintenance_times_out_without_passing(tmp_path, monkeypatch, 
         release.observe(tmp_path, 'cpu')
     report = json.loads((tmp_path / 'batch-observation.json').read_text())
     assert not report['passed'] and report['state'] == 'failed'
-    assert clock[0] == 3600 and not rollbacks
+    assert clock[0] == 90 and not rollbacks
 
 
-def test_normal_observation_completes_at_30_minutes(tmp_path, monkeypatch):
+def test_healthy_batch_is_accepted_immediately(tmp_path, monkeypatch):
     clock, rollbacks = environment(tmp_path, monkeypatch)
     release.observe(tmp_path, 'cpu')
     report = json.loads((tmp_path / 'batch-observation.json').read_text())
-    assert report['passed'] and clock[0] == 1800 and not rollbacks
+    assert report['passed'] and clock[0] == 0 and not rollbacks
+    assert report['mode'] == 'maintenance-window'
 
 
-def test_transient_health_failure_restarts_normal_window(tmp_path, monkeypatch):
-    clock, rollbacks = environment(tmp_path, monkeypatch, unhealthy=lambda elapsed: elapsed == 600)
+def test_transient_startup_failure_retries_until_ready(tmp_path, monkeypatch):
+    clock, rollbacks = environment(tmp_path, monkeypatch, unhealthy=lambda elapsed: elapsed == 0)
     release.observe(tmp_path, 'cpu')
     report = json.loads((tmp_path / 'batch-observation.json').read_text())
-    assert report['passed'] and clock[0] == 2460 and not rollbacks
-    assert report['normal_start'] == report['start'] + 660
+    assert report['passed'] and clock[0] == 5 and not rollbacks
+    assert report['normal_start'] == report['start'] + 5
 
 
-@pytest.mark.parametrize('fault', ['model', 'unknown_scheduling', 'container'])
+@pytest.mark.parametrize('fault', ['model', 'unknown_scheduling'])
 def test_sustained_failure_is_saved_without_rollback(tmp_path, monkeypatch, fault):
     _, rollbacks = environment(tmp_path, monkeypatch,
         scheduling=lambda elapsed: {'parallel_a3_backfill': None} if fault == 'unknown_scheduling' else {},
         unhealthy=lambda elapsed: fault == 'model')
-    if fault == 'container':
-        identities = iter([[], ['replacement'], ['replacement'], ['replacement']])
-        monkeypatch.setattr(release, 'fingerprint', lambda: next(identities))
     with pytest.raises(AssertionError):
         release.observe(tmp_path, 'cpu')
     report = json.loads((tmp_path / 'batch-observation.json').read_text())
@@ -103,23 +101,17 @@ def test_maintenance_does_not_hide_worker_failures(tmp_path, monkeypatch, fault)
     monkeypatch.setattr(release, 'read_health', faulty)
     with pytest.raises(AssertionError):
         release.observe(tmp_path, 'cpu')
-    assert clock[0] == 120 and not rollbacks
+    assert clock[0] == 10 and not rollbacks
     assert not json.loads((tmp_path / 'batch-observation.json').read_text())['passed']
 
 
-def test_wall_clock_jump_cannot_finish_observation_early(tmp_path, monkeypatch):
+def test_healthy_acceptance_does_not_require_service_identity_snapshots(tmp_path, monkeypatch):
     clock, rollbacks = environment(tmp_path, monkeypatch)
-    monkeypatch.setattr(release.time, 'time', lambda: 100000 + clock[0] + (3600 if clock[0] >= 600 else 0))
-    original = release.read_health
-    def synchronized_clock():
-        result = original()
-        result['environments']['env']['processed_at'] = release.time.time() - 5
-        return result
-    monkeypatch.setattr(release, 'read_health', synchronized_clock)
+    monkeypatch.setattr(release, 'fingerprint', lambda: pytest.fail('Continuity snapshot is not an upgrade prerequisite'))
     release.observe(tmp_path, 'cpu')
     report = json.loads((tmp_path / 'batch-observation.json').read_text())
-    assert report['passed'] and report['normal_seconds'] == 1800
-    assert clock[0] == 1800 and not rollbacks
+    assert report['passed'] and report['normal_seconds'] == 0
+    assert clock[0] == 0 and not rollbacks
 
 
 def test_observation_report_write_failure_preserves_original_error(tmp_path, monkeypatch):

@@ -36,7 +36,6 @@ def prepare(root):
     r.validate(candidate)
     r.save(root, 'before.json', before)
     r.save(root, 'candidate.json', candidate)
-    r.save(root, 'services-before.json', r.fingerprint())
     (root/'scrape-before.yml').write_bytes(CONFIG.read_bytes())
     (root/'scrape-candidate.yml').write_text(scrape(CONFIG.read_text()))
     patches = json.loads((root/'runtime-patches.json').read_text())
@@ -68,7 +67,6 @@ def apply(root):
     entries = json.loads((root/'runtime-plan.json').read_text())
     assert not (root/'apply-journal.json').exists(), 'Inspect partial application before continuing'
     assert r.snapshot() == before, 'Concurrent dashboard edit'
-    assert r.fingerprint() == json.loads((root/'services-before.json').read_text()), 'Concurrent service change'
     assert CONFIG.read_bytes() == (root/'scrape-before.yml').read_bytes(), 'Concurrent scrape edit'
     for item in entries:
         assert encoded(Path(item['path'])) == item['before'], ('Concurrent runtime edit', item['path'])
@@ -101,10 +99,9 @@ def apply(root):
     after = r.snapshot()
     for key, document in r.flattened(candidate).items():
         assert r.spec(r.flattened(after)[key]) == r.spec(document), key
-    assert r.fingerprint() == json.loads((root/'services-before.json').read_text())
     r.save(root, 'after.json', after)
     mark({'completed_at': time.time()})
-    print('Applied XPU mapping and read back all resources; services unchanged')
+    print('Applied XPU mapping and read back all resources')
 
 
 def instant(expression):
@@ -116,10 +113,10 @@ def collection(root):
     for role in NODES:
         for job, port in [('sglang-'+role, 8501), ('node-xpu', 9110), ('xpu-hardware', 9507)]:
             selector = 'environment="xpu-pd",role="'+role+'",node="'+NODES[role]+'",job="'+job+'",instance="'+IPS[role]+':'+str(port)+'"'
-            up = instant('min_over_time(up{'+selector+'}[2m])')
-            counts = instant('count_over_time(up{'+selector+'}[2m])')
-            passed = len(up) == len(counts) == 1 and float(up[0]['value'][1]) == 1 and float(counts[0]['value'][1]) >= 23
-            checks.append({'role': role, 'job': job, 'passed': passed, 'counts': counts})
+            up = instant('up{'+selector+'}')
+            ages = instant('time() - timestamp(up{'+selector+'})')
+            passed = len(up) == len(ages) == 1 and float(up[0]['value'][1]) == 1 and 0 <= float(ages[0]['value'][1]) < 20
+            checks.append({'role': role, 'job': job, 'passed': passed, 'up': up, 'ages': ages})
     report = {'passed': all(c['passed'] for c in checks), 'at': time.time(), 'checks': checks}
     r.save(root, 'collection.json', report)
     print(json.dumps(report))
@@ -127,7 +124,7 @@ def collection(root):
 
 
 def verify(root):
-    assert collection(root), 'Wait for two minutes of corrected samples'
+    assert collection(root), 'Corrected targets must have a fresh successful scrape'
     after = r.snapshot()
     for document in after['dashboards']:
         assert configure(document) == document, document['metadata']

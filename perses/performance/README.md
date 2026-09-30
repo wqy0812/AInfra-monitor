@@ -1,6 +1,8 @@
 # Perses 0.54.0 performance patches
 
-Two independently gated releases. The source base is commit
+Two independent patch batches. Upgrades follow the
+[maintenance-window policy](../../docs/maintenance-window-upgrade.md).
+The source base is commit
 `4c719fc19fa21d333797e84c4fe7e3d81c25f4f5`; the original image remains pinned
 in `../image-lock.json`. No user-authored dashboards are replaced with a stale
 repository snapshot during publication.
@@ -45,7 +47,7 @@ The output includes the binary, image archive, checksums and a generated
 `release-lock.json`. Preserve that generated lock with its exact archive.
 The checked-in release locks identify exact artifacts, not future builds.
 Versioned archives use `perses-<version>.tar.gz`. New deployment locks must pin
-`previous_image_digest` and `previous_version` for upgrade and rollback. The build
+`previous_image_digest` and `previous_version` for upgrade identity checks. The build
 reads these from `release-lock.json`, or an explicit previous-release lock passed
 as its third argument. `image_release.py --lock FILE` selects a version-specific lock.
 For a future upgrade from the deployed perf.3, pass `release-lock-perf3.json`
@@ -86,9 +88,9 @@ custom projects. Credentials and tokens are never written to release reports.
 
 - `tests/ui.test.cjs`: real React Query/React provider tests for relative/fixed
   refresh, timers, inactive cleanup, variable changes, selective imports and retry.
-- `tests/test_image_admission.py`: default admission still requires browser
-  evidence; explicitly authorized production validation retains deferred checks
-  and requires exact-image API evidence.
+- `tests/test_image_admission.py`: maintenance-window publication uses the locked
+  image without candidate/browser/soak/extra authorization reports; version and
+  resources are checked after upgrade.
 - `tests/test_image_auth.py`: authenticated resource snapshots, XPU change
   detection, per-server tokens, expiry recovery and explicit upgrade baselines.
 - `tests/cache_test.go`: substituted response body, cache headers, 304 responses,
@@ -107,11 +109,10 @@ architecture and binary version before starting the long-running containers.
 The candidate version label must also match. The baseline remains pinned to
 `../image-lock.json`; a mutable image tag is never used as the candidate identity.
 
-Image publication now rejects an occupied version-specific backup name before
-stopping the service. Stop, rename, create, start and acceptance share one recovery
-path, which reconciles container IDs even after an uncertain Docker response.
-Only this transaction's replacement may be removed; a failed rename cannot delete
-the original container. These tool changes require separate deployment acceptance.
+Image publication rejects an occupied version-specific temporary container name
+before stopping the service, verifies the image/version, and reads back resources
+after startup. Failure preserves the current state for forward repair. IDs/start
+times of other monitoring services are no longer publication gates.
 
 Browser checks use the computer-use browser/CDP APIs with a 1920x1080 viewport.
 Cold and warm cache samples are separated, with first query, last initial
@@ -121,37 +122,25 @@ acceptance. Local evidence is under `../../evidence/performance-20260916/`.
 
 ## Remote publication, via SSH MCP only
 
-Remote evidence root: `/data2/monitoring/perses/evidence/performance-20260916`.
-Notify the user before creating any new remote directories. Never run local
+Use a fresh evidence directory for a new upgrade; the historical evidence root
+below records the earlier release. Tell the user about any new remote directories. Never run local
 command-line SSH, SCP or port-forwarding subprocesses in these scripts.
 
-1. Upload the archive, generated release lock and first-batch scripts. Run
-   `image_release.py load --evidence DIR`, then `candidate`. The candidate binds
-   only `127.0.0.1:18541` and uses `candidate-data` / `candidate-config.yaml` copied
-   from the current server. The script preserves source ownership in the copied
-   data and checks all dashboard/datasource responses, since health alone does
-   not detect unreadable resources. Reach it through an approved test route.
-2. Record remote candidate browser checks in `remote-browser-acceptance.json`
-   (`passed`, `environment="remote-candidate"`, exact `image`) and an actual
-   >=1800-second remote soak in `remote-soak.json` (`passed`, `elapsed_seconds`,
-   exact `image`). This is the default admission path; do not manufacture reports.
-   When the user explicitly instructs deployment after the blocked checks are
-   disclosed, `--defer-browser-validation` requires `deployment-authorization.json`
-   and exact-image candidate API evidence. It records deferred checks in the
-   publication report; it does not mark candidate browser or soak tests passed.
-   If the user explicitly selects local browser acceptance, use
-   `--local-browser-validation` with that instruction and
-   `validation_mode="local-browser"` in `deployment-authorization.json`.
-   It requires `local-browser-acceptance.json` tied to the exact archive config
-   digest plus successful remote candidate API evidence. The report explicitly
-   records that remote browser and the 1800-second remote soak were not run.
-   Evidence directories are resolved to absolute paths before Docker bind mounts.
-3. Run `image_release.py apply --evidence DIR`. It preserves the original container
-   as `monitoring-perses-before-perf3` for perf.3 (the suffix follows the selected
-   version), keeps systemd/access controls, checks
-   unchanged resources and protected monitoring services. On failure it preserves
-   the current container state and raises the original error for forward repair.
-4. Capture a fresh dashboard snapshot after the first batch. Prepare changes from
+1. Upload the archive, generated release lock and scripts. Run
+   `image_release.py load --evidence DIR`, then `apply` in the downtime window.
+   An explicit `--lock FILE` selects this build's lock. Ordinary upgrades do not
+   run `candidate` or copy production data into parallel containers.
+2. `apply` stops/replaces Perses, keeps systemd/access controls, checks the new
+   version/health and reads back all resources. Candidate browser/API reports,
+   1800-second soak and `deployment-authorization.json` are no longer required.
+   The old `--defer-browser-validation` and `--local-browser-validation` flags
+   remain accepted for caller compatibility; neither is needed. UI changes receive
+   relevant browser checks after upgrade. A skipped check is never marked passed.
+3. The stopped old container is retained as transaction evidence, for example
+   `monitoring-perses-before-perf3`; it is not used for rollback. Other monitoring
+   services may also upgrade during this window. Failure preserves the current
+   state and raises the original error for forward repair.
+4. For a quantile optimization only, capture a fresh dashboard snapshot after the first batch. Prepare changes from
    that snapshot, then copy `changes.json`, `quantile-semantics.json` and the
    query publication scripts into the evidence directory. Run
    `publish_quantiles.py audit --evidence DIR`; it checks exact old/new and proxy
@@ -164,6 +153,9 @@ command-line SSH, SCP or port-forwarding subprocesses in these scripts.
    Earlier failed attempts and their rollback journals remain in evidence.
 
 ## Production release (2026-09-16)
+
+This section records historical execution and does not prescribe future upgrade
+gates. Historical evidence root: `/data2/monitoring/perses/evidence/performance-20260916`.
 
 The user explicitly authorized restoring the local `ssh -N jump` SOCKS listener
 and a separate temporary loopback forward to the candidate. Port 1080 is working,

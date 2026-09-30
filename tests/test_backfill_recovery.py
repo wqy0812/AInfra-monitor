@@ -36,7 +36,8 @@ def test_backfill_impact_allowed_then_restore_and_wait_for_real_recovery(tmp_pat
     recovery.main(tmp_path)
     assert changes == [('parallel-a3-off',{})]
     ready = json.loads((tmp_path/'recovery-ready.json').read_text())
-    assert ready['at'] >= 1180 and ready['model_lags']['a3'] == 5
+    assert ready['at'] == 1120 and ready['model_lags']['a3'] == 5
+    assert ready['state'] == 'ready_for_acceptance'
     assert not (tmp_path/'shadow-observation.json').exists()
 
 

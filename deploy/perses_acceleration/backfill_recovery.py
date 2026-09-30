@@ -16,13 +16,12 @@ STATE = Path('/data2/monitoring/state/perses-acceleration-admin.json')
 
 def main(root, hours=8, recovery_seconds=3600):
     expected = json.loads((root / 'shadow-started.json').read_text())
-    prepared = json.loads((root / 'prepared.json').read_text())
     catalog = json.loads((root / 'perses_acceleration_catalog.json').read_text())
     groups = {p['id']: p['group'] for p in catalog['panels']}
     expected_jobs = {p['id'] + ':' + p['revision'] + ':' + str(s)
                      for p in catalog['panels'] for s in catalog['steps']}
     started = time.time(); deadline = started + hours * 3600
-    recovery_at = stable_at = None
+    recovery_at = None
     bad = {g: 0 for g in catalog['groups']}
     transport_bad = 0
     owned = False
@@ -59,7 +58,6 @@ def main(root, hours=8, recovery_seconds=3600):
                       and all(v['error'] is None for v in result['environments'].values())
                       and not any(bad.values())
                       and all(j['lag_seconds'] <= max(300, int(j['job'].rsplit(':', 1)[1])) for j in jobs))
-            stable_at = (stable_at if stable_at is not None else time.time()) if normal else None
             record = {'at': time.time(), 'started_at': started, 'backfill_complete': complete,
                       'state': 'recovering' if complete else 'backfilling', 'recovery_started_at': recovery_at,
                       'priority_active': acceleration.get('backfill_priority_active'),
@@ -70,9 +68,8 @@ def main(root, hours=8, recovery_seconds=3600):
             save(root, 'backfill-recovery.json', record)
             with (root / 'backfill-recovery.jsonl').open('a') as log:
                 log.write(json.dumps(record) + '\n')
-            if stable_at is not None and time.time() - stable_at >= 60:
-                assert protected() == prepared['protected'], 'Protected container changed'
-                save(root, 'recovery-ready.json', dict(record, state='ready_for_30_minute_observation'))
+            if normal:
+                save(root, 'recovery-ready.json', dict(record, state='ready_for_acceptance'))
                 return
             if recovery_at is not None:
                 assert time.time() - recovery_at < recovery_seconds, 'Normal processing did not recover within the bounded window'

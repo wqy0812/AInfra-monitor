@@ -12,7 +12,7 @@ DCU/XPU/A3 各 10 张专业看板，共 301 图；非缓存看板按公共核心
 
 XPU 节点环境与初始部署拓扑见 [2026-09-21 环境记录](docs/xpu-environment-2026-09-21.md)，当前角色映射以 [2026-09-29 修复记录](docs/xpu-role-fix-20260929.md) 为准。
 
-监控故障统一修复当前版本，不回退；发布脚本失败时保留现场并停止，详见 [故障处理约定](deploy/README.md)。
+后续统一按允许停机窗口升级：停止并替换受影响组件，启动后检查健康与相关功能；当前流程和按改动选择测试的规则见 [停机窗口升级](docs/maintenance-window-upgrade.md)。监控故障统一修复当前版本，不回退；发布脚本失败时保留现场并停止，详见 [故障处理约定](deploy/README.md)。
 
 ## 仓库范围
 
@@ -72,25 +72,19 @@ A3 主机 CPU 与 CPU I/O 等待由 monitoring-api 按 5 秒周期计算新增�
 1. `python3 scripts/download.py` 按 `vendor/releases.json` 下载固定版本，并校验官方 SHA256；`vendor/manifest.json` 保存二进制摘要。离线环境传输已校验的 `vendor/bin`。
 2. 将本项目同步到目标机 `/data2/monitoring/release`，在 test4 中央机执行 `ALLOWED_CLIENTS=127.0.0.1,::1,122.247.53.162,122.247.53.250 python3 deploy/start_test4.py`，节点执行 `python3 deploy/start.py node --bind <节点地址>`。白名单对应 test4 本机/Perses 与 test1 当前评测服务；其他拓扑须按实际调用方配置。`start.py central` 可用 `--allowed-clients` 或上述环境变量。两种中央启动入口均在创建目录、构建及启动容器前验证显式 IP 列表，拒绝空值、通配符和网段；API 未配置时仅允许 IPv4/IPv6 回环。脚本只在本机管理容器，不自行 SSH。
 3. test4 使用 Docker 28.5.2 静态发行版，当前 API 修复标签为 `monitoring-api:review-fixes-20260930`，也是 `start_test4.py` 的默认镜像；可用 `MONITOR_API_IMAGE` 指定经过验证的当前候选。API 的 Python 3.11.16 和依赖沿用现有运行时。节点继续使用已有 DTK 镜像。重建中央机前需加载已验证镜像或准备兼容运行时。`requirements.txt` 对齐实际部署的 Python 包版本。
-4. 已存在服务不会被 `start.py` 覆盖。升级允许停机：先构建新标签、验证 `/health` 和数据，再用 `deploy/replace.py <本项目容器名> <新镜像>` 停止并替换受影响组件。从历史 `ALLOWED_CLIENTS=*` 的 API 升级时，附加 `--allowed-clients <显式IP列表>`。工具与 `deploy/container_validation.py` 一起提供：在停服前验证所有权、支持的组件、监听地址、镜像和备份名；启动后在最多 90 秒内要求容器身份、运行状态、重启次数与组件数据连续正常至少 10 秒，之后才删除临时旧容器。失败保留现场并停止后续步骤，修复当前版本后重新验收，不恢复旧容器。支持独立 API、VM、vmagent、node/DCU exporter；未知组件或非 host 网络在停服前拒绝。API 健康状态要求三个环境的模型来源正常且处理水位新鲜，另显式核验 DCU/A3 最新快照；VM 验证真实查询，vmagent 验证采集计数推进，exporter 验证必要指标和设备观测。操作仅针对 `monitoring.owner=independent`，保留原 `--driver-readonly` / `--loadavg` 参数。
+4. 已存在服务不会被 `start.py` 覆盖。升级先构建或加载新镜像，再用 `deploy/replace.py <本项目容器名> <新镜像>` 在停机窗口内停止并替换受影响组件。从历史 `ALLOWED_CLIENTS=*` 的 API 升级时，附加 `--allowed-clients <显式IP列表>`。工具与 `deploy/container_validation.py` 一起提供：停服前核验所有权、组件、监听地址、镜像和临时容器名；启动后最多重试 90 秒，容器运行、健康和组件数据检查成功即完成验收，随后删除本次临时旧容器。支持已经为维护停下的组件，不另起候选容器或要求连续 10 秒正常。失败保留现场并停止后续步骤，修复当前版本后重新验收，不恢复旧容器。支持独立 API、VM、vmagent、node/DCU exporter；未知组件或非 host 网络在停服前拒绝。API 核验 DCU/A3/XPU 三环境健康和最新数据；VM 验证真实查询，vmagent 验证成功采集计数推进，exporter 验证必要指标和设备观测。操作仅针对 `monitoring.owner=independent`，保留原 `--driver-readonly` / `--loadavg` 参数。
 5. 修改采集配置后调用本机 `POST http://127.0.0.1:18429/-/reload`，检查全部目标 `up` 和源数据。
 
 代码需要 Python 3.11+；节点 exporter 使用 Python 3.10 标准库。当前没有外部通知或 Grafana；已新增 Perses 看板，见 [Perses 部署与运维](perses/README.md)。
 
-本项目 Python 回归不要求同级 code-eval。使用 pyenv 管理的 Python 3.11+ 和项目 `.venv`，安装测试依赖后运行：
+本项目 Python 回归不要求同级 code-eval。使用 pyenv 管理的 Python 3.11+ 和项目 `.venv`，安装测试依赖后按改动选择用例；显式全量检查可运行：
 
 ```sh
 .venv/bin/python -m pip install -r requirements-test.txt
 .venv/bin/python -m pytest -q
 ```
 
-`pytest.ini` 收集 `tests/`、`perses/` 下的 Python 测试，排除本地工作产物。跨项目用例位于 `tests/integration/`，标记为 `cross_project`，默认明确跳过；仅在需要兼容性验证且已准备对应 code-eval 依赖时启用：
-
-```sh
-CODE_EVAL_ROOT=../code-eval .venv/bin/python -m pytest tests/integration --run-cross-project -q -rs
-```
-
-可省略 `CODE_EVAL_ROOT` 使用同级目录，或指定兼容的历史检出。缺少归档发布脚本会明确跳过，不计作通过；模块存在但导入/行为错误仍报失败。集成测试自动把数据目录指向 pytest 临时目录。完整测试入口和外部条件见 [测试说明](tests/README.md)。
+`pytest.ini` 收集 `tests/`、`perses/` 下的 Python 测试，排除本地工作产物。已删除依赖 code-eval 退役发布脚本的“活动任务不能冻结”历史升级测试。真实 VM、浏览器和性能测试按改动触发，不作为每次升级的全量前置条件；完整入口和外部条件见 [测试说明](tests/README.md)。
 
 部署校验工具另需 `python -m pip install -r requirements-tools.txt`（PyYAML，仅用于采集配置解析，不加入 monitoring-api 运行依赖）。`deploy/gateway_monitor_release.py` 的发布目录必须同时包含本仓库的 `deploy/check_gateway_monitor_candidate.py`，放在发布根目录并调用 `api` 模式；该校验只允许 VM 的 GET 查询，不依赖 code-eval 或写入 VM。
 

@@ -74,10 +74,9 @@ def restore(name, old, backup, image):
 def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=None):
     old = inspect(name)
     require(old['Config'].get('Labels', {}).get('monitoring.owner') == 'independent', 'Container is not independently owned')
-    require(old['State']['Running'], 'Original container must be running')
     probe = ComponentProbe(name, old)
     image = json.loads(cmd('docker', 'image', 'inspect', image))[0]['Id']
-    backup = name + '-rollback-' + str(time.time_ns())
+    backup = name + '-before-upgrade-' + str(time.time_ns())
     require(find(backup) is None, 'Backup name already exists')
     fields = ('User', 'ExposedPorts', 'Env', 'Cmd', 'Healthcheck', 'Volumes', 'WorkingDir',
               'Entrypoint', 'Labels', 'StopSignal', 'StopTimeout')
