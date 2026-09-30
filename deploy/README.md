@@ -9,11 +9,14 @@
 | 专项发布及核验 | 顶层 `*_release.py`、`*_verify.py`、`check_*.py`；按各专项文档的版本约束使用 |
 | 按日期保存的历史发布包 | `history-summary-20260924/`、`review-fixes-20260924/`、`stream-direction-20260923/`、`xpu-cache-20260923/` |
 | 时间导航与历史缓存发布 | [time-navigation-20260925](time-navigation-20260925/README.md) |
+| 2026-09-30 审核修复发布 | `review-fixes-20260930/`；[修复与验收记录](../docs/review-fixes-20260930.md) |
 | 查询加速 | [perses_acceleration](perses_acceleration/README.md) |
 
 历史发布过程统一见 [发布归档](../docs/releases/README.md)。原目录中的 `STATUS.md` 保留导航；脚本、输入清单和源码快照暂不搬动，避免破坏路径加载、源码摘要和回退约束。
 
 ## 故障处理（2026-09-28）
+
+2026-09-30 用户确认允许停机升级：停止并替换受影响组件，检查当前版本健康与相关功能后恢复使用。从历史 `ALLOWED_CLIENTS=*` 的 API 升级时，通过 `replace.py --allowed-clients <显式IP列表>` 配置实际调用方。
 
 监控有问题就修复当前版本，不执行自动或手动版本回退。本仓库的发布、容器替换及验收脚本在异常时保留现场、抛出原始错误并停止后续步骤；不恢复旧容器、旧采集配置、旧面板或生成器，不因验收失败停用加速组。历史手动回退入口和快照保留在源码及证据中，不作为现行处置流程。
 

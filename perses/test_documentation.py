@@ -36,7 +36,7 @@ def test_docs_only_is_complete_stable_and_preserves_historical_inventory(tmp_pat
         for key, panel in d['spec']['panels'].items():
             assert descriptions[d['metadata']['project']][d['metadata']['name']][key] == panel['spec']['display']['description']
             count += 1
-    assert count == 303  # Retire the two unsupported XPU cache placeholders.
+    assert count == 301  # XPU cache: remove absent sources and overlapping device KV panel.
     assert '不代表当前在线目标' in first['METRIC_COVERAGE.md'].decode()
     assert '当前沿用线上 v1/latency-v2' not in first['METRIC_COVERAGE.md'].decode()
 

@@ -1,6 +1,10 @@
 """Run locally on the deployment host. Never connects over SSH."""
-import argparse,json,pathlib,subprocess
+import argparse,json,os,pathlib,subprocess,sys
 ROOT=pathlib.Path('/data2/monitoring');RELEASE=ROOT/'release'
+def api_clients(value=None):
+ sys.path.insert(0,str(RELEASE))
+ from monitoring.access import client_allowlist
+ return ','.join(client_allowlist(value if value is not None else os.environ.get('ALLOWED_CLIENTS')))
 def run(*args):return subprocess.check_output(args,stderr=subprocess.STDOUT).decode()
 def exists(name):return subprocess.run(['docker','inspect',name],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0
 def start(name,image,args,options=(),entrypoint=None):
@@ -9,8 +13,9 @@ def start(name,image,args,options=(),entrypoint=None):
  if entrypoint:cmd+=['--entrypoint',entrypoint]
  print(run(*cmd,image,*args))
 def main():
- p=argparse.ArgumentParser();p.add_argument('mode',choices=['central','node']);p.add_argument('--bind');args=p.parse_args()
+ p=argparse.ArgumentParser();p.add_argument('mode',choices=['central','node']);p.add_argument('--bind');p.add_argument('--allowed-clients');args=p.parse_args()
  if args.mode=='central':
+  allowed_clients=api_clients(args.allowed_clients)
   for d in ['vm','buffer','state','evidence','backups']:(ROOT/d).mkdir(parents=True,exist_ok=True)
   # Existing Python runtime is pinned by immutable local image ID; no new dependencies or model processes.
   base=run('docker','inspect','code-eval-platform:0.7.4-executor-fix.1','--format','{{.Id}}').strip()
@@ -21,7 +26,7 @@ def main():
   print(run('docker','build','-f',str(RELEASE/'Dockerfile.api'),'-t','monitoring-api:20260913.1',str(RELEASE)))
   start('monitoring-vm','monitoring-vm:1.151.0',['-storageDataPath=/storage','-retentionPeriod=30d','-httpListenAddr=127.0.0.1:18428','-memory.allowedBytes=1536MiB','-storage.minFreeDiskSpaceBytes=20GiB'],['--cpus','2','--memory','2g','-v',str(ROOT/'vm')+':/storage'],'/vm')
   start('monitoring-vmagent','monitoring-vm:1.151.0',['-promscrape.config=/config/scrape.yml','-remoteWrite.url=http://127.0.0.1:18428/api/v1/write','-remoteWrite.tmpDataPath=/buffer','-remoteWrite.maxDiskUsagePerURL=5GiB','-httpListenAddr=127.0.0.1:18429','-memory.allowedBytes=384MiB'],['--cpus','0.5','--memory','512m','-v',str(ROOT/'buffer')+':/buffer','-v',str(RELEASE/'deploy')+':/config:ro'],'/vmagent')
-  start('monitoring-api','monitoring-api:20260913.1',['-m','uvicorn','monitoring.api:app','--host','0.0.0.0','--port','18430','--no-access-log','--no-proxy-headers'],['--cpus','1','--memory','512m','-v',str(ROOT/'state')+':/state','-e','ALLOWED_CLIENTS=*'],'python')
+  start('monitoring-api','monitoring-api:20260913.1',['-m','uvicorn','monitoring.api:app','--host','0.0.0.0','--port','18430','--no-access-log','--no-proxy-headers'],['--cpus','2','--memory','512m','-v',str(ROOT/'state')+':/state','-e','ALLOWED_CLIENTS='+allowed_clients],'python')
  else:
   assert args.bind
   image=run('docker','inspect','kongmx-deepseek-v4-0828','--format','{{.Image}}').strip()

@@ -33,11 +33,11 @@
                 },
                 {
                   "label": "Prefill",
-                  "value": "(prefill|xpu-1)"
+                  "value": "(prefill|xpu-2)"
                 },
                 {
                   "label": "Decode",
-                  "value": "(decode|xpu-2)"
+                  "value": "(decode|xpu-1)"
                 }
               ]
             }

@@ -8,7 +8,7 @@ from generate import panel, variable
 from project_queries import Queries
 from dashboard_reorg import ordered, present, write_resources
 
-NODES = {'a3-monitoring': ('a3-1','a3-2'), 'dcu-monitoring': ('dcu1','dcu2'), 'xpu-monitoring': ('xpu-1','xpu-2')}
+NODES = {'a3-monitoring': ('a3-1','a3-2'), 'dcu-monitoring': ('dcu1','dcu2'), 'xpu-monitoring': ('xpu-2','xpu-1')}
 ENV = {'a3-monitoring':'a3-vllm','dcu-monitoring':'dcu-pd','xpu-monitoring':'xpu-pd'}
 HOST = [('p0','CPU 使用率（%）'),('p1','主机内存（GiB）'),('p2','文件系统容量使用率（%）'),('p3','磁盘吞吐（MiB/秒）'),('p4','网络吞吐（MiB/秒）'),('extra-load','主机负载（任务数）'),('extra-iowait','CPU I/O 等待（%）'),('extra-memory-ratio','内存占用比例（%）'),('extra-swap','Swap 已用与总量（GiB）'),('extra-fs-free','文件系统剩余容量（GiB）')]
 PERFORMANCE = [('requests','后端请求速率（请求/秒）'),('output','后端输出 Token 吞吐（Token/秒）'),('ttft','首 Token 延迟 TTFT（秒）'),('itl','Token 间延迟 ITL（ms）'),('e2e','端到端延迟 E2E（秒）')]
@@ -72,6 +72,9 @@ def new_dashboard(source,name,title):
 
 
 def align(resources):
+    from xpu_topology import configure as configure_xpu
+    resources = copy.deepcopy(resources)
+    resources['dashboards'] = [configure_xpu(d) for d in resources['dashboards']]
     projects={d['metadata']['project'] for d in resources['dashboards']} & set(NODES)
     if all(any(d['metadata']['project']==p and 'core-requests' in d['spec']['panels'] for d in resources['dashboards']) for p in projects):
         return copy.deepcopy(resources), []

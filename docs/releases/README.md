@@ -8,6 +8,7 @@
 | --- | --- |
 | 监控迁移、指标口径、采集接入，2026-09-13 至 09-23 | [Monitoring 历史](monitoring-history.md) |
 | Perses 初装、项目拆分和旧版看板，2026-09-14 至 09-22 | [Perses 历史](perses-history.md) |
+| XPU 缓存看板，2026-09-30 | [清理与补充](../xpu-cache-refresh-20260930.md) |
 | XPU 缓存查询，2026-09-23 | [发布记录](xpu-cache-20260923.md) |
 | 流停顿方向监控，2026-09-23 | [发布记录](stream-direction-20260923.md) |
 | 缓存查询与页面审核修复，2026-09-24 | [发布记录](review-fixes-20260924.md) |
@@ -19,10 +20,12 @@
 
 | 范围 | 入口 |
 | --- | --- |
+| 监控查询恢复，2026-09-29 | [连接池隔离、压缩与资源调整](../query-isolation-20260929.md) |
+| API 审核修复，2026-09-30 | [修复、发布与验收](../review-fixes-20260930.md) |
 | 原生请求指标口径 | [metric-scope-v2](../metric-scope-v2-20260915.md) |
 | 主机 CPU 聚合 | [设计与验证](../host-cpu-materialization-20260916.md) |
 | NPU 采集 | [接入说明](../npu-20260916.md) |
-| XPU 环境、硬件、主机和角色 | [环境](../xpu-environment-2026-09-21.md)、[接入](../xpu-20260921.md)、[硬件](../xpu-hardware-20260922.md)、[主机](../xpu-hosts-20260922.md)、[角色修复](../xpu-role-fix-20260923.md) |
+| XPU 环境、硬件、主机和角色 | [环境](../xpu-environment-2026-09-21.md)、[接入](../xpu-20260921.md)、[硬件](../xpu-hardware-20260922.md)、[主机](../xpu-hosts-20260922.md)、[09-23 角色记录](../xpu-role-fix-20260923.md)、[09-29 当前角色修复](../xpu-role-fix-20260929.md) |
 | Perses 分类与指标对齐 | [重组](../perses-dashboard-reorg-20260923.md)、[对齐与 Mooncake](../perses-alignment-mooncake-20260923.md) |
 | 跨看板时间继承与历史缓存 | [实现说明](../time-navigation-cache-20260924.md)、[发布与回退](../../deploy/time-navigation-20260925/README.md) |
 | Perses 查询加速 | [运维说明](../../deploy/perses_acceleration/README.md)、[本轮状态](../../deploy/perses_acceleration/STATUS.md) |

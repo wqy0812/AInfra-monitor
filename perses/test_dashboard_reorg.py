@@ -1,6 +1,10 @@
 """Migration safety: accounting, query preservation, grouping and rollback."""
 import copy
 import json
+import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import patch
 import pytest
@@ -97,3 +101,20 @@ def test_runtime_install_and_rollback_detect_concurrent_changes(tmp_path):
     assert old.read_text()=='old overview'
     assert (target/'project_split.py').read_text()=='old'
     assert not (target/'dashboard_reorg.py').exists()
+
+
+def test_installed_generator_imports_topology_without_source_checkout(tmp_path):
+    import reorg_runtime as runtime
+    release = tmp_path/'release'
+    release.mkdir()
+    source_root = Path(__file__).parent
+    for name in set(runtime.MODULES) | {'xpu_topology.py'}:
+        shutil.copy2(source_root/name, release/name)
+    target = tmp_path/'runtime'
+    runtime.sync(tmp_path, target)
+    env = os.environ.copy()
+    env.pop('PYTHONPATH', None)
+    subprocess.run([sys.executable, '-c',
+        'from xpu_cache import configure; from align_dashboards import align; '
+        'assert align({"dashboards": []}) == ({"dashboards": []}, [])'],
+        cwd=target, env=env, check=True, capture_output=True, text=True, timeout=10)

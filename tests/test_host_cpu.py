@@ -98,7 +98,8 @@ async def test_cycle_materializes_once_and_retains_watermark_on_write_failure(tm
         return httpx.Response(200, json={'data': {'result': []}})
     service.raw = raw
     monkeypatch.setattr(host_cpu, 'collect', collect)
-    service.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    from monitoring.query_client import QueryClient
+    service.client = QueryClient(transport=httpx.MockTransport(handler))
     try:
         await service.cycle()
         assert calls == [(105, 110)] and service.watermark == 110

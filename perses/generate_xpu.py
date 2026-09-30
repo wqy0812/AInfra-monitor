@@ -17,7 +17,7 @@ def generate(snapshot,output):
  root=Path(output)/'xpu-monitoring';(root/'dashboards').mkdir(parents=True,exist_ok=True)
  def convert(obj):
   s=json.dumps(obj,ensure_ascii=False)
-  for a,b in [('dcu-monitoring','xpu-monitoring'),('dcu-pd','xpu-pd'),('Prefill / dcu1','Prefill / xpu-1'),('Decode / dcu2','Decode / xpu-2'),('dcu1','xpu-1'),('dcu2','xpu-2'),('DCU','XPU')]:s=s.replace(a,b)
+  for a,b in [('dcu-monitoring','xpu-monitoring'),('dcu-pd','xpu-pd'),('Prefill / dcu1','Prefill / xpu-2'),('Decode / dcu2','Decode / xpu-1'),('dcu1','xpu-2'),('dcu2','xpu-1'),('DCU','XPU')]:s=s.replace(a,b)
   out=json.loads(s);out['metadata']={k:v for k,v in out['metadata'].items() if k in ('name','project')};return out
  def write(path,obj):path.write_text(json.dumps(obj,ensure_ascii=False,indent=2)+'\n')
  write(root/'project.json',convert(baseline['project']))

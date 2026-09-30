@@ -2,7 +2,9 @@
 
 ## 当前分类（2026-09-23）
 
-运行概览已删除，图表迁入网关、后端性能、P/D 诊断、主机、加速卡、缓存和采集健康看板。DCU/XPU/A3 各 10 张，共 303 图；非缓存看板公共核心对齐，保留平台专属扩展，A3 Mooncake 新增 10 图。单位在标题，提示去除重复单位与曲线范围标题。当前验收与回退见 [对齐发布记录](../docs/perses-alignment-mooncake-20260923.md)，此前迁移见 [重组记录](../docs/perses-dashboard-reorg-20260923.md)。XPU 角色修复见 [修复记录](../docs/xpu-role-fix-20260923.md)。旧安装、双项目迁移和发布过程见 [历史归档](../docs/releases/perses-history.md)，不能据此恢复旧概览或旧看板数量。
+运行概览已删除，图表迁入网关、后端性能、P/D 诊断、主机、加速卡、缓存和采集健康看板。DCU/XPU/A3 各 10 张，共 301 图；非缓存看板公共核心对齐，保留平台专属扩展，A3 Mooncake 新增 10 图。单位在标题，提示去除重复单位与曲线范围标题。当前验收与回退见 [对齐发布记录](../docs/perses-alignment-mooncake-20260923.md)，此前迁移见 [重组记录](../docs/perses-dashboard-reorg-20260923.md)。XPU 角色修复见 [修复记录](../docs/xpu-role-fix-20260929.md)。旧安装、双项目迁移和发布过程见 [历史归档](../docs/releases/perses-history.md)，不能据此恢复旧概览或旧看板数量。
+
+2026-09-30 已清理 XPU 无源缓存图，并补充当前已有指标；缓存看板去除重复的设备 KV 池后现为 6 图，见 [缓存看板更新](../docs/xpu-cache-refresh-20260930.md)。
 
 现行资源：`projects/`；通过 `project_split.py` 再生成、`project_coverage.py --docs-only` 同步说明。发布脚本从服务器 `admin-credentials.json` 读取认证信息（可用 `PERSES_CREDENTIALS_FILE` 指定），不再依赖免登录访问。
 

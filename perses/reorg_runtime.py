@@ -7,7 +7,7 @@ from pathlib import Path
 MODULES = ('align_dashboards.py', 'dashboard_reorg.py', 'project_split.py', 'project_release.py', 'generate_xpu.py',
            'metric_scope.py', 'generate.py', 'project_queries.py', 'dcu_bottlenecks.py',
            'remove_idle_thresholds.py', 'host_cpu_panel.py', 'npu_panels.py', 'xpu_hosts.py',
-           'xpu_hardware.py', 'xpu_cache.py', 'query_acceleration.py', 'acceleration_catalog.py',
+           'xpu_hardware.py', 'xpu_cache.py', 'xpu_topology.py', 'query_acceleration.py', 'acceleration_catalog.py',
            'acceleration_publication.py', 'acceleration_state.json', 'a3_coverage.py')
 
 

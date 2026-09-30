@@ -65,7 +65,7 @@ class XpuHostsTest(unittest.TestCase):
             output = generate(path, root / 'output')
             result = json.loads((output / 'dashboards/hosts-xpu.json').read_text())
             self.assertIn('node_cpu_seconds_total', result['spec']['panels']['p0']['spec']['queries'][0]['spec']['plugin']['spec']['query'])
-            self.assertEqual(result['spec']['variables'][0]['spec']['plugin']['spec']['values'][1]['value'], 'xpu-1')
+            self.assertEqual(result['spec']['variables'][0]['spec']['plugin']['spec']['values'][1]['value'], 'xpu-2')
 
 
 if __name__ == '__main__':

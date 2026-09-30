@@ -1,0 +1,21 @@
+name: monitoring-local-tests
+
+services:
+  vm:
+    image: victoriametrics/victoria-metrics:v1.151.0
+    pull_policy: missing
+    container_name: monitoring-test-vm
+    ports:
+      - "127.0.0.1:18543:8428"
+    command:
+      - -httpListenAddr=0.0.0.0:8428
+      - -storageDataPath=/storage
+      - -retentionPeriod=1d
+      - -memory.allowedBytes=512MiB
+      - -storage.minFreeDiskSpaceBytes=64MiB
+    cpus: 1
+    mem_limit: 1g
+    tmpfs:
+      - /storage:rw,nosuid,nodev,size=536870912
+    labels:
+      monitoring.purpose: local-regression-tests
