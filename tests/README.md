@@ -40,6 +40,7 @@ VictoriaMetrics 1.151.0，地址为 `http://127.0.0.1:18543`。运行前会重�
 
 ```sh
 ./scripts/test_local_vm.sh tests/test_host_cpu_vm.py -q -rs
+./scripts/test_local_vm.sh tests/test_mooncake_source.py -q -rs
 ./scripts/test_local_vm.sh tests perses -q -rs
 ```
 

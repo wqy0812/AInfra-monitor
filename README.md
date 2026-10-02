@@ -65,7 +65,7 @@ A3 主机 CPU 与 CPU I/O 等待由 monitoring-api 按 5 秒周期计算新增�
 
 网关回归包含 `tests/test_gateway_history.py`；`tests/test_gateway_live_vm.py` 通过 `GATEWAY_TEST_VM_URL=http://127.0.0.1:<端口>` 在独立临时 VictoriaMetrics 中注入合成数据，核对真实查询与现有看板结果。该地址必须属于可丢弃的本地测试实例。
 
-`calculator.py`、`cache_metrics.py`、`monitor_series.py` 的统计算法来自迁移时 code-eval 基线，独立维护。保留 DP/TP/PP 去重、缓存分层分母、55–65 秒窗口、拓扑变化、计数重置和无流量留空。`replay.py` 重放原始抓取时间，不插值原始计数。派生曲线以数值及有效性标志写回 VM，历史降采样保留断档标记。
+`calculator.py`、`cache_metrics.py`、`monitor_series.py` 的统计算法来自迁移时 code-eval 基线，独立维护。保留 DP/TP/PP 去重、缓存分层分母、55–65 秒窗口、拓扑变化、计数重置和无流量留空。`replay.py` 重放原始抓取时间，不插值原始计数。Mooncake 的采集来源身份变化时，总查询与内存/SSD 分层查询窗口同时重置；重新积累同一来源的 55–65 秒观测前比例留空，容量观测继续展示。派生曲线以数值及有效性标志写回 VM，历史降采样保留断档标记。
 
 ## 构建、部署及升级
 

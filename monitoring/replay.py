@@ -96,6 +96,10 @@ def replay(groups,start,end):
    else:node['telemetry']={'status':'error','observed_at':tick,'error':'主机指标不可用或过期'}
   ts,rows=latest_rows(groups,'mooncake',tick)
   if ts is not None:
+   sources={tuple(sorted((k,v) for k,v in r.get('source_labels',{}).items() if k in META)) for r in rows}
+   if previous.get('store_sources')!=sources:
+    store_window=QueryWindow();tier_window=StoreTierWindow();previous.pop('store',None)
+   previous['store_sources']=sources
    if previous.get('store',(None,))[0]!=ts:
     data=store_metrics(rows);data['ts']=ts;data['query_60s']=store_window.add(data);data['tier_query_60s']=tier_window.add(data);previous['store']=(ts,data)
    snapshot['mooncake']={'status':'ok','observed_at':ts,'data':previous['store'][1]}
