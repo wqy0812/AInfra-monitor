@@ -20,6 +20,14 @@
 
 需要完整 Python 回归时显式运行 `.venv/bin/python -m pytest tests perses -q`。真实 VictoriaMetrics 语义用例在未配置可丢弃测试实例时跳过；浏览器、Go、前端 Jest 和线上验收不包含在此命令中。跳过不表示相应验收通过。
 
+## 单元测试覆盖率
+
+安装 `requirements-test.txt` 后运行 `./scripts/test_coverage.sh`，也可传 pytest 文件或筛选参数。`.coveragerc` 统计整个 `monitoring/` 运行包的行与分支，包括未导入模块；Perses 生成/发布脚本、冻结发布材料及第三方依赖不在此运行包覆盖率分母中，但已有 Perses 回归仍执行。
+
+终端 `Cover` 为行与分支合并覆盖率；`work/coverage/coverage.json` 分别提供 `percent_statements_covered`、`percent_branches_covered`，`htmlcov/index.html` 展示逐行缺口。失败也生成报告并返回测试失败码。产物均由 Git 忽略。
+
+离线测试新增加速结果发布/可见性重试、持久化断点、响应缓存失效、并发查询取消、API 生命周期和失败响应、采集器异常及历史重建检查。模拟 HTTP、设备调用和临时文件，不启动真实设备或修改线上 VM。未配置可丢弃 VM 时，已有 VM 集成测试继续明确跳过。
+
 ## 本地 Docker VictoriaMetrics 回归
 
 Docker Desktop 启动后，从仓库根目录执行：

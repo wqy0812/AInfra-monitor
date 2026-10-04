@@ -1,0 +1,7 @@
+[run]
+branch = True
+source = monitoring
+
+[report]
+precision = 1
+show_missing = True

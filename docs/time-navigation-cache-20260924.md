@@ -1,6 +1,6 @@
 # 时间范围、历史缓存与自动刷新
 
-此变更已于 2026-09-25 发布至 test4：monitoring-api 历史缓存和 Perses `0.54.0-perf.3` 均已切换并通过线上核验。评测平台前端不在此次修改范围内。版本、回退及证据位置见 [发布记录](../deploy/time-navigation-20260925/README.md)。
+此变更已于 2026-09-25 发布至 test4：monitoring-api 历史缓存和 Perses `0.54.0-perf.3` 均已切换并通过线上核验。评测平台前端不在此次修改范围内。当次版本及历史证据位置见 [发布记录](../deploy/time-navigation-20260925/README.md)；后续执行 [停机窗口升级](maintenance-window-upgrade.md)，故障修复当前版本，不执行版本回退。
 
 ## 行为
 

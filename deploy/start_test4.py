@@ -3,7 +3,7 @@ import os
 from start import ROOT,RELEASE,start,api_clients
 
 ALLOWED_CLIENTS=api_clients()
-API_IMAGE=os.environ.get('MONITOR_API_IMAGE','monitoring-api:review-fixes-20260930')
+API_IMAGE=os.environ.get('MONITOR_API_IMAGE','sha256:e5ee00ee67dbab3d94ad86b269d37793204734ba59044f30eea3dc830c870a1d')
 
 for directory in ('vm','buffer','state','evidence'):
  (ROOT/directory).mkdir(parents=True,exist_ok=True)

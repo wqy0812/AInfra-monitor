@@ -2,7 +2,7 @@
 
 ## 当前分类（2026-09-23）
 
-运行概览已删除，图表迁入网关、后端性能、P/D 诊断、主机、加速卡、缓存和采集健康看板。DCU/XPU/A3 各 10 张，共 301 图；非缓存看板公共核心对齐，保留平台专属扩展，A3 Mooncake 新增 10 图。单位在标题，提示去除重复单位与曲线范围标题。当前验收与回退见 [对齐发布记录](../docs/perses-alignment-mooncake-20260923.md)，此前迁移见 [重组记录](../docs/perses-dashboard-reorg-20260923.md)。XPU 角色修复见 [修复记录](../docs/xpu-role-fix-20260929.md)。旧安装、双项目迁移和发布过程见 [历史归档](../docs/releases/perses-history.md)，不能据此恢复旧概览或旧看板数量。
+运行概览已删除，图表迁入网关、后端性能、P/D 诊断、主机、加速卡、缓存和采集健康看板。DCU/XPU/A3 各 10 张，共 301 图；非缓存看板公共核心对齐，保留平台专属扩展，A3 Mooncake 新增 10 图。单位在标题，提示去除重复单位与曲线范围标题。对齐验收与当次发布过程见 [对齐发布记录](../docs/perses-alignment-mooncake-20260923.md)，此前迁移见 [重组记录](../docs/perses-dashboard-reorg-20260923.md)。XPU 角色修复见 [修复记录](../docs/xpu-role-fix-20260929.md)。旧安装、双项目迁移和发布过程见 [历史归档](../docs/releases/perses-history.md)，不能据此恢复旧概览或旧看板数量。
 
 2026-09-30 已清理 XPU 无源缓存图，并补充当前已有指标；缓存看板去除重复的设备 KV 池后现为 6 图，见 [缓存看板更新](../docs/xpu-cache-refresh-20260930.md)。
 
@@ -10,7 +10,7 @@
 
 ## 时间导航与刷新控制已上线（2026-09-25，0.54.0-perf.3）
 
-当前镜像配置摘要为 `sha256:978402ac5154e3ee2cf8c66f244fc7169be74125ef01a5fe9d28c1e8a24764e7`。跨看板、跨项目继承当前标签页时间范围，隐藏页面和固定窗口暂停定时查询，保留手动刷新。按用户要求在本机完成 1080p 浏览器验收；线上核验三个项目的 30 张看板、3 个数据源保持一致，各项目代理真实查询成功。未运行远端浏览器及 30 分钟持续观察。旧 perf.2 容器保留为 `monitoring-perses-before-perf3`，候选已停止；详见 [发布与回退记录](../deploy/time-navigation-20260925/README.md)。
+当前镜像配置摘要为 `sha256:978402ac5154e3ee2cf8c66f244fc7169be74125ef01a5fe9d28c1e8a24764e7`。跨看板、跨项目继承当前标签页时间范围，隐藏页面和固定窗口暂停定时查询，保留手动刷新。按用户要求在本机完成 1080p 浏览器验收；线上核验三个项目的 30 张看板、3 个数据源保持一致，各项目代理真实查询成功。未运行远端浏览器及 30 分钟持续观察。当次保留的旧 perf.2 容器和候选状态见 [历史发布记录](../deploy/time-navigation-20260925/README.md)；这不表示容器目前仍保留，也不是当前回退入口。后续升级按停机窗口验收，故障修复当前版本。
 
 ## 资源与维护入口
 
@@ -29,4 +29,4 @@
 
 指标语义、查询合并及回源规则见 [查询加速与原有口径](../docs/perses-query-acceleration.md)。该说明独立维护，生成图表文档时保留入口链接。
 
-生成器通过 `acceleration_publication.py` 读取 `acceleration_state.json`，仅保留已经准入的合并与数据源切换。默认清单为空时保持原路径。专用数据源写入 `perses-accelerated-datasource.json`，不会覆盖默认 `datasource.json`。候选实现、12 小时补算与性能验收、24 小时跨历史正确性及回退见 [运维说明](../deploy/perses_acceleration/README.md)，实际发布进度见 [状态](../deploy/perses_acceleration/STATUS.md)。
+生成器通过 `acceleration_publication.py` 读取 `acceleration_state.json`，仅保留已经准入的合并与数据源切换。默认清单为空时保持原路径。专用数据源写入 `perses-accelerated-datasource.json`，不会覆盖默认 `datasource.json`。查询加速的覆盖、正确性、性能准入与故障处置见 [运维说明](../deploy/perses_acceleration/README.md)，实际发布进度见 [状态](../deploy/perses_acceleration/STATUS.md)；普通升级按停机窗口验收，不重跑旧批次的长时间观察，也不执行版本回退。

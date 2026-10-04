@@ -73,8 +73,9 @@ def new_dashboard(source,name,title):
 
 def align(resources):
     from xpu_topology import configure as configure_xpu
+    from a3_cache import configure as configure_a3_cache
     resources = copy.deepcopy(resources)
-    resources['dashboards'] = [configure_xpu(d) for d in resources['dashboards']]
+    resources['dashboards'] = [configure_a3_cache(configure_xpu(d)) for d in resources['dashboards']]
     projects={d['metadata']['project'] for d in resources['dashboards']} & set(NODES)
     if all(any(d['metadata']['project']==p and 'core-requests' in d['spec']['panels'] for d in resources['dashboards']) for p in projects):
         return copy.deepcopy(resources), []

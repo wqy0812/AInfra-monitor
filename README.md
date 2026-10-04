@@ -6,6 +6,8 @@ DCU/XPU/A3 各 10 张专业看板，共 301 图；非缓存看板按公共核心
 
 2026-09-30 代码审核修复了 API 访问白名单、跨环境源健康判断、XPU 可选查询超时和过旧水位恢复，见 [审核修复记录](docs/review-fixes-20260930.md)。
 
+2026-10-03 已部署实时回放指标筛选、异步解码和完整快照发布修复，现场处理耗时降低约 40%，见 [修复与性能对照](docs/live-replay-20261002.md)。
+
 # 独立监控
 
 2026-09-25 已部署跨看板时间继承、Perses 后台/固定窗口暂停自动刷新，以及历史 API 多键缓存与在途请求合并。Perses 当前为 `0.54.0-perf.3`；本机 1080p 浏览器验收和线上 API/资源核验通过，行为、验证范围和回退见 [发布记录](deploy/time-navigation-20260925/README.md) 与 [实现说明](docs/time-navigation-cache-20260924.md)。
@@ -71,7 +73,7 @@ A3 主机 CPU 与 CPU I/O 等待由 monitoring-api 按 5 秒周期计算新增�
 
 1. `python3 scripts/download.py` 按 `vendor/releases.json` 下载固定版本，并校验官方 SHA256；`vendor/manifest.json` 保存二进制摘要。离线环境传输已校验的 `vendor/bin`。
 2. 将本项目同步到目标机 `/data2/monitoring/release`，在 test4 中央机执行 `ALLOWED_CLIENTS=127.0.0.1,::1,122.247.53.162,122.247.53.250 python3 deploy/start_test4.py`，节点执行 `python3 deploy/start.py node --bind <节点地址>`。白名单对应 test4 本机/Perses 与 test1 当前评测服务；其他拓扑须按实际调用方配置。`start.py central` 可用 `--allowed-clients` 或上述环境变量。两种中央启动入口均在创建目录、构建及启动容器前验证显式 IP 列表，拒绝空值、通配符和网段；API 未配置时仅允许 IPv4/IPv6 回环。脚本只在本机管理容器，不自行 SSH。
-3. test4 使用 Docker 28.5.2 静态发行版，当前 API 修复标签为 `monitoring-api:review-fixes-20260930`，也是 `start_test4.py` 的默认镜像；可用 `MONITOR_API_IMAGE` 指定经过验证的当前候选。API 的 Python 3.11.16 和依赖沿用现有运行时。节点继续使用已有 DTK 镜像。重建中央机前需加载已验证镜像或准备兼容运行时。`requirements.txt` 对齐实际部署的 Python 包版本。
+3. test4 使用 Docker 28.5.2 静态发行版，`start_test4.py` 默认固定使用已验收的 API 镜像 `sha256:e5ee00ee67dbab3d94ad86b269d37793204734ba59044f30eea3dc830c870a1d`，包含实时回放优化和 A3 外部缓存断线标记修复，见 [A3 缓存发布记录](docs/a3-cache-display-20261003.md)。可用 `MONITOR_API_IMAGE` 指定经过验证的新镜像。API 的 Python 3.11.16 和依赖沿用现有运行时。节点继续使用已有 DTK 镜像。重建中央机前需加载该镜像或显式指定已验证的新镜像；`requirements.txt` 对齐实际部署的 Python 包版本。
 4. 已存在服务不会被 `start.py` 覆盖。升级先构建或加载新镜像，再用 `deploy/replace.py <本项目容器名> <新镜像>` 在停机窗口内停止并替换受影响组件。从历史 `ALLOWED_CLIENTS=*` 的 API 升级时，附加 `--allowed-clients <显式IP列表>`。工具与 `deploy/container_validation.py` 一起提供：停服前核验所有权、组件、监听地址、镜像和临时容器名；启动后最多重试 90 秒，容器运行、健康和组件数据检查成功即完成验收，随后删除本次临时旧容器。支持已经为维护停下的组件，不另起候选容器或要求连续 10 秒正常。失败保留现场并停止后续步骤，修复当前版本后重新验收，不恢复旧容器。支持独立 API、VM、vmagent、node/DCU exporter；未知组件或非 host 网络在停服前拒绝。API 核验 DCU/A3/XPU 三环境健康和最新数据；VM 验证真实查询，vmagent 验证成功采集计数推进，exporter 验证必要指标和设备观测。操作仅针对 `monitoring.owner=independent`，保留原 `--driver-readonly` / `--loadavg` 参数。
 5. 修改采集配置后调用本机 `POST http://127.0.0.1:18429/-/reload`，检查全部目标 `up` 和源数据。
 

@@ -19,6 +19,8 @@ HISTORY_CACHE_SIZE=8
 HISTORY_CACHE_TTL=5
 HISTORY_TIMEOUT=8
 RETENTION_SECONDS=30*86400
+# Detailed diagnostic histograms stay in VM; the live replay only consumes these.
+LIVE_MODEL_METRICS=r'up|sglang:(num_requests_total|prompt_tokens_total|generation_tokens_total|cached_tokens_total|num_running_reqs|num_queue_reqs|token_usage|cache_hit_rate|hicache_host_used_tokens|hicache_host_total_tokens|prefill_effective_tokens_total|realtime_tokens_total|(time_to_first_token_seconds|inter_token_latency_seconds|e2e_request_latency_seconds)_(bucket|count))'
 def validate_environment(environment):
  if environment not in ENVIRONMENTS:raise HTTPException(400,"未知监控环境")
  return environment
@@ -101,11 +103,13 @@ class Service:
   if self.watermark_file.exists():
    saved=json.loads(self.watermark_file.read_text());self.watermark=saved['ts'];self.retention_gap=saved.get('retention_gap')
  async def raw(self,start,end):
-  selector='{job=~"sglang-prefill|sglang-decode|node-prefill|node-decode|dcu-prefill|dcu-decode|mooncake"}'
-  selector=selector[:-1]+',environment="dcu-pd"}' if self.environment=='dcu-pd' else '{environment="a3-vllm",job="vllm-a3",__name__=~"up|vllm:(request_success_total|generation_tokens_total|prefix_cache_(hits|queries)_total|external_prefix_cache_(hits|queries)_total|num_requests_(running|waiting)|kv_cache_usage_perc|(time_to_first_token|inter_token_latency|e2e_request_latency)_seconds_(bucket|count))"}'
-  if self.environment=='xpu-pd':selector='{environment="xpu-pd",job=~"sglang-prefill|sglang-decode"}'
-  r=await self.client.get(VM+'/api/v1/export',params={'match[]':selector,'start':start,'end':end,'reduce_mem_usage':1});r.raise_for_status()
-  return (a3.decode_export if self.environment=='a3-vllm' else decode_export)(json.loads(line) for line in r.text.splitlines() if line)
+  selectors=['{environment='+json.dumps(self.environment)+',job=~"sglang-prefill|sglang-decode",__name__=~'+json.dumps(LIVE_MODEL_METRICS)+'}']
+  if self.environment=='dcu-pd':selectors.append('{environment="dcu-pd",job=~"node-prefill|node-decode|dcu-prefill|dcu-decode|mooncake"}')
+  if self.environment=='a3-vllm':selectors=['{environment="a3-vllm",job="vllm-a3",__name__=~"up|vllm:(request_success_total|generation_tokens_total|prefix_cache_(hits|queries)_total|external_prefix_cache_(hits|queries)_total|num_requests_(running|waiting)|kv_cache_usage_perc|(time_to_first_token|inter_token_latency|e2e_request_latency)_seconds_(bucket|count))"}']
+  r=await self.client.get(VM+'/api/v1/export',params={'match[]':selectors,'start':start,'end':end,'reduce_mem_usage':1});r.raise_for_status()
+  def decode():
+   return (a3.decode_export if self.environment=='a3-vllm' else decode_export)(json.loads(line) for line in r.text.splitlines() if line)
+  return await asyncio.to_thread(decode)
  async def cycle(self):
   async with self.client.scope():
    await self._cycle()
@@ -135,8 +139,8 @@ class Service:
    if retention_gap is not None:saved['retention_gap']=retention_gap
    temp=self.watermark_file.with_suffix('.tmp');temp.write_text(json.dumps(saved));temp.replace(self.watermark_file)
    self.watermark=watermark;self.retention_gap=retention_gap
-  if snaps:self.latest={**snaps[-1],'environment':self.environment};self.latest_point=points[-1]
-  if self.environment=='a3-vllm':self.latest['collection_coverage']=a3.collection_coverage()
+  latest={**snaps[-1],'environment':self.environment} if snaps else dict(self.latest)
+  if self.environment=='a3-vllm':latest['collection_coverage']=a3.collection_coverage()
   try:
    r=await self.client.get(VM+'/api/v1/query',params={'query':'{__name__=~"vm_free_disk_space_bytes|vmagent_remotewrite_pending_data_bytes"}'})
    r.raise_for_status();values=r.json()['data']['result']
@@ -145,8 +149,10 @@ class Service:
     name=item['metric']['__name__'];found.setdefault(name,[]).append(float(item['value'][1]))
    free=min(found['vm_free_disk_space_bytes']) if found.get('vm_free_disk_space_bytes') else None
    pending=sum(found['vmagent_remotewrite_pending_data_bytes']) if found.get('vmagent_remotewrite_pending_data_bytes') else None
-   self.latest['infrastructure']={'disk_free_bytes':free,'pending_bytes':pending,'observed_at':time.time(),'status':'ok' if free is not None and free>20*1024**3 and pending==0 else 'warning'}
-  except (httpx.HTTPError,ValueError,KeyError):self.latest['infrastructure']={'status':'unavailable'}
+   latest['infrastructure']={'disk_free_bytes':free,'pending_bytes':pending,'observed_at':time.time(),'status':'ok' if free is not None and free>20*1024**3 and pending==0 else 'warning'}
+  except (httpx.HTTPError,ValueError,KeyError):latest['infrastructure']={'status':'unavailable'}
+  self.latest=latest
+  if snaps:self.latest_point=points[-1]
   self.error=None
  async def run(self):
   while True:
@@ -223,7 +229,7 @@ class Service:
    for role in ('prefill','decode'):
     node=p['nodes'][role];node['cache_60s']['semantics']='vllm-prefix-token-v1' if self.environment=='a3-vllm' else (xpu_cache.SCHEMA if self.environment=='xpu-pd' and role=='prefill' else 'unavailable' if self.environment=='xpu-pd' else 'prefill-effective-v1' if role=='prefill' else 'request-accounting-v1')
     fields={'requests':'requests','output_tokens':'output_tokens','decode_tokens':'decode_tokens','cpu':'cpu','cache':'cache_60s.ratio','hicache':'hicache.representative.ratio',**{k:'percentiles.'+k+'.p95' for k in ('ttft','itl','e2e')}}
-    if self.environment=='a3-vllm':fields['cpu_iowait']='cpu_iowait'
+    if self.environment=='a3-vllm':fields.update(cpu_iowait='cpu_iowait',external_cache='cache_60s.external_ratio')
     node['gap_before']=[k for k,path in fields.items() if mins.get(('nodes.'+role+'.'+path,ts))!=1]
    p['mooncake']['gap_before']=[key for key,path in STORE_GAPS.items() if mins.get(('mooncake.'+path,ts))!=1]
    p['mooncake']['tier_query_60s']['semantics']='store-replica-query-v1'
@@ -234,7 +240,7 @@ class Service:
   if self.latest_point and start<=self.latest_point['ts']<=end and (not backend_timestamps or self.latest_point['ts']>max(backend_timestamps)):
    import copy
    p=copy.deepcopy(self.latest_point);p['source']='victoriametrics';p['environment']=self.environment
-   for node in p['nodes'].values():node['gap_before']=['requests','output_tokens','decode_tokens','cpu','cache','hicache','ttft','itl','e2e']+(['cpu_iowait'] if self.environment=='a3-vllm' else [])
+   for node in p['nodes'].values():node['gap_before']=['requests','output_tokens','decode_tokens','cpu','cache','hicache','ttft','itl','e2e']+(['cpu_iowait','external_cache'] if self.environment=='a3-vllm' else [])
    p.setdefault('mooncake',{})['gap_before']=list(STORE_GAPS)
    for root in ('nodes.prefill','nodes.decode','mooncake'):
     get(p,root)['gap_before'] += [path[len(root)+1:] for path in resource_paths(p) if path.startswith(root+'.')]
