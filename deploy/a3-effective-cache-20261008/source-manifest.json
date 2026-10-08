@@ -1,0 +1,20 @@
+{
+  "base_image": "sha256:1f1de688381b4676fd7827c0ead361ab6eccf8f19dec8f808070ccd7f50e1fa0",
+  "files": [
+    {
+      "file": "a3.py",
+      "before_sha256": "61e19b790584088f6c086fc8ec1701e07e46cc4b83e5629b54fcc3c1d4d6df06",
+      "after_sha256": "3a50642c1c7e53792a6324c441584aba77b85b18280f378839c5dbedeb4a19a4"
+    },
+    {
+      "file": "api.py",
+      "before_sha256": "c01133d58903127c129dd84097c03e806e3a9cc84d2bf4289c7b533a7ba30714",
+      "after_sha256": "e13cbbaad42c3f7b0900c58f95aa525625debef661b4a6d1ac65b47f662e0578"
+    },
+    {
+      "file": "a3_effective.py",
+      "before_sha256": null,
+      "after_sha256": "875435d23463784af98091df73a0ed0603aa0c407fe7a64f4f2486275cdf5943"
+    }
+  ]
+}

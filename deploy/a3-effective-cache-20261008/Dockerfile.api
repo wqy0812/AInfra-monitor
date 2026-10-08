@@ -1,0 +1,4 @@
+ARG BASE
+FROM ${BASE}
+LABEL monitoring.a3-effective-cache="20261008"
+COPY api-payload/monitoring/ /monitoring/monitoring/

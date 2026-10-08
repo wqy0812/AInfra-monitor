@@ -8,6 +8,7 @@ from pathlib import Path
 from .calculator import quantile_buckets
 from .request_scope import SCHEMA
 from .latency import snapshot, increments as histogram_increments
+from . import a3_store, a3_effective
 
 ENVIRONMENT = 'a3-vllm'
 NODES = {'prefill': ('a3-1', '122.209.21.24'), 'decode': ('a3-2', '122.209.21.25')}
@@ -38,7 +39,7 @@ def valid_engine(rows, identity):
     seen = set()
     found = False
     for row in rows:
-        if not row['name'].startswith('vllm:'):
+        if not row['name'].startswith('vllm:') or row['name'] in a3_effective.NAMES:
             continue
         labels = row['labels']
         if labels.get('engine') != engine or labels.get('instance') != identity[1] or labels.get('node') != identity[0]:
@@ -55,12 +56,12 @@ def decode_export(lines):
     groups = collections.defaultdict(lambda: collections.defaultdict(list))
     for obj in lines:
         labels = dict(obj['metric'])
-        if labels.get('environment') != ENVIRONMENT or labels.get('job') != 'vllm-a3':
+        if labels.get('environment') != ENVIRONMENT or labels.get('job') not in ('vllm-a3', a3_store.JOB):
             continue
         name = labels.pop('__name__')
-        identity = (labels.get('node'), labels.get('instance'))
+        identity = (a3_store.JOB if labels.get('job') == a3_store.JOB else labels.get('node'), labels.get('instance'))
         for ts, value in zip(obj['timestamps'], obj['values']):
-            if isinstance(value, (float, int)) and math.isfinite(value):
+            if labels.get('job') == a3_store.JOB or (isinstance(value, (float, int)) and math.isfinite(value)):
                 groups[identity][ts / 1000].append({'name': name, 'labels': labels, 'value': value})
     return {key: (sorted(samples), samples) for key, samples in groups.items()}
 
@@ -186,11 +187,13 @@ def role_point(histories, complete):
     return p
 
 
-def replay(groups, start, end, emit_start=None):
+def replay(groups, start, end, emit_start=None, effective_since=None):
     previous = {}; histories = {}; snapshots = []; points = []
     for tick in range(int(start // 5) * 5, int(end // 5) * 5 + 1, 5):
         snapshot = {'ts': tick, 'environment': ENVIRONMENT, 'nodes': {}, 'enabled': True, 'source': 'victoriametrics', 'interval_seconds': 5, 'retention_hours': 720}
         point = {'ts': tick, 'environment': ENVIRONMENT, 'nodes': {}, 'mooncake': {}, 'source': 'victoriametrics'}
+        snapshot['mooncake'] = a3_store.observe(groups, tick)
+        point['mooncake'] = snapshot['mooncake']['data']
         for role, (node, address) in NODES.items():
             count = INSTANCE_COUNTS[role]
             expected = {(node, address + ':' + str(port)) for port in range(7100, 7100 + count)}
@@ -226,6 +229,8 @@ def replay(groups, start, end, emit_start=None):
             if emit_start is not None and tick < emit_start:
                 continue
             p = role_point(available, complete)
+            if role == 'prefill':
+                p['cache_60s']['effective'] = a3_effective.observe(available, complete, effective_since, tick)
             point['nodes'][role] = p
             observed = min((h[-1][0] for h in available), default=None)
             snapshot['nodes'][role] = {'node': node, 'metrics': {'status': 'ok' if complete else 'error', 'observed_at': observed,

@@ -35,4 +35,5 @@ def configure(document):
         by_key[key].update(x=index % 2 * 12, y=index // 2 * 8, width=12, height=8)
     assert 'p2' in by_key
     layout['spec']['items'] = [by_key[key] for key in ordered]
-    return document
+    from a3_mooncake import configure as configure_mooncake
+    return configure_mooncake(document)

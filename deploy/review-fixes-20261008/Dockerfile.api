@@ -1,0 +1,4 @@
+ARG BASE
+FROM ${BASE}
+LABEL monitoring.review-fixes="20261008"
+COPY monitoring/ /monitoring/monitoring/

@@ -1,0 +1,666 @@
+{
+  "api_before": {
+    "id": "7d414a57621d2a7ade4b1f08491a71ec548d5ef95d78c1dcce3003c250434927",
+    "image": "sha256:441cb9964954f66e8e12f4e207091791e2ee3d620c51bbe0f0ea72181a6cf8de",
+    "files": {
+      "__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "api.py": "e13cbbaad42c3f7b0900c58f95aa525625debef661b4a6d1ac65b47f662e0578",
+      "cache_metrics.py": "a74959ef8d4fbc22e079317f29dd6e3c15209bbcb5b3e181a26f02e60914fa37",
+      "calculator.py": "ec18d632ac853e7bf060c8da306f9498bb082de752cdfac4e5e8dffa8ba8d909",
+      "compat.py": "c413434cf76d3127a969ebffe73efa37232b9ad9ff7fc3a0e970cac782894735",
+      "exporter.py": "e7201e526bb797fb95972bf687a0da2eb0238312d8d9a143104efac495dc424b",
+      "monitor_series.py": "ed1ef3258632233f2a42cd2ff5dcb55ae0e835e1256c2c31c6ed849feba45edf",
+      "profile_counters.py": "ed44db9c0a1398fe06f96db16f2754702487447597f0d1f16c0305c940acf9cc",
+      "replay.py": "d66583fb5f420cd8dd8bb15eba39e410f9c19e348e3432364ec7e6050b088ebe",
+      "request_profile.py": "5731a28fb3b5352750f5f9c89a9948fb43619e3ab0e68f7e35bc904c3d44d6aa",
+      "resource_series.py": "ce3914e984d422db39c07bc10a4073f49e07de5a6353c64068b37b99bb2ab1ae",
+      "a3.py": "3a50642c1c7e53792a6324c441584aba77b85b18280f378839c5dbedeb4a19a4",
+      "a3_effective.py": "875435d23463784af98091df73a0ed0603aa0c407fe7a64f4f2486275cdf5943",
+      "a3_store.py": "9f8d799d731319a6677d48c46561a0e165b6346044be4cad1635615093b8329f",
+      "access.py": "a513a9205942314af32262155a0f15186b077974c23bb38f398a17c218cb0589",
+      "query_client.py": "efdcccef3d0147698b948b1fd0fe0d67433ad8b66d6ee43991c498cf6965c56a",
+      "perses_acceleration.py": "dfc0c0882116b4d7260d457d53e8c627dccc8ae46ff0cb2b808f4d0d1e9d52f6",
+      "xpu_cache.py": "dd7785a97dff9d33a021177b61b2c42135a323896b2d680747063f557d8f2640",
+      "xpu.py": "9b8c2315b8c5e3ad1c4ef933ebac6c6be9ed6cd1bbd76ce5afb22d4c58c4b281",
+      "gateway_live.py": "363efe6cf109c0a44cee698b4fa8642b655730672fa910d40a6f51c31e65557b",
+      "host_cpu.py": "fcd23b0e05e431e6e186afc1970c45f4774bc9e6222955f4948d2e4f64d858ce",
+      "latency.py": "5f8e880fa02e86cee2b525a378b115fbc1cf0f5c06d1406974978029b6c071e5",
+      "latency_rebuild.py": "269e393b6ebbf476262112b24fedeaff87cedb14eddf6099d40bda935d3db589",
+      "request_scope.py": "75ba6664b2f01285e28da7d3f2313ffba5e0a13098935aadd6612293f7c25726"
+    },
+    "allowed_clients": "127.0.0.1,::1,122.247.53.162,122.247.53.250",
+    "command": [
+      "-m",
+      "uvicorn",
+      "monitoring.api:app",
+      "--host",
+      "0.0.0.0",
+      "--port",
+      "18430",
+      "--no-access-log",
+      "--no-proxy-headers"
+    ],
+    "mounts": [
+      {
+        "Type": "bind",
+        "Source": "/data2/monitoring/state",
+        "Destination": "/state",
+        "Mode": "",
+        "RW": true,
+        "Propagation": "rprivate"
+      }
+    ],
+    "host_config_sha256": "b62be7ff5e0c8901190dd071bf242c54b458ae9efaac64662433185170825fa8"
+  },
+  "files": {
+    "release.py": "638df85311241c67d25deca6c4ef748e2654d3e9565dd543ace9e37b646424aa",
+    "Dockerfile.api": "58585a3310548aed1995f5bc2baee4ac0cb32be1aed2d0ee6793a858de6bfae2",
+    ".dockerignore": "8600e0c611f54fb7367e40a50fc2deef60d8a33b39826187badee2ea459c78b0",
+    "deploy/container_validation.py": "c96f81a013179ca22c41689ca16ba78c442f8e048b4805e33bcd958a08d02f4d",
+    "deploy/replace.py": "201e95fbeee1e8e9b8b539cdb18df0c0738d99db5d4877816c7337f429be7898",
+    "perses/dcu_bottlenecks.py": "6732e3415448cc0612bb6b1733565f31bbbcbcd3d5f30286529216d711a13f03",
+    "perses/query_acceleration.py": "ae649705f684bc093030474ad682fa2675fa480f608dba2ab57978e9f541c315",
+    "perses/reorg_runtime.py": "e11443407882d19c88b95fb94fc3396a450f5a59f4acacd1e7cc0e6f4670523e",
+    "perses/a3_cache.py": "c48ca08adda266daf06987efa63f40d5a389640ae2c37eb49df492aa83755b95",
+    "perses/metric_scope.py": "a2c210a12ba9c1e6fc07a827ead6d373efc108e0fe0ac1058cde58a7ef0a724d",
+    "perses/project_release.py": "0a3c5300f8773a6a3fba80e1338a9046d99a536162d4c222604706b7435f5e5c",
+    "perses/histogram_bounds.json": "16ee3da94544b3631e52fd10b613ebbff9f7a4a8e2dfa5ce548d9442892b4eb7",
+    "perses/remove_idle_thresholds.py": "9fa9550cb93baa2a305f52e404306310f93cda9a730e803c3889bad23b4829eb",
+    "perses/generate_xpu.py": "b0180340084307c0f8775dccabcdf5669b16252fc8b621963a126d90a807fec5",
+    "perses/generate.py": "b6db78169a3d6ca9572de91de8971081362e566bc1c77d8f6995fd971b442373",
+    "perses/acceleration_state.json": "d40c22a36ab36e56d906d7adc203c4803423a0e3b0f1b3c77ab6d4f6f53e64ef",
+    "perses/align_dashboards.py": "770cfb5ab6e0c0961ab7ab57523fcb9e91c5f165ddc9a64e7c0b598432efb398",
+    "perses/a3_mooncake.py": "723ced7ea1dadbe434670ccbb56a8602c223b07b048bebeb6a80304575d40066",
+    "perses/project_split.py": "399360becbfe8af7d1b83b2de8bd9273ed9c3aa2fb2aff4e8fa08e510bc9e238",
+    "perses/acceleration_catalog.py": "0cc1bf22354ce9b70b34aa560385b8158b7afad0e06f6845e3c06a9c2ed573b8",
+    "perses/acceleration_publication.py": "64b868816acc0b9ce187bf8a0822e76e9c1fb117c1e6122a55ed1e53d73a6ea5",
+    "perses/project_coverage.py": "a1b2e93a398b646436a0d68582b9705f8c8ac88f584123bef9c4a431ce79cc96",
+    "perses/project_queries.py": "88462bd05cbb5bb6b028b0006fdb9fab614cff6002e57aa063b30847519a0a19",
+    "perses/a3_coverage.py": "f036fdaacaf44e1e37cefb720040a0860bae1bab93e6e2aafa2eb1274a6680c2",
+    "perses/npu_panels.py": "6e125085a04454e767244a93c7412a2f7957c06ed7e48222163df8adb0b6b678",
+    "perses/METRICS_GUIDE.md": "200d1406571dda460d7efc2e753e45468bd1eecf84ad9f0fbaea1557acae8b55",
+    "perses/xpu_hardware.py": "6beea03ea4bcd88b1d1108ac94e0b7a964260bff5599af524ad0a43d8483ffe5",
+    "perses/xpu_topology.py": "69ec099c6ac1f3c5bfd6367f373afb97232c81f02433230c1c87d9feba1fd589",
+    "perses/panel_descriptions.json": "3bbc55a61bf842d858d1a497675a81ed8ed9bb4757d5b7bebbc2661cd1d9900f",
+    "perses/dashboard_reorg.py": "a28ef11ee6ed6072e8db940d64ab9168d15334acf763e5cae68787bb7f01051d",
+    "perses/METRIC_COVERAGE.md": "f06722050e455d53295a8d163c79d72b9d651ea0bb0596c2edf45892efd61f78",
+    "perses/host_cpu_panel.py": "37b3e1f41024d87766c06423e74049bf296485a1baeaf131e445a65b7527a07c",
+    "perses/xpu_cache.py": "f3bba1b7834afbcd5093ee10c2d28a68b2841615a8681920d61a83c1f3e793d9",
+    "perses/metric_coverage.json": "72cd89fed032cf23d452c433cf084ab5b4af92e1ca067203e10d7fca7b4a3101",
+    "perses/xpu_hosts.py": "29c76ec3d3d044fa33314dff26c5121344f4f730d6564568ce3109834b8d4736",
+    "monitoring/latency.py": "5f8e880fa02e86cee2b525a378b115fbc1cf0f5c06d1406974978029b6c071e5",
+    "monitoring/compat.py": "c413434cf76d3127a969ebffe73efa37232b9ad9ff7fc3a0e970cac782894735",
+    "monitoring/request_scope.py": "75ba6664b2f01285e28da7d3f2313ffba5e0a13098935aadd6612293f7c25726",
+    "monitoring/resource_series.py": "ce3914e984d422db39c07bc10a4073f49e07de5a6353c64068b37b99bb2ab1ae",
+    "monitoring/perses_acceleration.py": "dfc0c0882116b4d7260d457d53e8c627dccc8ae46ff0cb2b808f4d0d1e9d52f6",
+    "monitoring/gateway_live.py": "363efe6cf109c0a44cee698b4fa8642b655730672fa910d40a6f51c31e65557b",
+    "monitoring/exporter.py": "e7201e526bb797fb95972bf687a0da2eb0238312d8d9a143104efac495dc424b",
+    "monitoring/access.py": "a513a9205942314af32262155a0f15186b077974c23bb38f398a17c218cb0589",
+    "monitoring/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "monitoring/latency_rebuild.py": "269e393b6ebbf476262112b24fedeaff87cedb14eddf6099d40bda935d3db589",
+    "monitoring/a3_store.py": "f269989b6f00a5cc0eb8ced2e8b3a1e337c74fd8d129d850c676e3e4eba83575",
+    "monitoring/api.py": "e13cbbaad42c3f7b0900c58f95aa525625debef661b4a6d1ac65b47f662e0578",
+    "monitoring/request_profile.py": "5731a28fb3b5352750f5f9c89a9948fb43619e3ab0e68f7e35bc904c3d44d6aa",
+    "monitoring/xpu.py": "9b8c2315b8c5e3ad1c4ef933ebac6c6be9ed6cd1bbd76ce5afb22d4c58c4b281",
+    "monitoring/profile_counters.py": "ed44db9c0a1398fe06f96db16f2754702487447597f0d1f16c0305c940acf9cc",
+    "monitoring/replay.py": "43059cb72e32abccea4eaa4b3d76dd875d6144fedc1213d9ee7c7f76e0842b0e",
+    "monitoring/monitor_series.py": "ed1ef3258632233f2a42cd2ff5dcb55ae0e835e1256c2c31c6ed849feba45edf",
+    "monitoring/calculator.py": "ec18d632ac853e7bf060c8da306f9498bb082de752cdfac4e5e8dffa8ba8d909",
+    "monitoring/host_cpu.py": "fcd23b0e05e431e6e186afc1970c45f4774bc9e6222955f4948d2e4f64d858ce",
+    "monitoring/cache_metrics.py": "a74959ef8d4fbc22e079317f29dd6e3c15209bbcb5b3e181a26f02e60914fa37",
+    "monitoring/query_client.py": "efdcccef3d0147698b948b1fd0fe0d67433ad8b66d6ee43991c498cf6965c56a",
+    "monitoring/xpu_cache.py": "dd7785a97dff9d33a021177b61b2c42135a323896b2d680747063f557d8f2640",
+    "monitoring/a3.py": "3a50642c1c7e53792a6324c441584aba77b85b18280f378839c5dbedeb4a19a4",
+    "monitoring/a3_effective.py": "875435d23463784af98091df73a0ed0603aa0c407fe7a64f4f2486275cdf5943",
+    "perses/projects/a3-monitoring/datasource.json": "b118db6fa5ce2d819ac8839ebb7b100f13d7fbec5f6aad01bac5ce49f66766c1",
+    "perses/projects/a3-monitoring/project.json": "15b8cae9fa2b2da3e52798d45343c82cd9ab9f3b404c9ac5f80c8e342fac4018",
+    "perses/projects/a3-monitoring/perses-accelerated-datasource.json": "57bf281b0b1fe3b45278878c33865e0da3f92db8a73d41d631d0a24874fb34ec",
+    "perses/projects/dcu-monitoring/datasource.json": "8186fcbb6e47fbf3842b640337d2ff380ee3c845ff2b17e96ab7d863f2c252e4",
+    "perses/projects/dcu-monitoring/project.json": "060fe9f4248ba424482cee93571f86546d5cd2ea89b034f247a5a7f730f1921a",
+    "perses/projects/dcu-monitoring/perses-accelerated-datasource.json": "e13b61d5b0e849521180e3e6ae48a1ee50fc3a7f4b8ac4a2a7dd9d46c5425ad3",
+    "perses/projects/xpu-monitoring/datasource.json": "c57c73406a4496dde3c4ae5bab3e776868d7be9a8d7e92282ca5efc4a4da993c",
+    "perses/projects/xpu-monitoring/project.json": "37ab494735dfeeb2479b84a59759bde799005815ecba2df243becea7b2e14d44",
+    "perses/projects/xpu-monitoring/perses-accelerated-datasource.json": "72ee60a263046cc1d06765ac1f9fa57a4217bf5a2c019d18d3351a80872749ee",
+    "perses/projects/a3-monitoring/dashboards/a3-cache.json": "f30f5d727c6dbb60f95828bbb75e391af51e12c28bf768fac074e18aee8f27ce",
+    "perses/projects/a3-monitoring/dashboards/gateway-generation.json": "9c69e84ecf41beba83e88082a48ca4b2a953f3efacd6c6c053113c0bff547d1d",
+    "perses/projects/a3-monitoring/dashboards/backend-decode.json": "443cc3ed9cff82eb82989df19b97fda1b2fecdad5af62245fe4fec24bf6c2a3a",
+    "perses/projects/a3-monitoring/dashboards/backend-performance.json": "19a48c543b7ee0113cea5024b4b2b99bb4888eedea97d4df126f9e29759f2854",
+    "perses/projects/a3-monitoring/dashboards/gateway-requests.json": "52efc5a3c28cc07e21dd8519c69ec4961323e44e152d63763c4b141db9821412",
+    "perses/projects/a3-monitoring/dashboards/a3-hosts.json": "d6dfccbf7c9b146d0a5a0b71bd31732294da8ad34c9fa8a5694c15bd45db8c98",
+    "perses/projects/a3-monitoring/dashboards/backend-prefill.json": "d222f3ae70cf80e2df74724e7bd072f9ce5be34a3ced1874cfeb8106b3bee1c5",
+    "perses/projects/a3-monitoring/dashboards/accelerator-resources.json": "d1f66a600c17b646d7575fbadd355943dbc3109f4442eff34aa5f8785f21fcdb",
+    "perses/projects/a3-monitoring/dashboards/gateway.json": "242c38d5193fd7fa67abcf86d8f42ab358f01edfc1dc258d2a53bb1b35509dda",
+    "perses/projects/a3-monitoring/dashboards/monitoring-health.json": "efaa4fd4ecade7b287afecae7a8b23ccc6cc5407ffc216c1c12d0da3a3b690cb",
+    "perses/projects/dcu-monitoring/dashboards/gateway-generation.json": "dd3bf2b699ffc717a8ecb76549f6abaf3df83afaaf45d9819040c9eefc459b30",
+    "perses/projects/dcu-monitoring/dashboards/backend-decode.json": "f2cc34926b92ddf00aa4c4fa025f8d05c5138eca7014687aa4ef2a06026eff26",
+    "perses/projects/dcu-monitoring/dashboards/hosts-dcu.json": "76b05b5e9f1b11eab81dc2e48b69b95f397732ed5df4c056937bf516a177711e",
+    "perses/projects/dcu-monitoring/dashboards/backend-performance.json": "5fa52f0b184e401849be39ee0069d1fde804fa0a4c46a7219fdb8edd1cc9ba46",
+    "perses/projects/dcu-monitoring/dashboards/gateway-requests.json": "8bdb6669fca828f8ccd31529abba4221d671eee19f0eb68daca6be476abe767d",
+    "perses/projects/dcu-monitoring/dashboards/backend-prefill.json": "825f6b36670547615d575e2e877ecd421eeb23cc62c529b7fe0233cd3c8ffc66",
+    "perses/projects/dcu-monitoring/dashboards/accelerator-resources.json": "ec6ee13f977f2f69e62868ff7da260c321233bb7b4bb986e7f3d70aba9fe7fe0",
+    "perses/projects/dcu-monitoring/dashboards/gateway.json": "679fd56ebf2802a149a7ee911b1cd58cb81eaf5720a56e5eba3dc5d8b0c891f7",
+    "perses/projects/dcu-monitoring/dashboards/monitoring-health.json": "d3d69d2c12729624da0a39a5458529a7a2961ff6bd7417185df77843ea36075a",
+    "perses/projects/dcu-monitoring/dashboards/cache-store.json": "ba5c37bc13488a842cbe72489db527c825685c3479845f5179bc9b56294a371f",
+    "perses/projects/xpu-monitoring/dashboards/gateway-generation.json": "fa7e2227ce7d7709f9e8e00f886c990ff222ffe118633f2c7d7cc975ce424618",
+    "perses/projects/xpu-monitoring/dashboards/backend-decode.json": "1dfad83bfb002a2da9189234e53f55adbe4456bbe02bb91f7986854a0d377c89",
+    "perses/projects/xpu-monitoring/dashboards/backend-performance.json": "c2f8b60c66306a7d7bd5f5b5f3849bfcf1de67c185281bd118897b6878f12982",
+    "perses/projects/xpu-monitoring/dashboards/gateway-requests.json": "4c9e0cbf0326b286f88df6a330d327a65c96e09740f1f8afdc56c640d495a837",
+    "perses/projects/xpu-monitoring/dashboards/backend-prefill.json": "1164a975e685bad922fbcf9820475536e66133e50776b607694bc7be2c9bf4de",
+    "perses/projects/xpu-monitoring/dashboards/accelerator-resources.json": "9556c2a7edba3ad883abd2299d8bba5d595a3a555b149bd34969367b4e682dd4",
+    "perses/projects/xpu-monitoring/dashboards/gateway.json": "f63fe5a0b9247774805631b965e1f18bcae0b19616b06944e0192b5e3d1c0d96",
+    "perses/projects/xpu-monitoring/dashboards/monitoring-health.json": "7f7d027195c24b957650c14712941f5d396446a4ab3cf7fa92e7e4437b3ebf69",
+    "perses/projects/xpu-monitoring/dashboards/cache-store.json": "635da3bcd617bae5c13a5c47bb282b954616e6bcd85aa57bf3426962c43413d3",
+    "perses/projects/xpu-monitoring/dashboards/hosts-xpu.json": "e5d30f21f956e9c4861943bb9c8e7be82d554ce4e8c1f6594dc944c6348282b1"
+  },
+  "runtime_plan": [
+    {
+      "source": "perses/METRICS_GUIDE.md",
+      "target": "/data2/monitoring/perses/release/METRICS_GUIDE.md",
+      "before_sha256": "64f3fd80333b19acade6dbb4fbd9cf5608a1441eb2b5d88742b8508648a8ae87"
+    },
+    {
+      "source": "perses/METRIC_COVERAGE.md",
+      "target": "/data2/monitoring/perses/release/METRIC_COVERAGE.md",
+      "before_sha256": "3709ea887f524d53957997c0178ed4cf89cfa792e55234629f184113456dd384"
+    },
+    {
+      "source": "perses/a3_cache.py",
+      "target": "/data2/monitoring/perses/release/a3_cache.py",
+      "before_sha256": null
+    },
+    {
+      "source": "perses/a3_coverage.py",
+      "target": "/data2/monitoring/perses/release/a3_coverage.py",
+      "before_sha256": "a6dfb645fa08b0397a5475ddb73ef38b9f5072adab29322f7245013d524483db"
+    },
+    {
+      "source": "perses/a3_mooncake.py",
+      "target": "/data2/monitoring/perses/release/a3_mooncake.py",
+      "before_sha256": null
+    },
+    {
+      "source": "perses/acceleration_catalog.py",
+      "target": "/data2/monitoring/perses/release/acceleration_catalog.py",
+      "before_sha256": "0cc1bf22354ce9b70b34aa560385b8158b7afad0e06f6845e3c06a9c2ed573b8"
+    },
+    {
+      "source": "perses/acceleration_publication.py",
+      "target": "/data2/monitoring/perses/release/acceleration_publication.py",
+      "before_sha256": "64b868816acc0b9ce187bf8a0822e76e9c1fb117c1e6122a55ed1e53d73a6ea5"
+    },
+    {
+      "source": "perses/acceleration_state.json",
+      "target": "/data2/monitoring/perses/release/acceleration_state.json",
+      "before_sha256": "d40c22a36ab36e56d906d7adc203c4803423a0e3b0f1b3c77ab6d4f6f53e64ef"
+    },
+    {
+      "source": "perses/align_dashboards.py",
+      "target": "/data2/monitoring/perses/release/align_dashboards.py",
+      "before_sha256": "d6ae4231fb20ee27ab34a59e78b4c4c4bdedbf8b41f7a44d7fbff7976d963adb"
+    },
+    {
+      "source": "perses/dashboard_reorg.py",
+      "target": "/data2/monitoring/perses/release/dashboard_reorg.py",
+      "before_sha256": "a28ef11ee6ed6072e8db940d64ab9168d15334acf763e5cae68787bb7f01051d"
+    },
+    {
+      "source": "perses/dcu_bottlenecks.py",
+      "target": "/data2/monitoring/perses/release/dcu_bottlenecks.py",
+      "before_sha256": "6732e3415448cc0612bb6b1733565f31bbbcbcd3d5f30286529216d711a13f03"
+    },
+    {
+      "source": "perses/generate.py",
+      "target": "/data2/monitoring/perses/release/generate.py",
+      "before_sha256": "b6db78169a3d6ca9572de91de8971081362e566bc1c77d8f6995fd971b442373"
+    },
+    {
+      "source": "perses/generate_xpu.py",
+      "target": "/data2/monitoring/perses/release/generate_xpu.py",
+      "before_sha256": "b0180340084307c0f8775dccabcdf5669b16252fc8b621963a126d90a807fec5"
+    },
+    {
+      "source": "perses/histogram_bounds.json",
+      "target": "/data2/monitoring/perses/release/histogram_bounds.json",
+      "before_sha256": "16ee3da94544b3631e52fd10b613ebbff9f7a4a8e2dfa5ce548d9442892b4eb7"
+    },
+    {
+      "source": "perses/host_cpu_panel.py",
+      "target": "/data2/monitoring/perses/release/host_cpu_panel.py",
+      "before_sha256": "37b3e1f41024d87766c06423e74049bf296485a1baeaf131e445a65b7527a07c"
+    },
+    {
+      "source": "perses/metric_coverage.json",
+      "target": "/data2/monitoring/perses/release/metric_coverage.json",
+      "before_sha256": "dc84c9673e42341666e8be4914d27634650b7b63ecd3a0fe8113b6ab62f4cd72"
+    },
+    {
+      "source": "perses/metric_scope.py",
+      "target": "/data2/monitoring/perses/release/metric_scope.py",
+      "before_sha256": "a2c210a12ba9c1e6fc07a827ead6d373efc108e0fe0ac1058cde58a7ef0a724d"
+    },
+    {
+      "source": "perses/npu_panels.py",
+      "target": "/data2/monitoring/perses/release/npu_panels.py",
+      "before_sha256": "6e125085a04454e767244a93c7412a2f7957c06ed7e48222163df8adb0b6b678"
+    },
+    {
+      "source": "perses/panel_descriptions.json",
+      "target": "/data2/monitoring/perses/release/panel_descriptions.json",
+      "before_sha256": "25d33afabf7e7187d6291e8bd9e9527f73c3701f73a2af011322f82266c1152b"
+    },
+    {
+      "source": "perses/project_coverage.py",
+      "target": "/data2/monitoring/perses/release/project_coverage.py",
+      "before_sha256": "da8743072c6fbcfa23281b5058b7dc96a2ea982574d24bc9e21a0cacfe5be140"
+    },
+    {
+      "source": "perses/project_queries.py",
+      "target": "/data2/monitoring/perses/release/project_queries.py",
+      "before_sha256": "88462bd05cbb5bb6b028b0006fdb9fab614cff6002e57aa063b30847519a0a19"
+    },
+    {
+      "source": "perses/project_release.py",
+      "target": "/data2/monitoring/perses/release/project_release.py",
+      "before_sha256": "d6100e67be6a2dfd837d98fc6cd5b8650b5e348af0dbef19724bf8d5ba1c29e5"
+    },
+    {
+      "source": "perses/project_split.py",
+      "target": "/data2/monitoring/perses/release/project_split.py",
+      "before_sha256": "ca0fe7687fb02d90a9bbbf962f4e4c14c39c0a2529784f4b1102528970fd0c54"
+    },
+    {
+      "source": "perses/projects/a3-monitoring/dashboards/a3-cache.json",
+      "target": "/data2/monitoring/perses/release/projects/a3-monitoring/dashboards/a3-cache.json",
+      "before_sha256": "2981b7de05109565eaa40c3183be82e5fa23129636e3458d252fdaf38a8a97f8"
+    },
+    {
+      "source": "perses/projects/a3-monitoring/dashboards/a3-hosts.json",
+      "target": "/data2/monitoring/perses/release/projects/a3-monitoring/dashboards/a3-hosts.json",
+      "before_sha256": "d6dfccbf7c9b146d0a5a0b71bd31732294da8ad34c9fa8a5694c15bd45db8c98"
+    },
+    {
+      "source": "perses/projects/a3-monitoring/dashboards/accelerator-resources.json",
+      "target": "/data2/monitoring/perses/release/projects/a3-monitoring/dashboards/accelerator-resources.json",
+      "before_sha256": "d1f66a600c17b646d7575fbadd355943dbc3109f4442eff34aa5f8785f21fcdb"
+    },
+    {
+      "source": "perses/projects/a3-monitoring/dashboards/backend-decode.json",
+      "target": "/data2/monitoring/perses/release/projects/a3-monitoring/dashboards/backend-decode.json",
+      "before_sha256": "443cc3ed9cff82eb82989df19b97fda1b2fecdad5af62245fe4fec24bf6c2a3a"
+    },
+    {
+      "source": "perses/projects/a3-monitoring/dashboards/backend-performance.json",
+      "target": "/data2/monitoring/perses/release/projects/a3-monitoring/dashboards/backend-performance.json",
+      "before_sha256": "19a48c543b7ee0113cea5024b4b2b99bb4888eedea97d4df126f9e29759f2854"
+    },
+    {
+      "source": "perses/projects/a3-monitoring/dashboards/backend-prefill.json",
+      "target": "/data2/monitoring/perses/release/projects/a3-monitoring/dashboards/backend-prefill.json",
+      "before_sha256": "d222f3ae70cf80e2df74724e7bd072f9ce5be34a3ced1874cfeb8106b3bee1c5"
+    },
+    {
+      "source": "perses/projects/a3-monitoring/dashboards/gateway-generation.json",
+      "target": "/data2/monitoring/perses/release/projects/a3-monitoring/dashboards/gateway-generation.json",
+      "before_sha256": "9c69e84ecf41beba83e88082a48ca4b2a953f3efacd6c6c053113c0bff547d1d"
+    },
+    {
+      "source": "perses/projects/a3-monitoring/dashboards/gateway-requests.json",
+      "target": "/data2/monitoring/perses/release/projects/a3-monitoring/dashboards/gateway-requests.json",
+      "before_sha256": "52efc5a3c28cc07e21dd8519c69ec4961323e44e152d63763c4b141db9821412"
+    },
+    {
+      "source": "perses/projects/a3-monitoring/dashboards/gateway.json",
+      "target": "/data2/monitoring/perses/release/projects/a3-monitoring/dashboards/gateway.json",
+      "before_sha256": "242c38d5193fd7fa67abcf86d8f42ab358f01edfc1dc258d2a53bb1b35509dda"
+    },
+    {
+      "source": "perses/projects/a3-monitoring/dashboards/monitoring-health.json",
+      "target": "/data2/monitoring/perses/release/projects/a3-monitoring/dashboards/monitoring-health.json",
+      "before_sha256": "efaa4fd4ecade7b287afecae7a8b23ccc6cc5407ffc216c1c12d0da3a3b690cb"
+    },
+    {
+      "source": "perses/projects/a3-monitoring/datasource.json",
+      "target": "/data2/monitoring/perses/release/projects/a3-monitoring/datasource.json",
+      "before_sha256": "b118db6fa5ce2d819ac8839ebb7b100f13d7fbec5f6aad01bac5ce49f66766c1"
+    },
+    {
+      "source": "perses/projects/a3-monitoring/perses-accelerated-datasource.json",
+      "target": "/data2/monitoring/perses/release/projects/a3-monitoring/perses-accelerated-datasource.json",
+      "before_sha256": "57bf281b0b1fe3b45278878c33865e0da3f92db8a73d41d631d0a24874fb34ec"
+    },
+    {
+      "source": "perses/projects/a3-monitoring/project.json",
+      "target": "/data2/monitoring/perses/release/projects/a3-monitoring/project.json",
+      "before_sha256": "15b8cae9fa2b2da3e52798d45343c82cd9ab9f3b404c9ac5f80c8e342fac4018"
+    },
+    {
+      "source": "perses/projects/dcu-monitoring/dashboards/accelerator-resources.json",
+      "target": "/data2/monitoring/perses/release/projects/dcu-monitoring/dashboards/accelerator-resources.json",
+      "before_sha256": "ec6ee13f977f2f69e62868ff7da260c321233bb7b4bb986e7f3d70aba9fe7fe0"
+    },
+    {
+      "source": "perses/projects/dcu-monitoring/dashboards/backend-decode.json",
+      "target": "/data2/monitoring/perses/release/projects/dcu-monitoring/dashboards/backend-decode.json",
+      "before_sha256": "f2cc34926b92ddf00aa4c4fa025f8d05c5138eca7014687aa4ef2a06026eff26"
+    },
+    {
+      "source": "perses/projects/dcu-monitoring/dashboards/backend-performance.json",
+      "target": "/data2/monitoring/perses/release/projects/dcu-monitoring/dashboards/backend-performance.json",
+      "before_sha256": "5fa52f0b184e401849be39ee0069d1fde804fa0a4c46a7219fdb8edd1cc9ba46"
+    },
+    {
+      "source": "perses/projects/dcu-monitoring/dashboards/backend-prefill.json",
+      "target": "/data2/monitoring/perses/release/projects/dcu-monitoring/dashboards/backend-prefill.json",
+      "before_sha256": "825f6b36670547615d575e2e877ecd421eeb23cc62c529b7fe0233cd3c8ffc66"
+    },
+    {
+      "source": "perses/projects/dcu-monitoring/dashboards/cache-store.json",
+      "target": "/data2/monitoring/perses/release/projects/dcu-monitoring/dashboards/cache-store.json",
+      "before_sha256": "ba5c37bc13488a842cbe72489db527c825685c3479845f5179bc9b56294a371f"
+    },
+    {
+      "source": "perses/projects/dcu-monitoring/dashboards/gateway-generation.json",
+      "target": "/data2/monitoring/perses/release/projects/dcu-monitoring/dashboards/gateway-generation.json",
+      "before_sha256": "dd3bf2b699ffc717a8ecb76549f6abaf3df83afaaf45d9819040c9eefc459b30"
+    },
+    {
+      "source": "perses/projects/dcu-monitoring/dashboards/gateway-requests.json",
+      "target": "/data2/monitoring/perses/release/projects/dcu-monitoring/dashboards/gateway-requests.json",
+      "before_sha256": "8bdb6669fca828f8ccd31529abba4221d671eee19f0eb68daca6be476abe767d"
+    },
+    {
+      "source": "perses/projects/dcu-monitoring/dashboards/gateway.json",
+      "target": "/data2/monitoring/perses/release/projects/dcu-monitoring/dashboards/gateway.json",
+      "before_sha256": "679fd56ebf2802a149a7ee911b1cd58cb81eaf5720a56e5eba3dc5d8b0c891f7"
+    },
+    {
+      "source": "perses/projects/dcu-monitoring/dashboards/hosts-dcu.json",
+      "target": "/data2/monitoring/perses/release/projects/dcu-monitoring/dashboards/hosts-dcu.json",
+      "before_sha256": "76b05b5e9f1b11eab81dc2e48b69b95f397732ed5df4c056937bf516a177711e"
+    },
+    {
+      "source": "perses/projects/dcu-monitoring/dashboards/monitoring-health.json",
+      "target": "/data2/monitoring/perses/release/projects/dcu-monitoring/dashboards/monitoring-health.json",
+      "before_sha256": "d3d69d2c12729624da0a39a5458529a7a2961ff6bd7417185df77843ea36075a"
+    },
+    {
+      "source": "perses/projects/dcu-monitoring/datasource.json",
+      "target": "/data2/monitoring/perses/release/projects/dcu-monitoring/datasource.json",
+      "before_sha256": "8186fcbb6e47fbf3842b640337d2ff380ee3c845ff2b17e96ab7d863f2c252e4"
+    },
+    {
+      "source": "perses/projects/dcu-monitoring/perses-accelerated-datasource.json",
+      "target": "/data2/monitoring/perses/release/projects/dcu-monitoring/perses-accelerated-datasource.json",
+      "before_sha256": "e13b61d5b0e849521180e3e6ae48a1ee50fc3a7f4b8ac4a2a7dd9d46c5425ad3"
+    },
+    {
+      "source": "perses/projects/dcu-monitoring/project.json",
+      "target": "/data2/monitoring/perses/release/projects/dcu-monitoring/project.json",
+      "before_sha256": "060fe9f4248ba424482cee93571f86546d5cd2ea89b034f247a5a7f730f1921a"
+    },
+    {
+      "source": "perses/projects/xpu-monitoring/dashboards/accelerator-resources.json",
+      "target": "/data2/monitoring/perses/release/projects/xpu-monitoring/dashboards/accelerator-resources.json",
+      "before_sha256": "9556c2a7edba3ad883abd2299d8bba5d595a3a555b149bd34969367b4e682dd4"
+    },
+    {
+      "source": "perses/projects/xpu-monitoring/dashboards/backend-decode.json",
+      "target": "/data2/monitoring/perses/release/projects/xpu-monitoring/dashboards/backend-decode.json",
+      "before_sha256": "1dfad83bfb002a2da9189234e53f55adbe4456bbe02bb91f7986854a0d377c89"
+    },
+    {
+      "source": "perses/projects/xpu-monitoring/dashboards/backend-performance.json",
+      "target": "/data2/monitoring/perses/release/projects/xpu-monitoring/dashboards/backend-performance.json",
+      "before_sha256": "c2f8b60c66306a7d7bd5f5b5f3849bfcf1de67c185281bd118897b6878f12982"
+    },
+    {
+      "source": "perses/projects/xpu-monitoring/dashboards/backend-prefill.json",
+      "target": "/data2/monitoring/perses/release/projects/xpu-monitoring/dashboards/backend-prefill.json",
+      "before_sha256": "1164a975e685bad922fbcf9820475536e66133e50776b607694bc7be2c9bf4de"
+    },
+    {
+      "source": "perses/projects/xpu-monitoring/dashboards/cache-store.json",
+      "target": "/data2/monitoring/perses/release/projects/xpu-monitoring/dashboards/cache-store.json",
+      "before_sha256": "635da3bcd617bae5c13a5c47bb282b954616e6bcd85aa57bf3426962c43413d3"
+    },
+    {
+      "source": "perses/projects/xpu-monitoring/dashboards/gateway-generation.json",
+      "target": "/data2/monitoring/perses/release/projects/xpu-monitoring/dashboards/gateway-generation.json",
+      "before_sha256": "fa7e2227ce7d7709f9e8e00f886c990ff222ffe118633f2c7d7cc975ce424618"
+    },
+    {
+      "source": "perses/projects/xpu-monitoring/dashboards/gateway-requests.json",
+      "target": "/data2/monitoring/perses/release/projects/xpu-monitoring/dashboards/gateway-requests.json",
+      "before_sha256": "4c9e0cbf0326b286f88df6a330d327a65c96e09740f1f8afdc56c640d495a837"
+    },
+    {
+      "source": "perses/projects/xpu-monitoring/dashboards/gateway.json",
+      "target": "/data2/monitoring/perses/release/projects/xpu-monitoring/dashboards/gateway.json",
+      "before_sha256": "f63fe5a0b9247774805631b965e1f18bcae0b19616b06944e0192b5e3d1c0d96"
+    },
+    {
+      "source": "perses/projects/xpu-monitoring/dashboards/hosts-xpu.json",
+      "target": "/data2/monitoring/perses/release/projects/xpu-monitoring/dashboards/hosts-xpu.json",
+      "before_sha256": "e5d30f21f956e9c4861943bb9c8e7be82d554ce4e8c1f6594dc944c6348282b1"
+    },
+    {
+      "source": "perses/projects/xpu-monitoring/dashboards/monitoring-health.json",
+      "target": "/data2/monitoring/perses/release/projects/xpu-monitoring/dashboards/monitoring-health.json",
+      "before_sha256": "7f7d027195c24b957650c14712941f5d396446a4ab3cf7fa92e7e4437b3ebf69"
+    },
+    {
+      "source": "perses/projects/xpu-monitoring/datasource.json",
+      "target": "/data2/monitoring/perses/release/projects/xpu-monitoring/datasource.json",
+      "before_sha256": "c57c73406a4496dde3c4ae5bab3e776868d7be9a8d7e92282ca5efc4a4da993c"
+    },
+    {
+      "source": "perses/projects/xpu-monitoring/perses-accelerated-datasource.json",
+      "target": "/data2/monitoring/perses/release/projects/xpu-monitoring/perses-accelerated-datasource.json",
+      "before_sha256": "72ee60a263046cc1d06765ac1f9fa57a4217bf5a2c019d18d3351a80872749ee"
+    },
+    {
+      "source": "perses/projects/xpu-monitoring/project.json",
+      "target": "/data2/monitoring/perses/release/projects/xpu-monitoring/project.json",
+      "before_sha256": "37ab494735dfeeb2479b84a59759bde799005815ecba2df243becea7b2e14d44"
+    },
+    {
+      "source": "perses/query_acceleration.py",
+      "target": "/data2/monitoring/perses/release/query_acceleration.py",
+      "before_sha256": "ae649705f684bc093030474ad682fa2675fa480f608dba2ab57978e9f541c315"
+    },
+    {
+      "source": "perses/remove_idle_thresholds.py",
+      "target": "/data2/monitoring/perses/release/remove_idle_thresholds.py",
+      "before_sha256": "9fa9550cb93baa2a305f52e404306310f93cda9a730e803c3889bad23b4829eb"
+    },
+    {
+      "source": "perses/reorg_runtime.py",
+      "target": "/data2/monitoring/perses/release/reorg_runtime.py",
+      "before_sha256": null
+    },
+    {
+      "source": "perses/xpu_cache.py",
+      "target": "/data2/monitoring/perses/release/xpu_cache.py",
+      "before_sha256": "f3bba1b7834afbcd5093ee10c2d28a68b2841615a8681920d61a83c1f3e793d9"
+    },
+    {
+      "source": "perses/xpu_hardware.py",
+      "target": "/data2/monitoring/perses/release/xpu_hardware.py",
+      "before_sha256": "6beea03ea4bcd88b1d1108ac94e0b7a964260bff5599af524ad0a43d8483ffe5"
+    },
+    {
+      "source": "perses/xpu_hosts.py",
+      "target": "/data2/monitoring/perses/release/xpu_hosts.py",
+      "before_sha256": "29c76ec3d3d044fa33314dff26c5121344f4f730d6564568ce3109834b8d4736"
+    },
+    {
+      "source": "perses/xpu_topology.py",
+      "target": "/data2/monitoring/perses/release/xpu_topology.py",
+      "before_sha256": "69ec099c6ac1f3c5bfd6367f373afb97232c81f02433230c1c87d9feba1fd589"
+    },
+    {
+      "source": "monitoring/__init__.py",
+      "target": "/data2/monitoring/release/monitoring/__init__.py",
+      "before_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "monitoring/a3.py",
+      "target": "/data2/monitoring/release/monitoring/a3.py",
+      "before_sha256": "f1477f68ec98a2e92cf420d66e0d5a3bfb7172da9b37f35694c811cd2ad371bb"
+    },
+    {
+      "source": "monitoring/a3_effective.py",
+      "target": "/data2/monitoring/release/monitoring/a3_effective.py",
+      "before_sha256": null
+    },
+    {
+      "source": "monitoring/a3_store.py",
+      "target": "/data2/monitoring/release/monitoring/a3_store.py",
+      "before_sha256": null
+    },
+    {
+      "source": "monitoring/access.py",
+      "target": "/data2/monitoring/release/monitoring/access.py",
+      "before_sha256": "a513a9205942314af32262155a0f15186b077974c23bb38f398a17c218cb0589"
+    },
+    {
+      "source": "monitoring/api.py",
+      "target": "/data2/monitoring/release/monitoring/api.py",
+      "before_sha256": "1778f5d1e01fbe863ddc2a3d7a2790ddc6c067f76040170718932307eeb8aa4c"
+    },
+    {
+      "source": "monitoring/cache_metrics.py",
+      "target": "/data2/monitoring/release/monitoring/cache_metrics.py",
+      "before_sha256": "a74959ef8d4fbc22e079317f29dd6e3c15209bbcb5b3e181a26f02e60914fa37"
+    },
+    {
+      "source": "monitoring/calculator.py",
+      "target": "/data2/monitoring/release/monitoring/calculator.py",
+      "before_sha256": "ec18d632ac853e7bf060c8da306f9498bb082de752cdfac4e5e8dffa8ba8d909"
+    },
+    {
+      "source": "monitoring/compat.py",
+      "target": "/data2/monitoring/release/monitoring/compat.py",
+      "before_sha256": "c413434cf76d3127a969ebffe73efa37232b9ad9ff7fc3a0e970cac782894735"
+    },
+    {
+      "source": "monitoring/exporter.py",
+      "target": "/data2/monitoring/release/monitoring/exporter.py",
+      "before_sha256": "e7201e526bb797fb95972bf687a0da2eb0238312d8d9a143104efac495dc424b"
+    },
+    {
+      "source": "monitoring/gateway_live.py",
+      "target": "/data2/monitoring/release/monitoring/gateway_live.py",
+      "before_sha256": "dfa2d84be106b29b3bd42062bc556337745cca22139d2b95f7620cf136a06d5b"
+    },
+    {
+      "source": "monitoring/host_cpu.py",
+      "target": "/data2/monitoring/release/monitoring/host_cpu.py",
+      "before_sha256": "fcd23b0e05e431e6e186afc1970c45f4774bc9e6222955f4948d2e4f64d858ce"
+    },
+    {
+      "source": "monitoring/latency.py",
+      "target": "/data2/monitoring/release/monitoring/latency.py",
+      "before_sha256": "5f8e880fa02e86cee2b525a378b115fbc1cf0f5c06d1406974978029b6c071e5"
+    },
+    {
+      "source": "monitoring/latency_rebuild.py",
+      "target": "/data2/monitoring/release/monitoring/latency_rebuild.py",
+      "before_sha256": "269e393b6ebbf476262112b24fedeaff87cedb14eddf6099d40bda935d3db589"
+    },
+    {
+      "source": "monitoring/monitor_series.py",
+      "target": "/data2/monitoring/release/monitoring/monitor_series.py",
+      "before_sha256": "ed1ef3258632233f2a42cd2ff5dcb55ae0e835e1256c2c31c6ed849feba45edf"
+    },
+    {
+      "source": "monitoring/perses_acceleration.py",
+      "target": "/data2/monitoring/release/monitoring/perses_acceleration.py",
+      "before_sha256": null
+    },
+    {
+      "source": "monitoring/profile_counters.py",
+      "target": "/data2/monitoring/release/monitoring/profile_counters.py",
+      "before_sha256": "ed44db9c0a1398fe06f96db16f2754702487447597f0d1f16c0305c940acf9cc"
+    },
+    {
+      "source": "monitoring/query_client.py",
+      "target": "/data2/monitoring/release/monitoring/query_client.py",
+      "before_sha256": "efdcccef3d0147698b948b1fd0fe0d67433ad8b66d6ee43991c498cf6965c56a"
+    },
+    {
+      "source": "monitoring/replay.py",
+      "target": "/data2/monitoring/release/monitoring/replay.py",
+      "before_sha256": "d66583fb5f420cd8dd8bb15eba39e410f9c19e348e3432364ec7e6050b088ebe"
+    },
+    {
+      "source": "monitoring/request_profile.py",
+      "target": "/data2/monitoring/release/monitoring/request_profile.py",
+      "before_sha256": "5731a28fb3b5352750f5f9c89a9948fb43619e3ab0e68f7e35bc904c3d44d6aa"
+    },
+    {
+      "source": "monitoring/request_scope.py",
+      "target": "/data2/monitoring/release/monitoring/request_scope.py",
+      "before_sha256": "75ba6664b2f01285e28da7d3f2313ffba5e0a13098935aadd6612293f7c25726"
+    },
+    {
+      "source": "monitoring/resource_series.py",
+      "target": "/data2/monitoring/release/monitoring/resource_series.py",
+      "before_sha256": "ce3914e984d422db39c07bc10a4073f49e07de5a6353c64068b37b99bb2ab1ae"
+    },
+    {
+      "source": "monitoring/xpu.py",
+      "target": "/data2/monitoring/release/monitoring/xpu.py",
+      "before_sha256": "9a2126916fcb82e168f6bdf8d426ebcc632572c9d23827ed39195e801ac0f7aa"
+    },
+    {
+      "source": "monitoring/xpu_cache.py",
+      "target": "/data2/monitoring/release/monitoring/xpu_cache.py",
+      "before_sha256": null
+    }
+  ],
+  "resource_specs": {
+    "Project//a3-monitoring": "84d453c37ff48101b2032bb15bb9a7a15385c86ff2bfbfaefc628b1e7754f7ff",
+    "Project//dcu-monitoring": "bfa98422a570bc5860a0c3d66f5f775a4378ffe49cd48650a951e2cbc6eb6e84",
+    "Project//xpu-monitoring": "6fe7dd7993988b0b48bd42641e111a545d4b3b9a73b356b42a715d29ed3ad37f",
+    "Datasource/a3-monitoring/victoriametrics": "ea9f43d2eaff37a18cb568b734f6a562b8b53731268d554e780135611d1e1374",
+    "Datasource/a3-monitoring/perses-accelerated": "03fadffb1cb3a89ab24186d2ceb86dfb8b4d548bff18b6fceff7534bbc5011c6",
+    "Datasource/dcu-monitoring/victoriametrics": "ea9f43d2eaff37a18cb568b734f6a562b8b53731268d554e780135611d1e1374",
+    "Datasource/dcu-monitoring/perses-accelerated": "03fadffb1cb3a89ab24186d2ceb86dfb8b4d548bff18b6fceff7534bbc5011c6",
+    "Datasource/xpu-monitoring/victoriametrics": "ea9f43d2eaff37a18cb568b734f6a562b8b53731268d554e780135611d1e1374",
+    "Datasource/xpu-monitoring/perses-accelerated": "03fadffb1cb3a89ab24186d2ceb86dfb8b4d548bff18b6fceff7534bbc5011c6",
+    "Dashboard/a3-monitoring/a3-cache": "54b8635d3cb601696b1295025055942caad603545ab034a1ac612896a1ba1ab9",
+    "Dashboard/a3-monitoring/a3-hosts": "12ec6bf2ea144a12bfb128485620d08f6cfee7f9a0d64fa3331c5d82234bc1c0",
+    "Dashboard/a3-monitoring/accelerator-resources": "5c59908c16d8086c9be8076667c7e9ef5bcab7b2c45350ced05f85482832646e",
+    "Dashboard/a3-monitoring/backend-decode": "2478ee36e96ad41686407c192e77a2c2ff911c4394c291276263dd6424a88fc6",
+    "Dashboard/a3-monitoring/backend-performance": "7f48ba4263f88013199d46cbf15209c8a6b9390a9d8d40a32d0d538c5caac7df",
+    "Dashboard/a3-monitoring/backend-prefill": "7a43ac2058061e3871e76cf91af8c030105abe34c539915ace608a07555e5eb3",
+    "Dashboard/a3-monitoring/gateway-generation": "b628b428ea69c5cd959906660c8683378f200821b09054eaec8187d378eec1be",
+    "Dashboard/a3-monitoring/gateway-requests": "288bd706dcc0db4f6a62206c403950a3876206afa87e9fe83f60f8d741bbcbae",
+    "Dashboard/a3-monitoring/gateway": "848a424deed3691a5db1830723a8729f90c00e6f0e26106931692add54ec8a02",
+    "Dashboard/a3-monitoring/monitoring-health": "94991bfe34b8bfe5d9df93b8ec5ca4ae02e79e4c423fd404da2bfddbf78bed2d",
+    "Dashboard/dcu-monitoring/accelerator-resources": "5de52d8a381ff15f7c4ea8494a37685cc9fb4769cc8a353f364bffcd464edbcd",
+    "Dashboard/dcu-monitoring/backend-decode": "7cd32587c779f0a0307319bbcdf4aace90e729e463932a24ca9b776361fa29a5",
+    "Dashboard/dcu-monitoring/backend-performance": "3f7b2a67f287772fc0086db85bad6a4ae9b40e56d903f27c4d2a2dc2a77f5d3a",
+    "Dashboard/dcu-monitoring/backend-prefill": "a6a89cad0525984deb902dd087b88b5fc1f589eb872b39adc53b55e74df13b50",
+    "Dashboard/dcu-monitoring/cache-store": "0c40b56bd29f87d4085f8e5fc247ab8945cce85adfeb2a205bdd74121f1e19f9",
+    "Dashboard/dcu-monitoring/gateway-generation": "97cc6a63e0f07566b4546d8b206d7e8edec2ae378be15f833ef0ab42737c4ccf",
+    "Dashboard/dcu-monitoring/gateway-requests": "5831dfb25a2da965ebb033ca5749ce7000f5725ddef8e1054e3be357dd3a479f",
+    "Dashboard/dcu-monitoring/gateway": "add3bdf792b04109e6cb4e66b04068a61b5330781c9d5fe4d4d75b9ad230e924",
+    "Dashboard/dcu-monitoring/hosts-dcu": "55bb63f3878cf52c260845efef39f9fdac15b113cb607586e6b705dadfb87bb8",
+    "Dashboard/dcu-monitoring/monitoring-health": "e1459de55b9daff904be70cea6a2755d387d213121e4a0011e36cf0f14ab6aa3",
+    "Dashboard/xpu-monitoring/accelerator-resources": "13e0cddf3823b71ff29e0883ae0472b89209b50983973c72fbde84ee8fad52fd",
+    "Dashboard/xpu-monitoring/backend-decode": "f2948f0b6ad6599fd6e320bfae9d2dcb5922f7daa975aa04543272ea7032076f",
+    "Dashboard/xpu-monitoring/backend-performance": "151394de1109f10fc1f567a7b11f6e4201037cb933bc413e80eaf4c3f283165d",
+    "Dashboard/xpu-monitoring/backend-prefill": "49d80725fd16a88a35c2c1dc275cadac5b7e331f99a1f991803c267192ba3de6",
+    "Dashboard/xpu-monitoring/cache-store": "563d20b30257d47cd072da5c487a0ff38684c5563e8db0adc62371cb6e6e163a",
+    "Dashboard/xpu-monitoring/gateway-generation": "49901a90cc1c055738c158a45739bf23ac01505620f2414cd2b0d56cc1699576",
+    "Dashboard/xpu-monitoring/gateway-requests": "afabe776796fc11531f1d876bc9bf9507b6f31333b8631a434c5b5d389e2b29b",
+    "Dashboard/xpu-monitoring/gateway": "fd75f353374cfca072eed4dbedcdedf3806490d11acb9e67cba46ef7739049f1",
+    "Dashboard/xpu-monitoring/hosts-xpu": "7c6f19483e306d19c16d093d6c1d905e9434662fc7c6bd47bd97dd255a7b00c9",
+    "Dashboard/xpu-monitoring/monitoring-health": "13f986e6a2a7c2e524bbd82ca01a258be9ae8ba4830e8e3dce8feb1f1c4160eb"
+  },
+  "scrape_sha256": "99660be12433fdb6ca86554fbe42732a4d917bbc8538fed9a0be23658805ed71",
+  "scrape_path": "/data2/monitoring/release/deploy/scrape.yml",
+  "perses_runtime": "/data2/monitoring/perses/release"
+}

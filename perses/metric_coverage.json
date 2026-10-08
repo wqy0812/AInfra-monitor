@@ -16050,5 +16050,1400 @@
     "method": "未选",
     "panels": [],
     "reason": "未选为独立关键图；保留原始采集供按需查询。"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "ha_oplog_applied_sequence_id",
+    "metric_names": [
+      "ha_oplog_applied_sequence_id"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ha-sequence"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "ha_oplog_last_sequence_id",
+    "metric_names": [
+      "ha_oplog_last_sequence_id"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ha-sequence"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "ha_oplog_pending_entries",
+    "metric_names": [
+      "ha_oplog_pending_entries"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ha-lag"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "ha_oplog_standby_lag",
+    "metric_names": [
+      "ha_oplog_standby_lag"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ha-lag"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "ha_pending_mutation_queue_size",
+    "metric_names": [
+      "ha_pending_mutation_queue_size"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ha-lag"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "ha_standby_state",
+    "metric_names": [
+      "ha_standby_state"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ha-state"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_active_clients",
+    "metric_names": [
+      "master_active_clients"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-clients"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_allocated_bytes",
+    "metric_names": [
+      "master_allocated_bytes"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-capacity",
+      "a3-monitoring/a3-cache#mooncake-capacity-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_allocated_file_size_bytes",
+    "metric_names": [
+      "master_allocated_file_size_bytes"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-file-capacity",
+      "a3-monitoring/a3-cache#mooncake-file-capacity-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_attempted_evictions_total",
+    "metric_names": [
+      "master_attempted_evictions_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-evictions"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_exist_key_failures_total",
+    "metric_names": [
+      "master_batch_exist_key_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_exist_key_requests_total",
+    "metric_names": [
+      "master_batch_exist_key_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_get_replica_list_failures_total",
+    "metric_names": [
+      "master_batch_get_replica_list_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_get_replica_list_requests_total",
+    "metric_names": [
+      "master_batch_get_replica_list_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_put_end_failures_total",
+    "metric_names": [
+      "master_batch_put_end_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_put_end_requests_total",
+    "metric_names": [
+      "master_batch_put_end_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_put_revoke_failures_total",
+    "metric_names": [
+      "master_batch_put_revoke_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_put_revoke_requests_total",
+    "metric_names": [
+      "master_batch_put_revoke_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_put_start_failures_total",
+    "metric_names": [
+      "master_batch_put_start_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_put_start_requests_total",
+    "metric_names": [
+      "master_batch_put_start_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_query_ip_failures_total",
+    "metric_names": [
+      "master_batch_query_ip_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_query_ip_requests_total",
+    "metric_names": [
+      "master_batch_query_ip_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_replica_clear_failures_total",
+    "metric_names": [
+      "master_batch_replica_clear_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-1-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-1-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_batch_replica_clear_requests_total",
+    "metric_names": [
+      "master_batch_replica_clear_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-1-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-1-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_copy_end_failures_total",
+    "metric_names": [
+      "master_copy_end_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-3-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-3-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_copy_end_requests_total",
+    "metric_names": [
+      "master_copy_end_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-3-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-3-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_copy_revoke_failures_total",
+    "metric_names": [
+      "master_copy_revoke_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-3-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-3-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_copy_revoke_requests_total",
+    "metric_names": [
+      "master_copy_revoke_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-3-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-3-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_copy_start_failures_total",
+    "metric_names": [
+      "master_copy_start_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-3-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-3-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_copy_start_requests_total",
+    "metric_names": [
+      "master_copy_start_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-3-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-3-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_create_copy_task_failures_total",
+    "metric_names": [
+      "master_create_copy_task_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-4-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-4-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_create_copy_task_requests_total",
+    "metric_names": [
+      "master_create_copy_task_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-4-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-4-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_create_move_task_failures_total",
+    "metric_names": [
+      "master_create_move_task_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-4-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-4-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_create_move_task_requests_total",
+    "metric_names": [
+      "master_create_move_task_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-4-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-4-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_evict_disk_replica_failures_total",
+    "metric_names": [
+      "master_evict_disk_replica_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-1-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-1-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_evict_disk_replica_requests_total",
+    "metric_names": [
+      "master_evict_disk_replica_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-1-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-1-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_evicted_key_count",
+    "metric_names": [
+      "master_evicted_key_count"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-evicted-keys"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_evicted_size_bytes",
+    "metric_names": [
+      "master_evicted_size_bytes"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-evicted-bytes"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_exist_key_failures_total",
+    "metric_names": [
+      "master_exist_key_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_exist_key_requests_total",
+    "metric_names": [
+      "master_exist_key_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_fetch_tasks_failures_total",
+    "metric_names": [
+      "master_fetch_tasks_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-4-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-4-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_fetch_tasks_requests_total",
+    "metric_names": [
+      "master_fetch_tasks_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-4-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-4-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_get_replica_list_by_regex_failures_total",
+    "metric_names": [
+      "master_get_replica_list_by_regex_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_get_replica_list_by_regex_requests_total",
+    "metric_names": [
+      "master_get_replica_list_by_regex_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_get_replica_list_failures_total",
+    "metric_names": [
+      "master_get_replica_list_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_get_replica_list_requests_total",
+    "metric_names": [
+      "master_get_replica_list_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_key_count",
+    "metric_names": [
+      "master_key_count"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-keys"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_mount_segment_failures_total",
+    "metric_names": [
+      "master_mount_segment_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-2-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-2-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_mount_segment_requests_total",
+    "metric_names": [
+      "master_mount_segment_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-2-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-2-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_move_end_failures_total",
+    "metric_names": [
+      "master_move_end_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-3-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-3-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_move_end_requests_total",
+    "metric_names": [
+      "master_move_end_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-3-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-3-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_move_revoke_failures_total",
+    "metric_names": [
+      "master_move_revoke_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-3-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-3-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_move_revoke_requests_total",
+    "metric_names": [
+      "master_move_revoke_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-3-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-3-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_move_start_failures_total",
+    "metric_names": [
+      "master_move_start_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-3-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-3-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_move_start_requests_total",
+    "metric_names": [
+      "master_move_start_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-3-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-3-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_ping_failures_total",
+    "metric_names": [
+      "master_ping_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-2-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-2-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_ping_requests_total",
+    "metric_names": [
+      "master_ping_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-2-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-2-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_put_end_failures_total",
+    "metric_names": [
+      "master_put_end_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_put_end_requests_total",
+    "metric_names": [
+      "master_put_end_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_put_revoke_failures_total",
+    "metric_names": [
+      "master_put_revoke_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_put_revoke_requests_total",
+    "metric_names": [
+      "master_put_revoke_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_put_start_alloc_failures_total",
+    "metric_names": [
+      "master_put_start_alloc_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-put-cleanup"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_put_start_discard_cnt",
+    "metric_names": [
+      "master_put_start_discard_cnt"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-put-cleanup"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_put_start_discarded_staging_size",
+    "metric_names": [
+      "master_put_start_discarded_staging_size"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-staging"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_put_start_failures_total",
+    "metric_names": [
+      "master_put_start_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_put_start_release_cnt",
+    "metric_names": [
+      "master_put_start_release_cnt"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-put-cleanup"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_put_start_requests_total",
+    "metric_names": [
+      "master_put_start_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-0-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-0-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_query_task_failures_total",
+    "metric_names": [
+      "master_query_task_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-4-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-4-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_query_task_requests_total",
+    "metric_names": [
+      "master_query_task_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-4-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-4-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_remount_segment_failures_total",
+    "metric_names": [
+      "master_remount_segment_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-2-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-2-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_remount_segment_requests_total",
+    "metric_names": [
+      "master_remount_segment_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-2-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-2-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_remove_all_failures_total",
+    "metric_names": [
+      "master_remove_all_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-1-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-1-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_remove_all_requests_total",
+    "metric_names": [
+      "master_remove_all_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-1-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-1-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_remove_by_regex_failures_total",
+    "metric_names": [
+      "master_remove_by_regex_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-1-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-1-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_remove_by_regex_requests_total",
+    "metric_names": [
+      "master_remove_by_regex_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-1-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-1-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_remove_failures_total",
+    "metric_names": [
+      "master_remove_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-1-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-1-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_remove_requests_total",
+    "metric_names": [
+      "master_remove_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-1-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-1-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_soft_pin_key_count",
+    "metric_names": [
+      "master_soft_pin_key_count"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-keys"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_successful_evictions_total",
+    "metric_names": [
+      "master_successful_evictions_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-evictions"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_total_capacity_bytes",
+    "metric_names": [
+      "master_total_capacity_bytes"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-capacity",
+      "a3-monitoring/a3-cache#mooncake-capacity-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_total_file_capacity_bytes",
+    "metric_names": [
+      "master_total_file_capacity_bytes"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-file-capacity",
+      "a3-monitoring/a3-cache#mooncake-file-capacity-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_unmount_segment_failures_total",
+    "metric_names": [
+      "master_unmount_segment_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-2-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-2-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_unmount_segment_requests_total",
+    "metric_names": [
+      "master_unmount_segment_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-2-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-2-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_update_task_failures_total",
+    "metric_names": [
+      "master_update_task_failures_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-4-failures",
+      "a3-monitoring/a3-cache#mooncake-ops-4-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_update_task_requests_total",
+    "metric_names": [
+      "master_update_task_requests_total"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-ops-4-requests",
+      "a3-monitoring/a3-cache#mooncake-ops-4-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "master_value_size_bytes",
+    "metric_names": [
+      "master_value_size_bytes_bucket",
+      "master_value_size_bytes_count",
+      "master_value_size_bytes_sum"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-object-size",
+      "a3-monitoring/a3-cache#mooncake-object-buckets",
+      "a3-monitoring/a3-cache#mooncake-object-count",
+      "a3-monitoring/a3-cache#mooncake-object-average"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "segment_allocated_bytes",
+    "metric_names": [
+      "segment_allocated_bytes"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-segments",
+      "a3-monitoring/a3-cache#mooncake-segment-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
+  },
+  {
+    "environment": "a3-vllm",
+    "job": "mooncake-a3",
+    "metric_family": "segment_total_capacity_bytes",
+    "metric_names": [
+      "segment_total_capacity_bytes"
+    ],
+    "status": "已覆盖",
+    "method": "查询或校验依赖",
+    "panels": [
+      "a3-monitoring/a3-cache#mooncake-segments",
+      "a3-monitoring/a3-cache#mooncake-segment-ratio"
+    ],
+    "reason": "",
+    "verified_at": "2026-10-05"
   }
 ]

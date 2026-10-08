@@ -16,7 +16,12 @@ def annotate(document, repaired_at=None):
     if result['metadata']['name'] not in ('backend-performance', 'backend-prefill', 'backend-decode', 'a3-cache', 'monitoring-health'):
         return result
     displays = [result['spec'].setdefault('display', {})]
-    displays += [p['spec'].setdefault('display', {}) for p in result['spec'].get('panels', {}).values()]
+    for key, panel in result['spec'].get('panels', {}).items():
+        display = panel['spec'].setdefault('display', {})
+        if key.startswith('mooncake-'):
+            display['description'] = display.get('description', '').split(MARKER, 1)[0]
+        else:
+            displays.append(display)
     for display in displays:
         old = display.get('description', '')
         # Keep a previously published exact boundary when regenerating resources.

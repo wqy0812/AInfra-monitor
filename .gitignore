@@ -30,6 +30,7 @@ htmlcov/
 # Deployment evidence and local working records.
 /evidence/
 /work/
+/output/
 # Release inputs (manifest/panels/locks) remain tracked; these are execution results.
 /deploy/**/complete.json
 /deploy/**/*-complete.json

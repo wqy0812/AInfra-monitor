@@ -10,7 +10,7 @@ from .replay import decode_export,replay
 from .resource_series import resource_paths
 from .query_client import QueryClient
 from .access import client_allowlist
-from . import a3, gateway_live, host_cpu, xpu, xpu_cache
+from . import a3, a3_store, a3_effective, gateway_live, host_cpu, xpu, xpu_cache
 from .latency import PATHS as LATENCY_PATHS
 from .request_scope import PATH_REGEX as REQUEST_PATH_REGEX, SCHEMA as REQUEST_SCHEMA, is_request_path
 from .perses_acceleration import AccelerationService, install_routes as install_perses_routes
@@ -47,15 +47,17 @@ def put(obj,path,value):
 def encode(points,environment="dcu-pd",latency_only=False):
  validate_environment(environment)
  lines=[]
- paths=sorted(set(PATHS+(["nodes."+r+".cache_60s.external_ratio" for r in ("prefill","decode")]+list(host_cpu.PATHS) if environment=="a3-vllm" else [])).union(*(resource_paths(p) for p in points)))
+ paths=sorted(set(PATHS+(["nodes."+r+".cache_60s.external_ratio" for r in ("prefill","decode")]+list(host_cpu.PATHS)+list(a3_effective.PATHS) if environment=="a3-vllm" else [])).union(*(resource_paths(p) for p in points)))
  if latency_only:
   assert environment=="dcu-pd"
   paths=LATENCY_PATHS
  for p in points:
   for path in paths:
+   effective=environment=='a3-vllm' and path in a3_effective.PATHS
+   if effective and (get(p,'nodes.prefill.cache_60s.effective.since') is None or p['ts']<get(p,'nodes.prefill.cache_60s.effective.since')):continue
    value=get(p,path);valid=isinstance(value,(int,float)) and math.isfinite(value)
    cpu=environment=='a3-vllm' and path in host_cpu.PATHS
-   schema=host_cpu.SCHEMA if cpu else REQUEST_SCHEMA if is_request_path(path) else 'v1'
+   schema=a3_effective.SCHEMA if effective else host_cpu.SCHEMA if cpu else REQUEST_SCHEMA if is_request_path(path) else 'v1'
    label='{path='+json.dumps(path)+',environment='+json.dumps(environment)+',schema='+json.dumps(schema)
    if cpu:label+=',node='+json.dumps(host_cpu.PATHS[path])
    label+='}'
@@ -82,8 +84,9 @@ def history_expression(environment,kind,step,view='full'):
  bases=['{'+scope+',schema="v1",path!~'+json.dumps(REQUEST_PATH_REGEX)+'}',
         '{'+scope+',schema='+json.dumps(REQUEST_SCHEMA)+',path=~'+json.dumps(REQUEST_PATH_REGEX)+'}']
  if environment=='a3-vllm':
-  bases[0]=bases[0][:-1]+',path!~'+json.dumps(host_cpu.PATH_REGEX)+'}'
+  bases[0]=bases[0][:-1]+',path!~'+json.dumps(host_cpu.PATH_REGEX)+',path!~'+json.dumps(a3_effective.PATH_REGEX)+'}'
   bases.append('{'+scope+',schema='+json.dumps(host_cpu.SCHEMA)+',path=~'+json.dumps(host_cpu.PATH_REGEX)+'}')
+  bases.append('{'+scope+',schema='+json.dumps(a3_effective.SCHEMA)+',path=~'+json.dumps(a3_effective.PATH_REGEX)+'}')
  def expression(base):
   if view=='summary':base=base[:-1]+',path!~".*\\\\.resources\\\\..*"}'
   metric='monitoring_chart_'+('value' if kind=='value' else 'valid')+base
@@ -94,7 +97,8 @@ def history_expression(environment,kind,step,view='full'):
 class Service:
  def __init__(self,environment="dcu-pd"):
   self.environment=validate_environment(environment)
-  self.paths=sorted(set(PATHS+(["nodes."+role+".cache_60s.external_ratio" for role in ("prefill","decode")]+list(host_cpu.PATHS) if environment=="a3-vllm" else [])))
+  self.paths=sorted(set(PATHS+(["nodes."+role+".cache_60s.external_ratio" for role in ("prefill","decode")]+list(host_cpu.PATHS)+list(a3_effective.PATHS) if environment=="a3-vllm" else [])))
+  self.cache_effective_since=a3_effective.load_since(STATE) if environment=='a3-vllm' else None
   self.watermark_file=STATE/("watermark-"+REQUEST_SCHEMA+"-"+environment+".json")
   self.replay=a3.replay if environment=="a3-vllm" else xpu.replay if environment=="xpu-pd" else replay
   self.client=QueryClient()
@@ -105,7 +109,9 @@ class Service:
  async def raw(self,start,end):
   selectors=['{environment='+json.dumps(self.environment)+',job=~"sglang-prefill|sglang-decode",__name__=~'+json.dumps(LIVE_MODEL_METRICS)+'}']
   if self.environment=='dcu-pd':selectors.append('{environment="dcu-pd",job=~"node-prefill|node-decode|dcu-prefill|dcu-decode|mooncake"}')
-  if self.environment=='a3-vllm':selectors=['{environment="a3-vllm",job="vllm-a3",__name__=~"up|vllm:(request_success_total|generation_tokens_total|prefix_cache_(hits|queries)_total|external_prefix_cache_(hits|queries)_total|num_requests_(running|waiting)|kv_cache_usage_perc|(time_to_first_token|inter_token_latency|e2e_request_latency)_seconds_(bucket|count))"}']
+  if self.environment=='a3-vllm':selectors=['{environment="a3-vllm",job="vllm-a3",__name__=~"up|vllm:(request_success_total|generation_tokens_total|prefix_cache_(hits|queries)_total|external_prefix_cache_(hits|queries)_total|num_requests_(running|waiting)|kv_cache_usage_perc|(time_to_first_token|inter_token_latency|e2e_request_latency)_seconds_(bucket|count))"}',
+   '{environment="a3-vllm",job="vllm-a3",node="a3-1",__name__=~"vllm:'+a3_effective.METRICS+'"}']
+  if self.environment=='a3-vllm':selectors.append('{environment="a3-vllm",job="mooncake-a3",__name__=~"up|'+'|'.join(a3_store.METRICS)+'"}')
   r=await self.client.get(VM+'/api/v1/export',params={'match[]':selectors,'start':start,'end':end,'reduce_mem_usage':1});r.raise_for_status()
   def decode():
    return (a3.decode_export if self.environment=='a3-vllm' else decode_export)(json.loads(line) for line in r.text.splitlines() if line)
@@ -124,7 +130,9 @@ class Service:
   start=max(replay_watermark-80,floor)
   until=min(end,replay_watermark+300)
   groups=await self.raw(start,until)
+  if self.environment=='a3-vllm' and self.cache_effective_since is None:self.cache_effective_since=a3_effective.activate(STATE,self.started)
   replay_options={"emit_start":replay_watermark+5} if self.environment=="a3-vllm" else {}
+  if self.environment=='a3-vllm':replay_options['effective_since']=self.cache_effective_since
   replay_task=asyncio.to_thread(self.replay,groups,start,until,**replay_options)
   if self.environment=='a3-vllm':
    (snaps,points),(cpu_values,cpu_status)=await asyncio.gather(replay_task,host_cpu.collect(self.client,VM,replay_watermark+5,until))
@@ -140,7 +148,7 @@ class Service:
    temp=self.watermark_file.with_suffix('.tmp');temp.write_text(json.dumps(saved));temp.replace(self.watermark_file)
    self.watermark=watermark;self.retention_gap=retention_gap
   latest={**snaps[-1],'environment':self.environment} if snaps else dict(self.latest)
-  if self.environment=='a3-vllm':latest['collection_coverage']=a3.collection_coverage()
+  if self.environment=='a3-vllm':latest.update(collection_coverage=a3.collection_coverage(),cache_effective_since=self.cache_effective_since)
   try:
    r=await self.client.get(VM+'/api/v1/query',params={'query':'{__name__=~"vm_free_disk_space_bytes|vmagent_remotewrite_pending_data_bytes"}'})
    r.raise_for_status();values=r.json()['data']['result']
@@ -230,9 +238,23 @@ class Service:
     node=p['nodes'][role];node['cache_60s']['semantics']='vllm-prefix-token-v1' if self.environment=='a3-vllm' else (xpu_cache.SCHEMA if self.environment=='xpu-pd' and role=='prefill' else 'unavailable' if self.environment=='xpu-pd' else 'prefill-effective-v1' if role=='prefill' else 'request-accounting-v1')
     fields={'requests':'requests','output_tokens':'output_tokens','decode_tokens':'decode_tokens','cpu':'cpu','cache':'cache_60s.ratio','hicache':'hicache.representative.ratio',**{k:'percentiles.'+k+'.p95' for k in ('ttft','itl','e2e')}}
     if self.environment=='a3-vllm':fields.update(cpu_iowait='cpu_iowait',external_cache='cache_60s.external_ratio')
+    if self.environment=='a3-vllm' and role=='prefill':
+     effective=node['cache_60s']['effective'];effective.update(semantics=a3_effective.SCHEMA,since=self.cache_effective_since)
+     if self.cache_effective_since is None or ts<self.cache_effective_since:
+      effective.update(a3_effective.empty(self.cache_effective_since,'上线前无新口径数据'))
+     else:
+      rates=[effective.get(key) for key in ('ratio','device','storage')]
+      consistent=all(a3_effective.finite(rate) and rate<=1 for rate in rates) and math.isclose(rates[0],rates[1]+rates[2],rel_tol=1e-12,abs_tol=1e-12)
+      if not consistent:
+       effective.update(ratio=None,device=None,storage=None)
+      effective['reason']='窗口内无有效输入 Token' if effective.get('input_tokens')==0 else '原生分层数据缺失、缺采或计数不完整' if not consistent else None
+     fields['effective_cache']='cache_60s.effective.ratio'
     node['gap_before']=[k for k,path in fields.items() if mins.get(('nodes.'+role+'.'+path,ts))!=1]
+    if self.environment=='a3-vllm' and role=='prefill' and (effective.get('ratio') is None or any(mins.get((a3_effective.PREFIX+key,ts))!=1 for key in ('device','storage'))):
+     if 'effective_cache' not in node['gap_before']:node['gap_before'].append('effective_cache')
    p['mooncake']['gap_before']=[key for key,path in STORE_GAPS.items() if mins.get(('mooncake.'+path,ts))!=1]
-   p['mooncake']['tier_query_60s']['semantics']='store-replica-query-v1'
+   p['mooncake']['tier_query_60s']['semantics']='unavailable' if self.environment=='a3-vllm' else 'store-replica-query-v1'
+   if self.environment=='a3-vllm':p['mooncake']['tier_query_60s']['reason']=a3_store.UNAVAILABLE
    for root in ('nodes.prefill','nodes.decode','mooncake'):
     obj=get(p,root)
     obj['gap_before'] += [path[len(root)+1:] for path in paths if path.startswith(root+'.resources.') and mins.get((path,ts))!=1]
@@ -242,6 +264,7 @@ class Service:
    p=copy.deepcopy(self.latest_point);p['source']='victoriametrics';p['environment']=self.environment
    for node in p['nodes'].values():node['gap_before']=['requests','output_tokens','decode_tokens','cpu','cache','hicache','ttft','itl','e2e']+(['cpu_iowait','external_cache'] if self.environment=='a3-vllm' else [])
    p.setdefault('mooncake',{})['gap_before']=list(STORE_GAPS)
+   if self.environment=='a3-vllm':p['nodes']['prefill']['gap_before'].append('effective_cache')
    for root in ('nodes.prefill','nodes.decode','mooncake'):
     get(p,root)['gap_before'] += [path[len(root)+1:] for path in resource_paths(p) if path.startswith(root+'.')]
    points=[x for x in points if x['ts']!=p['ts']]+[p]
@@ -250,7 +273,7 @@ class Service:
   gateway_live.attach(points,gateway,step)
   if view=='summary':points=[summary_point(p) for p in points]
   value={'environment':self.environment,'hours':hours,'stride':step//5,'points':points,'source':'victoriametrics','retention_hours':720,'gateway_status':gateway_status}
-  if self.environment=='a3-vllm':value['collection_coverage']=a3.collection_coverage()
+  if self.environment=='a3-vllm':value.update(collection_coverage=a3.collection_coverage(),cache_effective_since=self.cache_effective_since)
   return value
 
 @asynccontextmanager

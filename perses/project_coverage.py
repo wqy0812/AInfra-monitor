@@ -121,6 +121,7 @@ def main():
     (ROOT / "METRICS_GUIDE.md").write_text("\n".join(guide))
     report = ["# Perses 关键指标覆盖清单", "", "历史采集基线：2026-09-15 test4 采集清单及当时迁移前后看板对照。下表和 metric_coverage.json 保留该次采集的指标范围，不代表当前在线目标或最新覆盖数量；2026-09-16 新增 NPU 等指标未计入该基线。按 environment、job 和指标族计数；同一族在多个 job 出现会分别记录。直方图的桶、sum、count 合为一族，校验依赖不等同于单独展示数值。", "",
               "| 环境 | 原已覆盖 | 新增覆盖 | 未单独展示 |", "|---|---:|---:|---:|"]
+    report.insert(4, 'A3 Mooncake 基线已于 2026-10-05 按当前 Master 端点更新：当时 88 个原生指标族均有展示。2026-10-08 按用户要求精简缓存看板 27 图，原始采集保留；覆盖清单保留历史基线，当前图表以图表说明为准。其他来源仍沿用上述历史基线。')
     for env in sorted({x['environment'] for x in coverage}):
         counts = collections.Counter(x["status"] for x in coverage if x["environment"] == env)
         report.append(f'| {env} | {counts["已覆盖"]} | {counts["新增覆盖"]} | {counts["未展示"]} |')

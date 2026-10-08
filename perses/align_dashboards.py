@@ -13,10 +13,7 @@ ENV = {'a3-monitoring':'a3-vllm','dcu-monitoring':'dcu-pd','xpu-monitoring':'xpu
 HOST = [('p0','CPU 使用率（%）'),('p1','主机内存（GiB）'),('p2','文件系统容量使用率（%）'),('p3','磁盘吞吐（MiB/秒）'),('p4','网络吞吐（MiB/秒）'),('extra-load','主机负载（任务数）'),('extra-iowait','CPU I/O 等待（%）'),('extra-memory-ratio','内存占用比例（%）'),('extra-swap','Swap 已用与总量（GiB）'),('extra-fs-free','文件系统剩余容量（GiB）')]
 PERFORMANCE = [('requests','后端请求速率（请求/秒）'),('output','后端输出 Token 吞吐（Token/秒）'),('ttft','首 Token 延迟 TTFT（秒）'),('itl','Token 间延迟 ITL（ms）'),('e2e','端到端延迟 E2E（秒）')]
 HARDWARE = [('utilization','加速卡利用率（%）'),('memory-used','加速卡显存已用（GiB）'),('temperature','加速卡温度（°C）'),('power','加速卡功耗（W）'),('memory-total','加速卡显存总量（GiB）'),('memory-ratio','加速卡显存占用比例（%）')]
-OPS = ['exist_key','put_start','put_end','put_revoke','get_replica_list','batch_exist_key','batch_put_start','batch_put_end','batch_put_revoke','batch_get_replica_list']
-GAUGES = ['master_allocated_bytes','master_total_capacity_bytes','master_allocated_file_size_bytes','master_total_file_capacity_bytes','master_key_count','master_active_clients']
-MOONCAKE_METRICS = GAUGES + ['master_'+op+'_'+suffix+'_total' for op in OPS for suffix in ['requests','failures']]
-MOONCAKE_METRICS += ['master_attempted_evictions_total','master_successful_evictions_total','master_evicted_key_count','master_evicted_size_bytes']
+from a3_mooncake import METRICS as MOONCAKE_METRICS
 
 
 def exprs(p): return [q['spec']['plugin']['spec']['query'] for q in p['spec']['queries']]
@@ -154,25 +151,8 @@ def align(resources):
 
 
 def mooncake(d):
-    d=copy.deepcopy(d)
-    if 'mooncake-capacity' in d['spec']['panels']:return d
-    q=Queries('a3-vllm','mooncake-a3')
-    defs=[('capacity','Mooncake 内存容量','GiB',[(q.gauge(m)+' / 1024^3',t) for m,t in [('master_allocated_bytes','已分配'),('master_total_capacity_bytes','总容量')]],'Master 管理的内存 segment 总容量及分配量，不是 NPU 显存。'),
-          ('memory-ratio','Mooncake 内存分配比例','%', [('100 * ('+q.gauge('master_allocated_bytes')+') / (('+q.gauge('master_total_capacity_bytes')+') > 0)','已分配比例')],'分配量 / 总容量；零容量时留空。'),
-          ('file-capacity','Mooncake 文件层容量','GiB',[(q.gauge(m)+' / 1024^3',t) for m,t in [('master_allocated_file_size_bytes','已分配'),('master_total_file_capacity_bytes','总容量')]],'源定义为 3fs/nfs 文件存储容量；零容量不表示已启用 SSD offload，也不代表物理磁盘 I/O。'),
-          ('keys','Mooncake Key 数','个',[(q.gauge('master_key_count'),'Key')],'Master 管理的 Key 数，不是模型请求数。'),
-          ('clients','Mooncake 活跃客户端','个',[(q.gauge('master_active_clients'),'客户端')],'Master 报告的活跃客户端数。'),
-          ('requests','Mooncake 操作请求速率','次/秒',[(q.rate('master_'+op+'_requests_total'),op) for op in OPS],'分别展示单次及批量 RPC 调用；不将批量 RPC 次数解释为 Key 数或缓存命中。'),
-          ('failures','Mooncake 操作失败速率','次/秒',[(q.rate('master_'+op+'_failures_total'),op) for op in OPS],'Master 操作失败计数速率；不是模型生成失败率或缓存未命中率。'),
-          ('evictions','Mooncake 驱逐操作速率','次/秒',[(q.rate(m),t) for m,t in [('master_attempted_evictions_total','尝试'),('master_successful_evictions_total','成功')]],'驱逐操作尝试和成功次数，保留源计数定义。'),
-          ('evicted-keys','Mooncake 驱逐 Key 速率','个/秒',[(q.rate('master_evicted_key_count'),'Key')],'被驱逐对象数量的增长速率。'),
-          ('evicted-bytes','Mooncake 驱逐数据速率','MiB/秒',[(q.rate('master_evicted_size_bytes')+' / 1024^2','数据')],'被驱逐对象字节计数，不代表物理 SSD 吞吐。')]
-    keys=[]
-    for suffix,title,unit,qs,desc in defs:
-        key='mooncake-'+suffix;p=panel(title,qs,unit,desc+'\n\n仅 A3 Mooncake Master。保留有效零值，采集失败、过期、计数重置或缺样留空；不推断缓存命中率。')
-        present(p,'a3-cache');d['spec']['panels'][key]=p;keys.append(key)
-    existing=copy.deepcopy(d['spec']['layouts']);layout(d,[('Mooncake Master',keys)]);d['spec']['layouts']=existing+d['spec']['layouts']
-    return d
+    from a3_mooncake import configure
+    return configure(d)
 
 
 def scrape(text):
