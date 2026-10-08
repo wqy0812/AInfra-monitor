@@ -21,13 +21,13 @@ import urllib.error
 from pathlib import Path
 
 from merge_release import api, equivalent, fingerprint, normalized, path, record_failure, save, sha, snapshot, query
-from generator_transaction import plan as generator_plan, install as generator_install, rollback as generator_rollback
-from admin import update as admin_update
+from generator_transaction import plan as generator_plan, install as generator_install
+from release_support import readback
 from acceleration_publication import published, NAME
 
 ROOT = Path(__file__).resolve().parents[2]
 STATE = Path('/data2/monitoring/state')
-CATALOG = ROOT / 'api-build-v2/perses_acceleration_catalog.json'
+CATALOG = ROOT / 'monitoring/perses_acceleration_catalog.json'
 GROUPS = ('cpu', 'dcu', 'a3')
 PERFORMANCE_POLICY = 'faster-median-v1'
 WINDOW_SECONDS = 43200
@@ -367,39 +367,7 @@ def impact(root, group):
     save(root, 'non-target-performance.json', report)
 
 
-def rollback(root, group):
-    journal_path = root / 'batch-journal.json'
-    if journal_path.exists():
-        for entry in reversed(json.loads(journal_path.read_text())):
-            current = api(path(entry['after']))
-            for key, old in entry['before']['spec']['panels'].items():
-                new = entry['after']['spec']['panels'][key]
-                if old == new or current['spec']['panels'][key] == old: continue
-                assert current['spec']['panels'][key] == new, 'Concurrent target panel edit'
-                current['spec']['panels'][key] = old
-            api(path(current), 'PUT', current)
-            assert api(path(current))['spec'] == current['spec']
-    generator_rollback(root)
-    admin_update(STATE / 'perses-acceleration-admin.json', 'disable', group=group)
-    save(root, 'batch-rollback.json', {'group': group, 'at': time.time()})
-
-
-def validate_impact_exception(root, group, after, impact, exception):
-    """Explicit, candidate-bound user release decision; never rewrite test results."""
-    decision = json.loads(exception.read_text())
-    assert group == decision['group'] == 'dcu'
-    assert decision['scope'] == 'publish_after_interrupted_impact_health_check'
-    assert decision['user_instruction'] == '新版本没问题，上线吧'
-    assert decision['candidate_sha256'] == sha(after)
-    assert decision['impact_sha256'] == hashlib.sha256((root / 'non-target-performance.json').read_bytes()).hexdigest()
-    assert decision['recovery_sha256'] == hashlib.sha256((root / 'recovery-progress.json').read_bytes()).hexdigest()
-    recovery = json.loads((root / 'recovery-progress.json').read_text())
-    assert recovery['state'] == 'stopped' and "result['status'] == 'ok'" in recovery['traceback']
-    assert impact['benchmarks'] and all(b['passed'] for b in impact['benchmarks']), 'Cannot waive measured impact regressions'
-    return decision
-
-
-def apply(root, group, impact_exception=None):
+def apply(root, group):
     before = json.loads((root / 'batch-prepared.json').read_text()); after = json.loads((root / 'batch-candidate.json').read_text())
     report = json.loads((root / 'batch-performance.json').read_text())
     browser = json.loads((root / 'materialized-browser.json').read_text())
@@ -411,8 +379,7 @@ def apply(root, group, impact_exception=None):
     assert browser['passed'] and browser['catalog_sha256'] == report['catalog_sha256']
     assert impact['samples'] == 41 and impact['catalog_sha256'] == report['catalog_sha256'] and impact['group'] == group
     assert impact['candidate_sha256'] == sha(after)
-    decision = validate_impact_exception(root, group, after, impact, impact_exception) if impact_exception else None
-    assert impact['passed'] or decision is not None, 'Non-target impact admission incomplete'
+    assert impact['passed'], 'Non-target impact admission incomplete'
     assert normalized(snapshot()) == normalized(before), 'Concurrent resource edit'
     assert fingerprint() == json.loads((root / 'batch-services.json').read_text())
     readiness(json.loads(CATALOG.read_text()), group)
@@ -427,11 +394,10 @@ def apply(root, group, impact_exception=None):
             current = api(path(old)); assert current['spec'] == old['spec']
             new = copy.deepcopy(candidate); new['metadata'] = current['metadata']
             journal.append({'before': current, 'after': new}); save(root, 'batch-journal.json', journal)
-            api(path(new), 'PUT', new); assert api(path(new))['spec'] == new['spec']
+            api(path(new), 'PUT', new); readback(api, path(new), new)
         generator_install(root)
         assert normalized(snapshot()) == normalized(after)
         publication = {'group': group, 'at': time.time(), 'panels': len(changes)}
-        if decision is not None: publication['user_release_exception'] = decision
         save(root, 'batch-publication.json', publication)
     except BaseException as error:
         record_failure(root, 'batch-apply-failure.json', error)
@@ -491,13 +457,12 @@ def observe(root, group):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(); parser.add_argument('action', choices=('prepare', 'audit', 'impact', 'apply', 'observe', 'rollback'))
+    parser = argparse.ArgumentParser(); parser.add_argument('action', choices=('prepare', 'audit', 'impact', 'apply', 'observe'))
     parser.add_argument('--group', choices=GROUPS, required=True); parser.add_argument('--evidence', type=Path, required=True)
     parser.add_argument('--resume', action='store_true', help='Resume interrupted audit with unchanged resources and saved fixed windows')
-    parser.add_argument('--impact-exception', type=Path, help='Explicit candidate-bound user release decision')
+    parser.add_argument('--catalog', type=Path, default=CATALOG, help='Catalog matching the deployed API')
     args = parser.parse_args(); assert args.evidence.is_dir()
-    assert not args.impact_exception or args.action == 'apply'
+    CATALOG = args.catalog.resolve()
     assert not args.resume or args.action == 'audit', '--resume is only for audit'
-    if args.impact_exception: apply(args.evidence, args.group, impact_exception=args.impact_exception)
-    elif args.resume: audit(args.evidence, args.group, resume=True)
+    if args.resume: audit(args.evidence, args.group, resume=True)
     else: globals()[args.action](args.evidence, args.group)

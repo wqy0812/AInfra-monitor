@@ -1,4 +1,4 @@
-"""Scoped generator installation, with byte backups and concurrency checks."""
+"""Scoped generator installation, with byte evidence and concurrency checks."""
 import base64
 import copy
 import hashlib
@@ -89,39 +89,3 @@ def install(evidence):
         assert encoded(path) == item['before'], 'Concurrent generator edit: ' + item['path']
         save(path, base64.b64decode(item['after']))
         assert encoded(path) == item['after']
-
-
-def rollback(evidence):
-    path = evidence / 'generator-journal.json'
-    if not path.exists(): return
-    journal = json.loads(path.read_text())
-    for item in reversed(journal['entries']):
-        target = RUNTIME / item['path']
-        current = encoded(target)
-        if current == item['before']: continue
-        if item['path'].startswith('projects/'):
-            if item['path'].endswith('/perses-accelerated-datasource.json'):
-                # A non-default unused datasource is inert; later groups may use it.
-                assert current == item['after'], 'Concurrent datasource generator edit'
-                continue
-            value = json.loads(target.read_text())
-            identity = (value['metadata']['project'], value['metadata']['name'])
-            for change in journal['changes']:
-                if (change['project'], change['dashboard']) != identity: continue
-                queries = value['spec']['panels'][change['panel']]['spec']['queries']
-                if queries == change['before']['spec']['queries']: continue
-                assert queries == change['after']['spec']['queries'], 'Concurrent target generator query edit'
-                value['spec']['panels'][change['panel']]['spec']['queries'] = change['before']['spec']['queries']
-            save(target, json_bytes(value))
-        elif item['path'] == 'acceleration_state.json':
-            value = json.loads(target.read_text())
-            selected = {(c['project'], c['dashboard'], c['panel']) for c in journal['changes']}
-            if journal.get('group'):
-                value['groups'] = [g for g in value['groups'] if g != journal['group']]
-            else:
-                value['merges'] = [m for m in value['merges'] if tuple(m) not in selected]
-            save(target, json_bytes(value))
-        else:
-            # Inert shared helpers stay installed so a later independent batch
-            # keeps working. The exact old bytes remain in the rollback journal.
-            assert current == item['after'], 'Concurrent generator helper edit'

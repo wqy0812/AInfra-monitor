@@ -20,7 +20,7 @@ def environment(tmp_path, monkeypatch, scheduling=lambda elapsed: {}, unhealthy=
     monkeypatch.setattr(release, 'CATALOG', catalog)
     monkeypatch.setattr(release, 'fingerprint', lambda: [])
     rollbacks = []
-    monkeypatch.setattr(release, 'rollback', lambda root, group: rollbacks.append(group))
+    monkeypatch.setattr(release, 'rollback', lambda root, group: rollbacks.append(group), raising=False)
     def read_health():
         return {'status': 'degraded' if unhealthy(clock[0]) else 'ok',
             'environments': {'env': {'error': None, 'processed_at': 99995 + clock[0]}},

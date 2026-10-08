@@ -10,6 +10,7 @@ import json
 import shutil
 import time
 from pathlib import Path
+from api_readiness import publication, accepted
 
 import materialized_release as release
 from merge_release import fingerprint, save
@@ -17,9 +18,9 @@ from merge_release import fingerprint, save
 
 def _main(build, batches, browser, hours, observation=None, resume_prepared=None):
     catalog = json.loads(release.CATALOG.read_text())
-    expected = json.loads((build / 'shadow-started.json').read_text())
+    expected = publication(build)
     observed_build = observation or build
-    observed_release = json.loads((observed_build / 'shadow-started.json').read_text())
+    observed_release = publication(observed_build)
     assert observed_release['image'] == expected['image'], 'Observation belongs to another API image'
     deadline = time.time() + hours * 3600
     summary = {'started_at': time.time(), 'published_panels': 0, 'groups': {}}
@@ -55,7 +56,7 @@ def _main(build, batches, browser, hours, observation=None, resume_prepared=None
                 assert all(not j['error'] and not (j.get('backfill') or {}).get('error') for j in selected), 'Materialization failure'
                 try:
                     release.readiness(catalog, group)
-                    assert json.loads((observed_build / 'shadow-observation.json').read_text())['passed'], 'Startup acceptance still pending'
+                    assert accepted(observed_build), 'Startup acceptance still pending'
                     break
                 except AssertionError:
                     time.sleep(30)

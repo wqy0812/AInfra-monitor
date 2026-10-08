@@ -189,14 +189,16 @@ def test_partial_publication_keeps_changes_and_blocks_next_batch(tmp_path, monke
         runtime.write_text('{"groups":["cpu"]}')
         raise failure
     monkeypatch.setattr(release, 'generator_install', install)
-    monkeypatch.setattr(release, 'rollback', lambda *a: pytest.fail('Rollback must never run'))
-    monkeypatch.setattr(release, 'admin_update', lambda *a, **k: pytest.fail('Do not disable acceleration'))
+    monkeypatch.setattr(release, 'rollback', lambda *a: pytest.fail('Rollback must never run'), raising=False)
+    import admin
+    monkeypatch.setattr(admin, 'update', lambda *a, **k: pytest.fail('Do not disable acceleration'))
     original_save = merge_release.save
     def save(root, name, data):
         if name == 'batch-apply-failure.json' and not report_writable:
             raise OSError('disk unavailable')
         original_save(root, name, data)
-    monkeypatch.setattr(merge_release, 'save', save)
+    import release_support
+    monkeypatch.setattr(release_support, 'save', save)
     with pytest.raises(OSError) as caught:
         release.apply(root, 'cpu')
     assert caught.value is failure

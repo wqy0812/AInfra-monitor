@@ -22,7 +22,7 @@
 
 ## 单元测试覆盖率
 
-安装 `requirements-test.txt` 后运行 `./scripts/test_coverage.sh`，也可传 pytest 文件或筛选参数。`.coveragerc` 统计整个 `monitoring/` 运行包的行与分支，包括未导入模块；Perses 生成/发布脚本、冻结发布材料及第三方依赖不在此运行包覆盖率分母中，但已有 Perses 回归仍执行。
+安装 `requirements-test.txt` 后运行 `./scripts/test_coverage.sh`，也可传 pytest 文件或筛选参数。`.coveragerc` 统计整个 `monitoring/` 运行包的行与分支，包括未导入模块；Perses 生成/发布脚本及第三方依赖不在此运行包覆盖率分母中，但已有 Perses 回归仍执行。
 
 终端 `Cover` 为行与分支合并覆盖率；`work/coverage/coverage.json` 分别提供 `percent_statements_covered`、`percent_branches_covered`，`htmlcov/index.html` 展示逐行缺口。失败也生成报告并返回测试失败码。产物均由 Git 忽略。
 
@@ -62,3 +62,7 @@ docker compose -f tests/compose.vm.yml down
 ## 已删除的历史升级测试
 
 2026-09-30 删除依赖 code-eval 退役发布脚本的“活动任务不能冻结”测试及其跨项目加载/开关。该用例验证旧升级流程，不适用于当前 monitoring 停机窗口升级；`--run-cross-project` 和 `CODE_EVAL_ROOT` 不再是本项目测试入口。
+
+## 发布工具清理回归
+
+统一发布入口、禁止回退和失败留证检查位于 `test_release_entrypoints.py`、`test_deployment_tools.py`、`test_forward_repair.py`；Perses 生成器、资源作用域、认证与并发编辑检查继续保留。全量收集可用 `pytest --collect-only` 检查清理后的导入闭包，不代表全量用例已执行。历史脚本专属测试随入口退役，共用下载校验、采集目标身份、网关只读和管理状态并发测试保留。

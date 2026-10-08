@@ -10,34 +10,6 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 
-@pytest.mark.parametrize('module_name', ['alignment_release', 'xpu_role_release'])
-def test_scrape_reload_failure_keeps_new_configuration(tmp_path, monkeypatch, module_name):
-    monkeypatch.syspath_prepend(str(ROOT / 'perses'))
-    release = importlib.import_module(module_name)
-    config = tmp_path / 'scrape.yml'; config.write_bytes(b'old')
-    (tmp_path / 'scrape-before.yml').write_bytes(b'old')
-    (tmp_path / 'scrape-candidate.yml').write_bytes(b'new')
-    monkeypatch.setattr(release, 'CONFIG', config)
-    monkeypatch.setattr(release.subprocess, 'check_output', lambda *a: json.dumps([
-        {'Config': {'Entrypoint': ['vmagent']}, 'Image': 'image'}]).encode())
-    calls = []
-    failure = OSError('HUP response lost')
-    def command(args):
-        calls.append(args)
-        if args[:2] == ['docker', 'kill']:
-            raise failure
-    monkeypatch.setattr(release.subprocess, 'check_call', command)
-    with pytest.raises(OSError) as caught:
-        if module_name == 'alignment_release':
-            release.collect(tmp_path)
-        else:
-            monkeypatch.setattr(sys, 'argv', ['release', 'collect', '--evidence', str(tmp_path)])
-            release.main()
-    assert caught.value is failure and config.read_bytes() == b'new'
-    assert sum(args[:2] == ['docker', 'kill'] for args in calls) == 1
-    assert (tmp_path / 'collection-journal.json').exists()
-
-
 @pytest.mark.parametrize('module_name', ['project_release', 'merge_release'])
 def test_dashboard_write_response_loss_keeps_candidate_and_journal(tmp_path, monkeypatch, module_name):
     monkeypatch.syspath_prepend(str(ROOT / 'perses'))
@@ -51,7 +23,7 @@ def test_dashboard_write_response_loss_keeps_candidate_and_journal(tmp_path, mon
     current = copy.deepcopy(old)
     monkeypatch.setattr(release, 'snapshot', lambda: copy.deepcopy(before))
     monkeypatch.setattr(release, 'fingerprint', lambda: [])
-    monkeypatch.setattr(release, 'rollback', lambda *a: pytest.fail('Rollback must never run'))
+    monkeypatch.setattr(release, 'rollback', lambda *a: pytest.fail('Rollback must never run'), raising=False)
     writes = []
     failure = OSError('PUT response lost')
     def api(route, method='GET', data=None):

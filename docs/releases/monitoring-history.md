@@ -67,7 +67,7 @@ DCU 的 E2E、TTFT、ITL 改为保留完整来源和流式标签，逐序列校�
 
 网关一般请求指标使用 `request_scope="all"`；首增量和流观察指标保留 `streaming`；独立非流式到达数保留 `nonstreaming`。画像查询以新的 all-request 计数起点隔离升级前的旧首增量序列。
 
-完整口径、测试、部署与回退说明见 [metric-scope-v2-20260915.md](../metric-scope-v2-20260915.md)。前次仅流式发布记录保存在 [local-latest-20260915.md](../local-latest-20260915.md)，不代表当前口径。
+完整口径、测试、部署与回退说明见 [metric-scope-v2-20260915.md](metric-scope-v2-20260915.md)。前次仅流式发布记录保存在 [local-latest-20260915.md](local-latest-20260915.md)，不代表当前口径。
 
 ## A3 NPU 硬件监控（2026-09-16）
 
@@ -75,10 +75,10 @@ DCU 的 E2E、TTFT、ITL 改为保留完整来源和流式标签，逐序列校�
 
 [A3 · 加速卡资源](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/accelerator-resources) 对齐 DCU 六项硬件图表：利用率、显存已用、温度、功耗、显存总量和显存占比。支持节点与 NPU 芯片筛选；HBM 的 MiB 转为 GiB，不使用 KV Cache 代替整芯片显存。功耗按 exporter 原始芯片 ID 展示，不相加为整机功耗。有效零保留，超过 15 秒的源观测、失败抓取及非法值留空。
 
-本次只热加载 vmagent 采集配置并更新 A3 主机看板；没有重启中央监控、推理或网关服务。实现与回退见 [NPU 发布说明](../npu-20260916.md)。
+本次只热加载 vmagent 采集配置并更新 A3 主机看板；没有重启中央监控、推理或网关服务。实现与回退见 [NPU 发布说明](npu-20260916.md)。
 
 ## XPU 接入（2026-09-21）
 
-已新增 `xpu-pd` 推理采集与 monitoring-api 支持，以及 [XPU Perses 项目](http://122.247.53.162:18431/projects/xpu-monitoring)。XPU 网关画像也已接入；HiCache、缓存层级和硬件先留空。发布、验收与回退见 [XPU 接入记录](../xpu-20260921.md)。
+已新增 `xpu-pd` 推理采集与 monitoring-api 支持，以及 [XPU Perses 项目](http://122.247.53.162:18431/projects/xpu-monitoring)。XPU 网关画像也已接入；HiCache、缓存层级和硬件先留空。发布、验收与回退见 [XPU 接入记录](xpu-20260921.md)。
 
-流停顿方向监控新增 `points[].gateway.backend_wait_max_seconds` 与 `write_active_max_seconds`，两者分别按环境取当前最大读取等待和当前连续写出时长；页面和 Perses 展示这两项，旧字段保留。有效空闲为零，指标缺失留空，不以旧字段回填。完整口径和验证说明见 [流停顿方向监控](../stream-direction-monitoring-20260923.md)。
+流停顿方向监控新增 `points[].gateway.backend_wait_max_seconds` 与 `write_active_max_seconds`，两者分别按环境取当前最大读取等待和当前连续写出时长；页面和 Perses 展示这两项，旧字段保留。有效空闲为零，指标缺失留空，不以旧字段回填。完整口径和验证说明见 [流停顿方向监控](stream-direction-monitoring-20260923.md)。

@@ -1,4 +1,4 @@
-"""Project-aware Perses publication, audit and resource-scoped rollback.
+"""Project-aware Perses publication and audit; failures preserve current state.
 
 Run on test4 through SSH MCP. This module never starts remote connections.
 """
@@ -17,6 +17,11 @@ import urllib.request
 from pathlib import Path
 
 from project_split import PROJECTS, no_request_filter, read_resources, validate
+from release_support import save, record_failure, snapshot as resource_snapshot, readback
+
+
+def snapshot():
+    return resource_snapshot(lambda route: http(BASE + route))
 
 BASE = "http://122.247.53.162:18431"
 VM = "http://127.0.0.1:18428"
@@ -52,10 +57,6 @@ def http(url, method="GET", data=None):
         raise RuntimeError(f"HTTP {e.code} {method} {url}: {body[:1200]}") from e
 
 
-def save(root, name, data):
-    (root / name).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
-
-
 def spec(document):
     s = copy.deepcopy(document["spec"])
     for var in s.get("variables", []):
@@ -70,15 +71,6 @@ def spec(document):
 def fingerprint():
     items = json.loads(subprocess.check_output(["docker", "inspect", *SERVICES]))
     return [{"name": c["Name"], "id": c["Id"], "started": c["State"]["StartedAt"], "image": c["Image"]} for c in items]
-
-
-def snapshot():
-    projects = http(BASE + "/api/v1/projects")
-    data = {"projects": projects, "datasources": [], "dashboards": []}
-    for p in projects:
-        for kind in ("datasources", "dashboards"):
-            data[kind] += http(BASE + "/api/v1/projects/" + p["metadata"]["name"] + "/" + kind)
-    return data
 
 
 def endpoint(kind, document):
@@ -239,8 +231,7 @@ def apply(resources, root):
             mutations.append({"action": "create", "candidate": document})
             save(root, "journal.json", mutations)
             http(url, "POST", document)
-        actual = http(url + "/" + identity[-1])
-        assert spec(actual) == spec(document), "Readback differs: " + str(identity)
+        actual = readback(http, url + "/" + identity[-1], document, normalize=spec)
         mutations[-1]["after"] = actual
         save(root, "journal.json", mutations)
         existing[identity] = actual
@@ -284,46 +275,13 @@ def apply(resources, root):
              "upgrade_mode": "maintenance-window", "completed_at": time.time()})
         print("Publication accepted", flush=True)
     except Exception as error:
-        error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
+        record_failure(root, 'publication-failure.json', error)
         raise
-
-
-def rollback(root):
-    journal = json.loads((root / "journal.json").read_text())
-    for entry in reversed(journal):
-        d = entry.get("candidate", entry.get("before"))
-        url = endpoint(d["kind"], d) + "/" + d["metadata"]["name"]
-        try:
-            current = http(url)
-        except RuntimeError as e:
-            if "HTTP 404" not in str(e):
-                raise
-            current = None
-        if entry["action"] == "create":
-            if current is not None:
-                assert spec(current) == spec(d), "Concurrent edit; keep created resource"
-                if d["kind"] == "Project":
-                    for child in ("dashboards", "datasources", "variables", "secrets"):
-                        assert not http(url + "/" + child), "Project contains resources created after this release; keep it"
-                http(url, "DELETE")
-        elif entry["action"] == "update":
-            if current is not None and spec(current) == spec(entry["before"]):
-                continue
-            assert current is not None and spec(current) == spec(d), "Concurrent edit; do not overwrite"
-            current["spec"] = entry["before"]["spec"]
-            http(url, "PUT", current)
-        elif current is None:
-            old = copy.deepcopy(entry["before"])
-            old["metadata"] = {k: v for k, v in old["metadata"].items() if k in ("name", "project")}
-            http(endpoint(old["kind"], old), "POST", old)
-        else:
-            assert spec(current) == spec(entry["before"]), "Concurrent source recreation"
-    save(root, "rollback.json", {"passed": True, "at": time.time()})
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=("prepare", "audit", "audit-published", "apply", "rollback"))
+    parser.add_argument("action", choices=("prepare", "audit", "audit-published", "apply"))
     parser.add_argument("--resources", type=Path, default=Path(__file__).parent / "projects")
     parser.add_argument("--evidence", type=Path, required=True)
     parser.add_argument("--full-audit", action="store_true", help="Explicitly audit every panel instead of affected panels")
@@ -332,9 +290,6 @@ def main():
     if args.action == "prepare":
         assert not (args.evidence / "before.json").exists(), "Use a fresh evidence directory"
         save(args.evidence, "before.json", snapshot())
-        return
-    if args.action == "rollback":
-        rollback(args.evidence)
         return
     resources = read_resources(args.resources)
     validate(resources)

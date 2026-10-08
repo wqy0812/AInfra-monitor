@@ -1,4 +1,4 @@
-"""Migration safety: accounting, query preservation, grouping and rollback."""
+"""Migration safety: accounting, query preservation, grouping and runtime installation."""
 import copy
 import json
 import os
@@ -67,21 +67,7 @@ def test_current_resources_are_valid_and_regenerate_without_overview():
             assert d['spec']['layouts'][0]['spec']['display']['title']=='项目采集链路'
 
 
-def test_rollback_restores_deleted_dashboard_and_preserves_concurrent_recreation(tmp_path):
-    import project_release as r
-    old=fixture()['dashboards'][0]
-    (tmp_path/'journal.json').write_text(json.dumps([{'action':'delete','before':old}]))
-    calls=[]
-    def missing(url,method='GET',data=None):
-        if method=='GET':raise RuntimeError('HTTP 404')
-        calls.append((method,data))
-    with patch.object(r,'http',missing):r.rollback(tmp_path)
-    assert calls[0][0]=='POST' and calls[0][1]['spec']==old['spec']
-    edited=copy.deepcopy(old);edited['spec']['display']['name']='用户修改'
-    with patch.object(r,'http',return_value=edited),pytest.raises(AssertionError):r.rollback(tmp_path)
-
-
-def test_runtime_install_and_rollback_detect_concurrent_changes(tmp_path):
+def test_runtime_install_keeps_original_bytes_and_refuses_reused_journal(tmp_path):
     import reorg_runtime as runtime
     evidence=tmp_path/'evidence';evidence.mkdir()
     release=evidence/'release';release.mkdir()
@@ -94,13 +80,16 @@ def test_runtime_install_and_rollback_detect_concurrent_changes(tmp_path):
     runtime.sync(evidence,target)
     assert not old.exists()
     assert (target/'project_split.py').read_text()=='new'
+    import base64
+    entries = json.loads((evidence/'runtime-install.json').read_text())
+    entry = next(e for e in entries if e['path'] == 'project_split.py')
+    assert base64.b64decode(entry['before']) == b'old'
+    removed = next(e for e in entries if e['path'].endswith('overview.json'))
+    assert base64.b64decode(removed['before']) == b'old overview' and removed['after'] is None
     (target/'project_split.py').write_text('concurrent')
-    with pytest.raises(AssertionError):runtime.sync(evidence,target,True)
-    (target/'project_split.py').write_text('new')
-    runtime.sync(evidence,target,True)
-    assert old.read_text()=='old overview'
-    assert (target/'project_split.py').read_text()=='old'
-    assert not (target/'dashboard_reorg.py').exists()
+    with pytest.raises(AssertionError, match='journal already exists'):
+        runtime.sync(evidence, target)
+    assert (target/'project_split.py').read_text() == 'concurrent'
 
 
 def test_installed_generator_imports_topology_without_source_checkout(tmp_path):
@@ -116,5 +105,6 @@ def test_installed_generator_imports_topology_without_source_checkout(tmp_path):
     env.pop('PYTHONPATH', None)
     subprocess.run([sys.executable, '-c',
         'from xpu_cache import configure; from align_dashboards import align; '
+        'from project_release import snapshot; assert callable(snapshot); '
         'assert align({"dashboards": []}) == ({"dashboards": []}, [])'],
         cwd=target, env=env, check=True, capture_output=True, text=True, timeout=10)

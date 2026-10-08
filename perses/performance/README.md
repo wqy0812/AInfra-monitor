@@ -1,13 +1,8 @@
-# Perses 0.54.0 performance patches
+# Perses 构建、镜像发布与性能测试
 
-Two independent patch batches. Upgrades follow the
-[maintenance-window policy](../../docs/maintenance-window-upgrade.md).
-The source base is commit
-`4c719fc19fa21d333797e84c4fe7e3d81c25f4f5`; the original image remains pinned
-in `../image-lock.json`. No user-authored dashboards are replaced with a stale
-repository snapshot during publication.
+当前源码基于 Perses `0.54.0` / `4c719fc19fa21d333797e84c4fe7e3d81c25f4f5`。仓库的 `release-lock-perf3.json` 记录 perf.3 发布产物，`release-lock.json` 是历史 perf.2 产物；两者都不替代下一次构建生成的 lock。线上镜像须操作时重新核查。
 
-## First batch
+## 源码与构建
 
 `patches/` contains the seven modified TypeScript sources recovered from the
 published packages' source maps. `source-lock.json` pins each original map,
@@ -53,171 +48,29 @@ as its third argument. `image_release.py --lock FILE` selects a version-specific
 For a future upgrade from the deployed perf.3, pass `release-lock-perf3.json`
 as the third argument instead of the default historical perf.2 lock.
 
-## Second batch
+## 当前行为与验证
 
-`quantile_release.py` prepares a snapshot-derived patch for precisely 13 panels:
-four histogram panels in each gateway-requests dashboard and five A3 backend
-histograms. The original three query tails/guards must match exactly. They are
-replaced with one `histogram_quantiles` and one validity mask. `perses_quantile`
-is a presentation label carrying P50/P95/P99. Original source/grouping, missing
-values and validity semantics are retained. Custom query-index styling fails
-closed instead of being silently discarded.
+perf.3 补丁提供标签页内的跨看板时间继承、后台页面暂停、固定窗口暂停自动刷新和手动刷新，保留已有图表定义；显式 URL 时间优先。设计与当次证据见 [时间导航说明](../../docs/releases/time-navigation-cache-20260924.md)、[发布记录](../../docs/releases/time-navigation-20260925-deployment.md)。
 
-The generator uses the same shape; only the three corresponding project JSON
-files change. There are no recording rules, schema changes or history rewrites.
+- `tests/ui.test.cjs`：刷新、定时器、变量、选择性导入与失败重试。
+- `tests/cache_test.go`：内容校验、缓存头、ETag 304 和 HTML 重验证；随上游使用 `go test -mod=vendor ./ui`。
+- `tests/test_image_admission.py` / `test_image_auth.py`：固定镜像、停机升级、完整项目资源快照、认证和升级基线。
+- `tests/quantiles.py`：当前分位查询的真实 VM 合成语义检查。
+- `local_candidate.py` / `local_samples.py`：需要性能专项时使用的本地隔离对照，校验镜像、平台和版本；不属于普通升级前置条件，也不代表生产性能。
 
-## Validation and evidence
+所有构建/测试保持 vendor 模式和离线依赖约束。UI 变化按改动执行 1920×1080 浏览器检查，区分冷/热缓存、响应完成与实际绘制；未执行的检查不能记作通过。
 
-The local **perf.3** candidate adds tab-scoped time range inheritance (explicit
-URL ranges win), visibility-aware relative refresh, paused fixed windows, and
-focus/reconnect suppression for chart and variable queries. It preserves manual
-refresh and existing dashboard specs. The toolbar explains fixed-window pause.
-Absolute URL ranges retain milliseconds. The earlier builtin plugin collector's
-`ListVariable` metadata kind is corrected to upstream's `Variable` kind.
-See [behavior and acceptance](../../docs/time-navigation-cache-20260924.md).
-Perf.3 was deployed on 2026-09-25 with local browser acceptance and remote
-candidate/production API validation. The remote browser and 1800-second remote
-soak were not run. See the [deployment record](../../deploy/time-navigation-20260925/README.md).
-The existing `release-lock.json` still identifies the previous perf.2 release.
-Use `release-lock-perf3.json` for the deployed artifact.
-The perf.3 lock pins the deployed perf.2 image as its previous release. Resource
-validation logs in using the server-local `admin-credentials.json` (or
-`PERSES_CREDENTIALS_FILE`), keeps tokens separate for production and candidate,
-retries an expired token once, and enumerates every project, including XPU and
-custom projects. Credentials and tokens are never written to release reports.
+## 镜像发布
 
-- `tests/ui.test.cjs`: real React Query/React provider tests for relative/fixed
-  refresh, timers, inactive cleanup, variable changes, selective imports and retry.
-- `tests/test_image_admission.py`: maintenance-window publication uses the locked
-  image without candidate/browser/soak/extra authorization reports; version and
-  resources are checked after upgrade.
-- `tests/test_image_auth.py`: authenticated resource snapshots, XPU change
-  detection, per-server tokens, expiry recovery and explicit upgrade baselines.
-- `tests/cache_test.go`: substituted response body, cache headers, 304 responses,
-  changed prefix validators and HTML revalidation. Runs with upstream `go test -mod=vendor ./ui`.
-- `tests/quantiles.py`: 162 synthetic assertions against localhost VM 1.151.0.
-- `tests/dashboard_quantiles.py`: all 13 exact dashboard families, 52 range/step
-  comparisons, alternating cold/warm seven-pair performance samples. The fixture
-  seeds one hour; its 24-hour queries intentionally also cover missing history.
-- `local_candidate.py` starts baseline/candidate containers on loopback 18542/18541,
-  using only local JSON and a synthetic localhost VM on 18543. `local_samples.py`
-  provides synthetic chart observations. These are not production measurements.
+连接与传输遵循工作区 SSH MCP 约束，命令在目标主机仓库根目录运行。先上传当前代码、镜像归档及本次生成的 release lock，显式创建新证据目录并告知用户：
 
-`local_candidate.py --lock FILE` selects a candidate release lock; the default is
-the checked-in `release-lock.json`. It verifies each image digest, Linux/amd64
-architecture and binary version before starting the long-running containers.
-The candidate version label must also match. The baseline remains pinned to
-`../image-lock.json`; a mutable image tag is never used as the candidate identity.
+```sh
+python3 deploy/release.py image load --evidence DIR --lock DIR/release-lock.json
+python3 deploy/release.py image apply --evidence DIR --lock DIR/release-lock.json
+```
 
-Image publication rejects an occupied version-specific temporary container name
-before stopping the service, verifies the image/version, and reads back resources
-after startup. Failure preserves the current state for forward repair. IDs/start
-times of other monitoring services are no longer publication gates.
+`apply` 检查镜像摘要、架构、版本和原镜像身份，在停机窗口内替换 Perses；保留 systemd、访问控制、数据挂载、并发编辑检查，启动后读取所有项目（包括自定义项目）的资源。凭据来自目标机 `admin-credentials.json` 或 `PERSES_CREDENTIALS_FILE`；令牌按服务隔离，过期最多重新认证一次。
 
-Browser checks use the computer-use browser/CDP APIs with a 1920x1080 viewport.
-Cold and warm cache samples are separated, with first query, last initial
-response, request counts, plugin counts and bytes recorded. Response completion
-is not claimed as exact chart paint time. Do not treat local evidence as remote
-acceptance. Local evidence is under `../../evidence/performance-20260916/`.
+没有候选服务、30 分钟观察或回退选项。失败保留当前状态、原资源快照及原始异常，修复后重新核验。旧容器只作为当前事务证据；存在同名临时容器时停止并要求先核查。相关看板变更通过 `deploy/release.py dashboards` 发布；查询合并专项通过 `deploy/release.py merges`，不再重跑旧 13 面板迁移器。
 
-## Remote publication, via SSH MCP only
-
-Use a fresh evidence directory for a new upgrade; the historical evidence root
-below records the earlier release. Tell the user about any new remote directories. Never run local
-command-line SSH, SCP or port-forwarding subprocesses in these scripts.
-
-1. Upload the archive, generated release lock and scripts. Run
-   `image_release.py load --evidence DIR`, then `apply` in the downtime window.
-   An explicit `--lock FILE` selects this build's lock. Ordinary upgrades do not
-   run `candidate` or copy production data into parallel containers.
-2. `apply` stops/replaces Perses, keeps systemd/access controls, checks the new
-   version/health and reads back all resources. Candidate browser/API reports,
-   1800-second soak and `deployment-authorization.json` are no longer required.
-   The old `--defer-browser-validation` and `--local-browser-validation` flags
-   remain accepted for caller compatibility; neither is needed. UI changes receive
-   relevant browser checks after upgrade. A skipped check is never marked passed.
-3. The stopped old container is retained as transaction evidence, for example
-   `monitoring-perses-before-perf3`; it is not used for rollback. Other monitoring
-   services may also upgrade during this window. Failure preserves the current
-   state and raises the original error for forward repair.
-4. For a quantile optimization only, capture a fresh dashboard snapshot after the first batch. Prepare changes from
-   that snapshot, then copy `changes.json`, `quantile-semantics.json` and the
-   query publication scripts into the evidence directory. Run
-   `publish_quantiles.py audit --evidence DIR`; it checks exact old/new and proxy
-   values and refuses acceptance when actual samples are absent or performance
-   fails. Run `apply` only after the first batch was accepted. Journaled updates
-   affect three dashboards; failures keep the applied changes and journal for repair.
-   `--samples N` fixes the cold and warm paired sample count per panel for both
-   audit and apply (minimum 7). The final production cohort uses 41 samples;
-   the 20% median improvement and 5% maximum regression gates are unchanged.
-   Earlier failed attempts and their rollback journals remain in evidence.
-
-## Production release (2026-09-16)
-
-This section records historical execution and does not prescribe future upgrade
-gates. Historical evidence root: `/data2/monitoring/perses/evidence/performance-20260916`.
-
-The user explicitly authorized restoring the local `ssh -N jump` SOCKS listener
-and a separate temporary loopback forward to the candidate. Port 1080 is working,
-and three production dashboards were reopened in Chrome at 1920x1080. The
-temporary candidate forward was rejected by test4 with `administratively
-prohibited`; its effective SSH configuration is `allowtcpforwarding no` and
-`permitopen none`. The failed local forward was closed. No server SSH or firewall
-policy was changed. Remote commands and file transfers used SSH MCP.
-
-After the blocked candidate browser/soak checks were disclosed, the user
-explicitly instructed deployment. The recorded authorization moved browser
-validation to production. No candidate browser or soak report was fabricated.
-
-Production now runs **0.54.0-perf.2**, image config
-`sha256:c5a17dc68da543e42b3c78618b0c452ea29328a027ec4439b402f3aa79a15bfa`.
-The exact locked archive was verified on test4. Candidate APIs, all 16 dashboard
-and two datasource copies, both proxies, HTML revalidation, immutable hashed
-assets and ETag 304 responses passed. Data-copy ownership and resource-response
-checks are now part of candidate preparation.
-
-The final 13-panel publication passed 52 range/step groups and all performance
-gates before and after publication. Each panel has 41 paired cold and 41 paired
-warm samples. Post-publication cold median reductions are 46.6–72.8%, with a
-panel median of 61.1%. The earlier seven-pair attempts triggered automatic
-rollback; both failure records are retained. The final larger cohort was fixed
-before running, and did not relax either performance threshold. Empty one-hour
-windows remain in the evidence; data over 24 hours also matches.
-
-Production perf.1 completed 1826 seconds with 121 cycles, 12 requests per cycle,
-1452 HTTP 200 responses, and a settled cache of 27 entries/12 panel queries.
-Perf.2 changes only failed-plugin retry. Its production tests separately confirm
-successful initial loads, warm cache reuse, injected plugin failure and recovery,
-variable changes, manual refresh, and DCU 24-hour quantile legends. The perf.1
-soak is not presented as a 30-minute perf.2 soak. Perf.2 separately completed
-343 seconds/23 cycles/276 HTTP 200 responses, with 27 cache entries and
-12 panel queries (`production-refresh-perf2.json`).
-
-Only three dashboard specs/13 target panels changed; existing guards and
-descriptions from the latest online snapshot were preserved. Other dashboards,
-projects, datasources, and protected service container IDs/start times match the
-pre-cutover snapshot. Candidate containers are stopped. Original and perf.1
-containers remain as `monitoring-perses-before-perf1` and
-`monitoring-perses-before-perf2`.
-
-Evidence: `image-publication.json`, `quantiles-publication.json`,
-`quantiles-audit.json`, `production-resource-validation.json`,
-`production-browser-perf2.json`, `production-soak-perf1.json`,
-`production-service-observation.json`, and `final-deployment.json` in the remote
-evidence root and local `../../evidence/performance-20260916/`.
-
-### Historical rollback procedure (superseded 2026-09-28)
-
-Current policy requires forward repair; do not execute these historical commands.
-Automatic rollback has been removed from image and query publication.
-The following describes the former procedure only.
-
-The former test4 procedure rolled back quantile changes with
-`publish_quantiles.py rollback --evidence DIR` (set
-`PYTHONPATH=/data2/monitoring/perses/release`). It checks current content before
-restoring the latest pre-publication specs.
-
-For the image, `image_release.py rollback --evidence DIR --lock DIR/release-lock-perf2.json`
-returns perf.2 to perf.1. A subsequent rollback with `DIR/release-lock-perf1.json`
-returns perf.1 to the original 0.54.0 image. Image rollback alone keeps dashboard
-definitions; the two batches have independent rollback paths.
+早期性能发布、旧回退过程和测量数字单独保存在 [历史记录](../../docs/releases/perses-performance-20260916.md)。

@@ -74,37 +74,6 @@ class ProjectSplitTest(unittest.TestCase):
         for d in generated['dashboards']:
             self.assertFalse(set(d['spec']['panels']) & {'live-idle-5', 'live-idle-15', 'live-idle-30', 'live-idle-60'})
 
-    def test_rollback_restores_updated_spec(self):
-        import project_release as release
-        old = {"kind": "Dashboard", "metadata": {"project": "dcu-monitoring", "name": "example"}, "spec": {"display": {"name": "old"}}}
-        new = copy.deepcopy(old)
-        new["spec"]["display"]["name"] = "new"
-        calls = []
-        def fake_http(url, method="GET", data=None):
-            calls.append((method, data))
-            return copy.deepcopy(new) if method == "GET" else None
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            (root / "journal.json").write_text(json.dumps([{"action": "update", "before": old, "candidate": new}]))
-            with patch.object(release, "http", fake_http):
-                release.rollback(root)
-            self.assertEqual(calls[-1][0], "PUT")
-            self.assertEqual(calls[-1][1]["spec"], old["spec"])
-
-    def test_rollback_keeps_concurrent_project_children(self):
-        import project_release as release
-        project = {"kind": "Project", "metadata": {"name": "a3-monitoring"}, "spec": {"display": {"name": "A3"}}}
-        methods = []
-        def fake_http(url, method="GET", data=None):
-            methods.append(method)
-            return [{"kind": "Dashboard", "metadata": {"name": "user-created"}}] if url.endswith("/dashboards") else project
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            (root / "journal.json").write_text(json.dumps([{"action": "create", "candidate": project}]))
-            with patch.object(release, "http", fake_http), self.assertRaises(AssertionError):
-                release.rollback(root)
-            self.assertNotIn("DELETE", methods)
-
 
 if __name__ == "__main__":
     unittest.main()

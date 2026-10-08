@@ -108,31 +108,3 @@ def test_perf3_requires_and_pins_perf2_upgrade_baseline():
         del broken[missing]
         with pytest.raises(AssertionError, match='must pin'):
             release.previous_release(broken)
-
-
-def test_original_perf1_lock_remains_compatible():
-    assert release.previous_release({'candidate_version': '0.54.0-perf.1'})[1] == '0.54.0'
-
-
-def test_relative_evidence_path_creates_bind_mounts_not_named_volumes(tmp_path, monkeypatch):
-    (tmp_path / 'candidate-data').mkdir()
-    (tmp_path / 'candidate-config.yaml').write_text('')
-    (tmp_path / 'release-lock.json').write_text(json.dumps({
-        'candidate_version': '0.54.0-perf.3', 'candidate_config_digest': 'new',
-        'previous_version': '0.54.0-perf.2', 'previous_image_digest': 'old'}))
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(release.os, 'umask', lambda _: None)
-    monkeypatch.setattr(release.os, 'chown', lambda *args: None)
-    monkeypatch.setattr(sys, 'argv', ['image_release.py', 'candidate', '--evidence', '.'])
-    monkeypatch.setattr(release, 'find_container', lambda _: None)
-    monkeypatch.setattr(release, 'inspect', lambda name: {
-        'Image': 'old' if name == release.NAME else 'new',
-        'Mounts': [{'Source': str(tmp_path / 'candidate-data'), 'Destination': '/perses'}]})
-    monkeypatch.setattr(release, 'resources', lambda *args: {'projects': []})
-    monkeypatch.setattr(release, 'health', lambda _: {'version': '0.54.0-perf.3'})
-    monkeypatch.setattr(release, 'run', lambda *args: '')
-    captured = []
-    monkeypatch.setattr(release, 'create', lambda old, name, image, binds, listen: captured.extend(binds))
-    release.main()
-    assert captured == [str(tmp_path / 'candidate-data') + ':/perses',
-                        str(tmp_path / 'candidate-config.yaml') + ':/etc/perses/config.yaml:ro']

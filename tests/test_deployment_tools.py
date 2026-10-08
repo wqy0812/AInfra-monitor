@@ -113,6 +113,32 @@ def test_replacement_removes_backup_only_after_acceptance(monkeypatch):
     assert list(docker.containers) == ['monitoring-api']
 
 
+@pytest.mark.parametrize('failure', [None, 'create-after', 'acceptance', 'rm-before', 'rm-after'])
+def test_replacement_evidence_survives_success_or_uncertain_mutation(tmp_path, monkeypatch, failure):
+    docker = Docker(failure)
+    docker.containers['monitoring-api']['Config']['Env'] = ['SECRET=do-not-persist']
+    docker.patch(monkeypatch)
+    if failure:
+        with pytest.raises(RuntimeError, match='injected'):
+            replacement.replace('monitoring-api', 'candidate-tag', evidence=tmp_path)
+        assert docker.containers == docker.at_failure and docker.calls == docker.calls_at_failure
+        report = json.loads((tmp_path / 'container-failure.json').read_text())
+        assert report['recovery'] == 'fix_forward' and report['automatic_rollback'] is False
+        assert not (tmp_path / 'container-publication.json').exists()
+    else:
+        result = replacement.replace('monitoring-api', 'candidate-tag', evidence=tmp_path)
+        assert json.loads((tmp_path / 'container-publication.json').read_text()) == result
+        assert result['container_id'] == 'new'
+    assert json.loads((tmp_path / 'container-before.json').read_text())['Id'] == 'original'
+    assert 'configuration_sha256' in json.loads((tmp_path / 'container-before.json').read_text())
+    assert all('do-not-persist' not in p.read_text() for p in tmp_path.iterdir())
+    assert json.loads((tmp_path / 'container-transaction.json').read_text())['image'] == 'candidate'
+    calls = list(docker.calls)
+    with pytest.raises(RuntimeError, match='fresh evidence'):
+        replacement.replace('monitoring-api', 'candidate-tag', evidence=tmp_path)
+    assert docker.calls == calls
+
+
 def test_api_replacement_normalizes_explicit_clients_and_preserves_other_settings(monkeypatch):
     docker = Docker()
     docker.containers['monitoring-api']['Config']['Env'] = ['ALLOWED_CLIENTS=*', 'OTHER=preserve']
@@ -306,7 +332,7 @@ class PersesDocker(Docker):
         monkeypatch.setattr(image_release, 'BACKUP', 'monitoring-perses-before-perf2')
         for name, fn in [('inspect', self.inspect), ('find_container', self.find), ('run', self.command),
                          ('create', self.create_perses), ('health', self.health), ('resources', lambda: {}),
-                         ('protected', lambda: pytest.fail('Continuity snapshot is not an upgrade prerequisite')), ('save', lambda *a: None)]:
+                         ('save', lambda *a: None)]:
             monkeypatch.setattr(image_release, name, fn)
 
 
@@ -367,19 +393,6 @@ def test_local_candidate_uses_locked_images_and_checks_versions(monkeypatch, fau
         selected = local_candidate.selected_images(lock_path)
         assert selected == [('candidate', 18541, lock['candidate_config_digest']), ('baseline', 18542, baseline['image_id'])]
     assert not any('-d' in call for call in calls)
-
-
-def test_restore_refuses_to_remove_a_concurrently_replaced_container(monkeypatch):
-    docker = Docker()
-    old = docker.containers.pop('monitoring-api')
-    docker.containers['backup'] = old
-    docker.containers['monitoring-api'] = {'Id': 'foreign', 'Image': 'candidate', 'Config': {'Labels': {}}}
-    docker.patch(monkeypatch)
-    with pytest.raises(RuntimeError, match='Concurrent'):
-        replacement.restore('monitoring-api', old, 'backup', 'candidate')
-    assert docker.containers['monitoring-api']['Id'] == 'foreign'
-    assert docker.containers['backup']['Id'] == 'original'
-    assert not docker.calls
 
 
 def test_perses_preflight_rejects_wrong_candidate_before_stopping(monkeypatch, tmp_path):

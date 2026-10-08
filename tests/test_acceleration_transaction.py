@@ -29,21 +29,20 @@ def fixture(tmp_path, monkeypatch, guides=None):
     return runtime, evidence, path
 
 
-def test_generator_rollback_preserves_later_independent_batch(tmp_path, monkeypatch):
+def test_generator_install_preserves_unrelated_queries_and_records_original_bytes(tmp_path, monkeypatch):
+    import base64
     runtime, evidence, path = fixture(tmp_path, monkeypatch)
+    before = path.read_bytes()
     transaction.install(evidence)
     document = json.loads(path.read_text())
     assert document['spec']['panels']['target']['spec']['queries'] == ['after']
-    document['spec']['panels']['untouched']['spec']['queries'] = ['later independent edit']
-    path.write_text(json.dumps(document))
-    state_path = runtime / 'acceleration_state.json'
-    state = json.loads(state_path.read_text()); state['groups'] = ['cpu']; state_path.write_text(json.dumps(state))
-    transaction.rollback(evidence)
-    document = json.loads(path.read_text())
-    assert document['spec']['panels']['target']['spec']['queries'] == ['before']
-    assert document['spec']['panels']['untouched']['spec']['queries'] == ['later independent edit']
-    assert json.loads(state_path.read_text()) == {'schema': 1, 'groups': ['cpu'], 'merges': []}
-    assert (runtime / 'acceleration_publication.py').exists()
+    assert document['spec']['panels']['untouched']['spec']['queries'] == ['other']
+    entries = json.loads((evidence / 'generator-journal.json').read_text())['entries']
+    saved = next(e for e in entries if e['path'].endswith('dashboard.json'))
+    assert base64.b64decode(saved['before']) == before
+    assert base64.b64decode(saved['after']) == path.read_bytes()
+    assert json.loads((runtime / 'acceleration_state.json').read_text()) == {
+        'schema': 1, 'groups': [], 'merges': [['project', 'dashboard', 'target']]}
 
 
 def test_generator_install_rejects_concurrent_edit(tmp_path, monkeypatch):
@@ -54,7 +53,7 @@ def test_generator_install_rejects_concurrent_edit(tmp_path, monkeypatch):
     assert path.read_text() == 'concurrent edit'
 
 
-def test_later_materialized_batch_keeps_previous_merge_and_rolls_back_own_binding(tmp_path, monkeypatch):
+def test_later_materialized_batch_preserves_previous_merge(tmp_path, monkeypatch):
     runtime, evidence, path = fixture(tmp_path, monkeypatch)
     transaction.install(evidence)
     second = tmp_path / 'cpu'; second.mkdir()
@@ -67,12 +66,9 @@ def test_later_materialized_batch_keeps_previous_merge_and_rolls_back_own_bindin
     state_path = runtime / 'acceleration_state.json'
     assert json.loads(state_path.read_text())['groups'] == ['cpu']
     assert json.loads(path.read_text())['spec']['panels']['untouched']['spec']['queries'] == ['accelerated-source']
-    transaction.rollback(second)
     state = json.loads(state_path.read_text())
-    assert state['groups'] == [] and state['merges'] == [['project', 'dashboard', 'target']]
-    document = json.loads(path.read_text())
-    assert document['spec']['panels']['target']['spec']['queries'] == ['after']
-    assert document['spec']['panels']['untouched']['spec']['queries'] == ['other']
+    assert state['groups'] == ['cpu'] and state['merges'] == [['project', 'dashboard', 'target']]
+    assert json.loads(path.read_text())['spec']['panels']['target']['spec']['queries'] == ['after']
 
 
 @pytest.mark.parametrize('previous_note', [False, True])
@@ -99,8 +95,6 @@ def test_runtime_guides_survive_migrated_source_docs_and_repeated_publication(tm
     second = tmp_path / 'second'; second.mkdir()
     transaction.plan(second, [], group='cpu')
     transaction.install(second)
-    assert {name: (runtime / name).read_bytes() for name in first} == first
-    transaction.rollback(second)
     assert {name: (runtime / name).read_bytes() for name in first} == first
 
 

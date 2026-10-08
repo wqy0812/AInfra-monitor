@@ -6,16 +6,20 @@ import argparse
 import json
 import time
 from pathlib import Path
+from api_readiness import publication
 
 from admin import update
 from merge_release import save
-from release_api import health, inspect, protected
+from materialized_release import read_health as health
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from replace import inspect
 
 STATE = Path('/data2/monitoring/state/perses-acceleration-admin.json')
 
 
 def main(root, hours=8, recovery_seconds=3600):
-    expected = json.loads((root / 'shadow-started.json').read_text())
+    expected = publication(root)
     catalog = json.loads((root / 'perses_acceleration_catalog.json').read_text())
     groups = {p['id']: p['group'] for p in catalog['panels']}
     expected_jobs = {p['id'] + ':' + p['revision'] + ':' + str(s)

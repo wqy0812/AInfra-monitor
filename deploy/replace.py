@@ -1,8 +1,10 @@
-"""Replace an owned container; discard its backup only after data acceptance."""
+"""Replace an owned container; preserve evidence and fix the current version."""
 import argparse
 import copy
+import hashlib
 import http.client
 import json
+import os
 from pathlib import Path
 import socket
 import subprocess
@@ -53,25 +55,20 @@ def create(name, config):
         connection.close()
 
 
-def restore(name, old, backup, image):
-    current = find(name)
-    if current and current['Id'] != old['Id']:
-        saved = find(backup)
-        require(saved and saved['Id'] == old['Id'], 'Original backup identity changed; refusing removal')
-        require(current['Image'] == image and current['Config'].get('Labels', {}).get('monitoring.transaction') == backup,
-                'Concurrent container change; refusing removal')
-        cmd('docker', 'rm', '-f', current['Id'])
-        current = None
-    if current is None:
-        saved = find(backup)
-        require(saved and saved['Id'] == old['Id'], 'Original backup is missing')
-        cmd('docker', 'rename', old['Id'], name)
-    if not inspect(old['Id'])['State']['Running']:
-        cmd('docker', 'start', old['Id'])
-    require(inspect(name)['Id'] == old['Id'] and inspect(old['Id'])['State']['Running'], 'Original container did not recover')
+def save(root, name, data):
+    if root is None:
+        return
+    path = root / name
+    temporary = path.with_suffix('.tmp')
+    temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+    temporary.chmod(0o600)
+    temporary.replace(path)
 
 
-def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=None):
+def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=None, evidence=None):
+    if evidence is not None:
+        require(evidence.is_dir(), 'Evidence directory must already exist')
+        require(not (evidence / 'container-before.json').exists(), 'Use a fresh evidence directory')
     old = inspect(name)
     require(old['Config'].get('Labels', {}).get('monitoring.owner') == 'independent', 'Container is not independently owned')
     probe = ComponentProbe(name, old)
@@ -105,6 +102,12 @@ def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=N
         if '--collector.loadavg' not in config['Cmd']:
             config['Cmd'].append('--collector.loadavg')
     require(inspect(name)['Id'] == old['Id'], 'Original container changed before replacement')
+    before = {key: old[key] for key in ('Id', 'Image', 'Name', 'State')}
+    before['configuration_sha256'] = hashlib.sha256(json.dumps(
+        {'Config': old['Config'], 'HostConfig': old['HostConfig']}, sort_keys=True).encode()).hexdigest()
+    save(evidence, 'container-before.json', before)
+    save(evidence, 'container-transaction.json', {'container': name, 'old_id': old['Id'],
+         'image': image, 'temporary_name': backup, 'started_at': time.time()})
     try:
         cmd('docker', 'stop', old['Id'])
         cmd('docker', 'rename', old['Id'], backup)
@@ -112,23 +115,33 @@ def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=N
         cmd('docker', 'start', identity)
         wait_ready(inspect, identity, image, probe)
         require(inspect(name)['Id'] == identity, 'Candidate name changed before acceptance completed')
+        require(inspect(backup)['Id'] == old['Id'], 'Backup identity changed before cleanup')
+        cmd('docker', 'rm', old['Id'])
+        result = {'container': name, 'container_id': identity, 'temporary_container_removed': backup,
+                  'image': image, 'acceptance': 'passed'}
+        save(evidence, 'container-publication.json', result)
     except BaseException as error:
-        error.add_note('Automatic rollback is disabled; preserve current containers and fix forward. Backup: ' + backup)
+        error.add_note('Rollback is disabled; preserve current containers and fix forward. Temporary container: ' + backup)
+        try:
+            save(evidence, 'container-failure.json', {'error': str(error), 'type': type(error).__name__,
+                 'recovery': 'fix_forward', 'automatic_rollback': False, 'at': time.time()})
+        except OSError as reporting_error:
+            error.add_note('Failure report could not be saved: ' + str(reporting_error))
         raise
-    require(inspect(backup)['Id'] == old['Id'], 'Backup identity changed before cleanup')
-    cmd('docker', 'rm', old['Id'])
-    return {'container': name, 'temporary_container_removed': backup, 'image': image, 'acceptance': 'passed'}
+    return result
 
 
 def main():
+    os.umask(0o077)
     parser = argparse.ArgumentParser()
     parser.add_argument('name')
     parser.add_argument('image')
     parser.add_argument('--driver-readonly', action='store_true')
     parser.add_argument('--loadavg', action='store_true')
     parser.add_argument('--allowed-clients')
+    parser.add_argument('--evidence', type=Path, required=True)
     args = parser.parse_args()
-    print(json.dumps(replace(args.name, args.image, args.driver_readonly, args.loadavg, args.allowed_clients)))
+    print(json.dumps(replace(args.name, args.image, args.driver_readonly, args.loadavg, args.allowed_clients, args.evidence)))
 
 
 if __name__ == '__main__':

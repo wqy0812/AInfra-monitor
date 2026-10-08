@@ -85,11 +85,3 @@ def build_dashboard():
         'layouts': [{'kind': 'Grid', 'spec': {'items': [
             {'x': (i % 2) * 12, 'y': (i // 2) * 8, 'width': 12, 'height': 8,
              'content': {'$ref': '#/spec/panels/' + key}} for i, key in enumerate(panels)]}}]}}
-
-
-if __name__ == '__main__':
-    from gateway_live import extend_dashboard
-    target = ROOT / 'dashboards/gateway-generation.json'
-    document = extend_dashboard(build_dashboard())
-    target.write_text(json.dumps(document, ensure_ascii=False, indent=2) + '\n')
-    print('Generated gateway-generation:', len(document['spec']['panels']), 'panels')

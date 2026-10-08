@@ -1,6 +1,6 @@
 # monitoring 停机窗口升级（2026-09-30）
 
-用户明确允许停机更新升级，后续均按本约定执行。升级期间查询和采集可以中断，真实缺样和断档照常保留；发布完成后恢复服务与相关功能。历史发布记录中的不中断目标、候选容器探针和持续观察要求不再作为日常升级步骤。
+用户明确允许停机更新升级，后续均按本约定执行。统一入口为 `python3 deploy/release.py --help`，在仓库根目录运行；容器替换使用 `container NAME IMAGE --evidence DIR`，所有发布证据目录须显式创建。升级期间查询和采集可以中断，真实缺样和断档照常保留；发布完成后恢复服务与相关功能。历史发布记录中的不中断目标、候选容器探针和持续观察要求不再作为日常升级步骤。
 
 ## 当前流程
 
@@ -13,9 +13,9 @@
 
 ## Perses
 
-镜像升级使用 `perses/performance/image_release.py load --evidence DIR` 后直接 `apply --evidence DIR`。上传并使用本次构建生成的 release lock；`--lock FILE` 可显式选择，旧版本锁不能代替新的构建产物。`apply` 核对新镜像、版本、健康和完整资源读回，不读取候选浏览器、候选 API、30 分钟观察或额外授权报告。涉及 UI 行为时，在升级后执行相关的 1920×1080 浏览器检查。
+镜像升级使用 `deploy/release.py image load --evidence DIR` 后直接 `apply --evidence DIR`。上传并使用本次构建生成的 release lock；`--lock FILE` 可显式选择，旧版本锁不能代替新的构建产物。`apply` 核对新镜像、版本、健康和完整资源读回，不读取候选浏览器、候选 API、30 分钟观察或额外授权报告。涉及 UI 行为时，在升级后执行相关的 1920×1080 浏览器检查。
 
-看板更新使用 `project_release.py prepare --evidence DIR` 保存当前资源，再执行 `project_release.py apply --evidence DIR`；`--resources` 指定本次资源输入。保留结构校验、并发编辑检查、变更日志及资源读回。发布后只比较受影响图表的 VM/代理查询；变量、时间范围或数据源变化会扩大到其依赖图表。普通看板更新不再先启动合成 VM 验证所有查询构造器，也不重复执行发布前后的全看板查询矩阵。
+看板更新使用 `deploy/release.py dashboards prepare --evidence DIR` 保存当前资源，再执行 `deploy/release.py dashboards apply --evidence DIR`；`--resources` 指定本次资源输入。保留结构校验、并发编辑检查、变更日志及资源读回。发布后只比较受影响图表的 VM/代理查询；变量、时间范围或数据源变化会扩大到其依赖图表。普通看板更新不再先启动合成 VM 验证所有查询构造器，也不重复执行发布前后的全看板查询矩阵。
 
 复杂查询改动可显式执行 `audit`；专项完整检查使用 `audit-published --full-audit`。查询构造器、缺样/重置或统计口径变化仍需相关真实 VM 语义测试，性能优化仍需相关性能对照。测试结果按实际执行范围记录，不把未执行的检查记作通过。
 
@@ -31,6 +31,6 @@
 
 全量 Python、全看板、全浏览器/性能矩阵和故障注入不作为每次升级的前置条件。`scripts/test_local_vm.sh` 仅在需要真实 VM 语义测试时使用，默认运行三个 VM 测试文件；传入路径可继续缩小范围，全量必须显式传入 `tests perses`。不再依赖 code-eval 退役升级脚本验证“活动任务不能冻结”。
 
-查询加速的 API/批次 `observe` 同样改为最多 90 秒的就绪验收，补算恢复不再额外等待一分钟。完整覆盖、查询结果与性能准入仍用于加速实现和数据源切换；性能采样期间固定版本是为了确保对照可比，不属于普通升级持续在线要求。详细入口见 [查询加速运维](../deploy/perses_acceleration/README.md)。
+查询加速 API 使用 `deploy/release.py acceleration-ready --evidence DIR`，批次使用 `deploy/release.py acceleration observe`，均为最多 90 秒的就绪验收，补算恢复不再额外等待一分钟。完整覆盖、查询结果与性能准入仍用于加速实现和数据源切换；性能采样期间固定版本是为了确保对照可比，不属于普通升级持续在线要求。详细入口见 [查询加速运维](../deploy/perses_acceleration/README.md)。
 
-现行入口：[部署说明](../deploy/README.md)、[测试说明](../tests/README.md)、[Perses 维护](../perses/README.md)。按日期保存的脚本和报告继续作为历史资料；不重跑旧发布批次，也不把其旧门槛带入新窗口。
+现行入口：[部署说明](../deploy/README.md)、[测试说明](../tests/README.md)、[Perses 维护](../perses/README.md)。已完成批次脚本已退役，追溯方式见 [退役清单](releases/retired-code.md)；历史正文与必要输入保留在归档中。

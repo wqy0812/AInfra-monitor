@@ -17,6 +17,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'perses'))
 from query_acceleration import prepare, SERIES_LABEL, ORDER_LABEL
+from release_support import save, record_failure, snapshot as resource_snapshot, readback
+
+
+def snapshot():
+    return resource_snapshot(api)
 
 BASE = 'http://122.247.53.162:18431'
 VM = 'http://127.0.0.1:18428'
@@ -60,37 +65,13 @@ def fingerprint():
             for c in records]
 
 
-def snapshot():
-    result = {'projects': api('/api/v1/projects'), 'dashboards': [], 'datasources': []}
-    for project in result['projects']:
-        for kind in ('dashboards', 'datasources'):
-            result[kind].extend(api('/api/v1/projects/' + project['metadata']['name'] + '/' + kind))
-    return result
-
-
 def normalized(resources):
     return sorted([(d['kind'], d['metadata'].get('project', ''), d['metadata']['name'], d['spec'])
                    for ds in resources.values() for d in ds], key=lambda x: x[:3])
 
 
-def save(root, name, data):
-    path = root / name
-    temporary = path.with_suffix('.tmp')
-    temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
-    temporary.replace(path)
-
-
 def sha(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
-
-
-def record_failure(root, name, error):
-    error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
-    try:
-        save(root, name, {'passed': False, 'at': time.time(), 'type': type(error).__name__,
-                         'error': str(error)[:500], 'recovery': 'fix_forward', 'automatic_rollback': False})
-    except OSError as reporting_error:
-        error.add_note('Failure report could not be saved: ' + str(reporting_error))
 
 
 def expressions(document):
@@ -249,23 +230,6 @@ def path(document):
     return '/api/v1/projects/' + document['metadata']['project'] + '/dashboards/' + document['metadata']['name']
 
 
-def rollback(root):
-    for entry in reversed(json.loads((root / 'merge-journal.json').read_text())):
-        current = api(path(entry['after']))
-        for key, before_panel in entry['before']['spec']['panels'].items():
-            after_panel = entry['after']['spec']['panels'][key]
-            if before_panel == after_panel: continue
-            actual = current['spec']['panels'][key]
-            if actual == before_panel: continue
-            assert actual == after_panel, 'Concurrent target panel edit'
-            current['spec']['panels'][key] = copy.deepcopy(before_panel)
-        api(path(current), 'PUT', current)
-        assert api(path(current))['spec'] == current['spec']
-    from generator_transaction import rollback as restore_generators
-    restore_generators(root)
-    save(root, 'merge-rollback.json', {'passed': True, 'time': time.time()})
-
-
 def apply(root, admitted_only=False, viewport=False):
     prefix = 'viewport' if viewport else 'merge'
     before = json.loads((root / (prefix + '-before.json')).read_text())
@@ -326,7 +290,7 @@ def apply(root, admitted_only=False, viewport=False):
             journal.append({'before': current, 'after': new})
             save(root, 'merge-journal.json', journal)
             api(path(new), 'PUT', new)
-            assert api(path(new))['spec'] == new['spec']
+            readback(api, path(new), new)
         install_generators(root)
         assert normalized(snapshot()) == normalized(after)
         assert fingerprint() == json.loads((root / (prefix + '-services.json')).read_text())
@@ -339,7 +303,7 @@ def apply(root, admitted_only=False, viewport=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=('audit', 'resume', 'apply', 'rollback'))
+    parser.add_argument('action', choices=('audit', 'resume', 'apply'))
     parser.add_argument('--evidence', required=True, type=Path)
     parser.add_argument('--admitted-only', action='store_true')
     parser.add_argument('--viewport', action='store_true')

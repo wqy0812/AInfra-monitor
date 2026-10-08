@@ -1,35 +1,30 @@
-# 部署工具与历史发布包
+# 部署工具
 
-本目录保存部署代码、校验工具、采集配置及历史发布输入。所有服务器调用与传输均经 SSH MCP；这些 Python 脚本在目标主机本地运行，不负责建立远程连接。
+现行发布命令统一为 `python3 deploy/release.py <组件> ...`，在仓库根目录、目标主机本地执行。连接与传输遵循工作区 SSH MCP 约束；工具自身不建立远程连接。默认执行 [停机窗口升级](../docs/maintenance-window-upgrade.md)。
 
-后续默认执行 [停机窗口升级](../docs/maintenance-window-upgrade.md)：构建/加载新版本，在窗口内替换受影响组件，启动后做必要验收。候选并行探针、服务 ID/启动时间连续性、全量重复查询和长时间观察不作为日常发布门槛；按日期保存的发布包供历史查阅，不能直接作为新升级步骤重跑。
-
-| 用途 | 文件或目录 |
+| 组件 | 入口与用途 |
 | --- | --- |
-| 启动、容器替换及公共校验 | `start.py`、`start_test4.py`、`replace.py`、`container_validation.py` |
-| 采集配置 | `scrape.yml`、`profile_a3_scrape.yml`、`xpu_hardware_scrape.yml` |
-| 专项发布及核验 | 顶层 `*_release.py`、`*_verify.py`、`check_*.py`；按各专项文档的版本约束使用 |
-| 按日期保存的历史发布包 | `history-summary-20260924/`、`review-fixes-20260924/`、`stream-direction-20260923/`、`xpu-cache-20260923/` |
-| 时间导航与历史缓存发布 | [time-navigation-20260925](time-navigation-20260925/README.md) |
-| 2026-09-30 审核修复发布 | `review-fixes-20260930/`；[修复与验收记录](../docs/review-fixes-20260930.md) |
-| 查询加速 | [perses_acceleration](perses_acceleration/README.md) |
+| `container` | `replace.py`：替换受影响的独立 API、VM、vmagent、node/DCU exporter，启动后最多 90 秒健康与数据验收 |
+| `image` | `perses/performance/image_release.py`：按 release lock 加载/更新 Perses 镜像，保留 systemd、访问控制和完整资源读回 |
+| `dashboards` | `perses/project_release.py`：快照、并发编辑检查、逐项日志、资源读回和受影响查询验收 |
+| `runtime` | `perses/reorg_runtime.py`：同步生成器和资源，保留原字节日志与并发检查 |
+| `acceleration-ready` | `perses_acceleration/api_readiness.py`：通用 API 容器替换后的预计算启动检查 |
+| `acceleration` / `merges` | 预计算分组/查询合并的专项准入与发布；详见 [加速运维](perses_acceleration/README.md) |
 
-历史发布过程统一见 [发布归档](../docs/releases/README.md)。原目录中的 `STATUS.md` 保留导航；脚本、输入清单和源码快照暂不搬动，避免破坏路径加载、源码摘要和回退约束。
+例如 `python3 deploy/release.py dashboards --help` 显示实际子命令参数。分组件实现可独立导入，后续功能改动复用这些实现，不新增按功能或日期命名的发布脚本。Perses 发布共用 `perses/release_support.py` 的完整资源快照、原子证据写入、读回和失败留证。
 
-## 故障处理（2026-09-28）
+首次安装保留 `start.py`、`start_test4.py`；公共容器校验为 `container_validation.py`。采集输入为 `scrape.yml`、`profile_a3_scrape.yml`、`xpu_hardware_scrape.yml`。只读网关历史检查已迁到 `scripts/check_gateway_history.py`。
 
-2026-09-30 用户确认允许停机升级：停止并替换受影响组件，检查当前版本健康与相关功能后恢复使用。从历史 `ALLOWED_CLIENTS=*` 的 API 升级时，通过 `replace.py --allowed-clients <显式IP列表>` 配置实际调用方。
+## 证据与故障处理
 
-监控有问题就修复当前版本，不执行自动或手动版本回退。本仓库的发布、容器替换及验收脚本在异常时保留现场、抛出原始错误并停止后续步骤；不恢复旧容器、旧采集配置、旧面板或生成器，不因验收失败停用加速组。历史手动回退入口和快照保留在源码及证据中，不作为现行处置流程。
+发布前显式创建新的证据目录；服务器新增目录须告知用户。容器替换要求 `--evidence DIR`，保存原容器身份、配置摘要、目标镜像、事务、成功或失败结果，不将容器环境变量写入证据。看板、生成器和加速工具分别保留快照与逐项日志。stdout/stderr 也保存到该批目录。
 
-后台执行时将 stdout/stderr 保存到本批证据日志。加速发布另写结构化失败报告；其他脚本通过异常栈和既有事务日志留证。取消回退不表示发布成功或服务可用：中途失败可能保留部分更新或停止的容器，需读取实际状态、修复当前版本后重新验证。预计算发布中途失败会阻止后续批次；不得删除日志或覆盖快照来绕过检查。
+失败可能留下部分更新或停止的容器；先读实际状态和日志，再修复当前版本并重新验证。所有回退操作已从现行工具删除。快照和旧字节用于排查与并发核对，不能用删除日志、覆盖旧快照或伪造成功标记跳过失败批次。
 
-这些修改只作用于本仓库脚本，服务器上的旧副本需通过 SSH MCP 同步后才生效；已启动的旧脚本进程不会自动更新。
+这些修改需同步到服务器后才影响服务器工具；已运行进程和旧副本不会自动更新。
 
-## Git 边界
+## 历史材料
 
-- 保留：源码、采集配置、发布脚本读取的 `manifest.json` / `*-manifest.json` / `panels.json`，以及版本锁和校验和。
-- 排除：`complete.json` / `*-complete.json`、代理验证结果、运行日志和容器快照。本地留存统一放到仓库根目录 `evidence/<批次>/`；9 个历史结果已迁移，清单见归档索引。
-- 远端历史脚本的输出和回退文件布局维持原约定；下载留存时放到本地证据目录。本轮仅整理本地仓库，未改动远端发布流程。
+已完成批次的 Python 发布/候选/验证脚本、源代码快照和旧看板基线已移出工作树，检索方式见 [退役清单](../docs/releases/retired-code.md)。带日期的目录仅保留追溯用 Dockerfile、manifest、panels 等输入及归档导航，不能作为新发布计划重跑。
 
-`.gitignore` 同时排除发布目录中再次出现的完成报告及 Perses 代理验证报告，防止误加入 Git；没有笼统忽略 JSON 或 manifest。
+历史正文集中于 [发布归档](../docs/releases/README.md)。`evidence/`、`work/`、运行日志、凭据和镜像归档不入库；版本锁、源输入摘要和校验和继续入库，不按扩展名批量忽略。

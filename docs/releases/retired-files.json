@@ -1,0 +1,400 @@
+{
+  "source_commit": "a624c42a53f3248f4efbcdd34cb03c80d0a5908f",
+  "files": {
+    "deploy/a3-coverage-20260928/audit.py": {
+      "sha256": "b45a8e5aee0ce1b55d7cb2611a7d3d7c455111b01c68edb60101669bd05db18c",
+      "bytes": 7846,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/a3-coverage-20260928/release.py": {
+      "sha256": "e4945132f95bcbe0cb53efb56e5cbf3a4f5c16696bbef23200193be709ccc71b",
+      "bytes": 9944,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/a3_switch_release.py": {
+      "sha256": "3fe0e612db601357351b2721edfe42745b2fdde71d922928934780018f80b661",
+      "bytes": 6723,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/a3_switch_verify.py": {
+      "sha256": "050b4f4c1feeb2d12283eb87c6b9ae99c664fc6944750cb3cf8128c622848f45",
+      "bytes": 4325,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/check_gateway_monitor_candidate.py": {
+      "sha256": "a5bdd2693935bba56a6a939cbfc0e06638e9ab8bd8d6249ed72e6df6861eb759",
+      "bytes": 2004,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/check_host_cpu_candidate.py": {
+      "sha256": "61a53ab77893832f52bd019e13174b635ace247e0c6197f8830b1a2e51a1193b",
+      "bytes": 2465,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/check_local_latest.py": {
+      "sha256": "023fa4a0885670856366e40be6b796de43b1dcd8917c7cde0d9a5f29c7661f5a",
+      "bytes": 1818,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/dcu_bottlenecks_release.py": {
+      "sha256": "44c8746445da81d93ba1d266627b5d4844c8c412a5c98a7b11ddffa7e8b640e3",
+      "bytes": 8271,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/gateway_monitor_release.py": {
+      "sha256": "03d0fbd8982c71965446a88ec2819654ddf6741a233b7c7232a80d4f8dc2053e",
+      "bytes": 6602,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/history-summary-20260924/api.py": {
+      "sha256": "c9b782a2138ad68880b8bb839bce2c660002901847b0ac5d7c41ad6b5e118ec7",
+      "bytes": 15988,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/history-summary-20260924/candidate.py": {
+      "sha256": "37ea65d87c8595300e6127285921a0714617c418f30bb554252238b7025e9fe1",
+      "bytes": 1088,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/history-summary-20260924/release.py": {
+      "sha256": "995d1d8fb1f3411ef90ae4f75764231464ac7af7ffce0bde5954593783138676",
+      "bytes": 5514,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/host_cpu_release.py": {
+      "sha256": "3186c6bf525f6447f23a4865890b0a99085aed861b2f542d4a38c78895e547b8",
+      "bytes": 10445,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/latency_release.py": {
+      "sha256": "b519cabb160a77bcb8c542deb69c91ff249e7561214acdf71dee98a381d5e83a",
+      "bytes": 6535,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/live-replay-20261002/benchmark.py": {
+      "sha256": "d54c3ef1d376b0d8d9a419898c5ec7bf3925a59b6db86573cc74518c0a536264",
+      "bytes": 1507,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/local_latest_release.py": {
+      "sha256": "894630c98a786e3740da36eba739cc0c316c0c432b0bfda7ca776d4da2a8cea0",
+      "bytes": 7471,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/migrate_test4_env.py": {
+      "sha256": "60d0581af944a04a9b2544cef87760729129adaa00e984bef2c4a3260da21771",
+      "bytes": 3654,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/npu_release.py": {
+      "sha256": "133037fcd20a348df5d17e9f03b2d0a9581e61647156b9733a306335f04c3609",
+      "bytes": 7349,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/profile_a3_accept.py": {
+      "sha256": "dd45f208972690adf16f628f87de0370d9301221866a1678f7b83cea56cc3c64",
+      "bytes": 4727,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/profile_environments_release.py": {
+      "sha256": "2ab7b5951f3f00b16c79bebb87ebcab5b96913a74629497874a3d3b2f27f4a80",
+      "bytes": 7322,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/profile_restart_verify.py": {
+      "sha256": "eda16b531838a3d05d36ef9efc0321556827e4262647bda2f643791054e19085",
+      "bytes": 5019,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/profile_time_sync.py": {
+      "sha256": "af2224ea2afa1b09d38cee6028be34fa93eb3426b85bab76d32d67c72a0d54a9",
+      "bytes": 1835,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/request_rate_release.py": {
+      "sha256": "7ef8ed65927561f74e4c249de327e7ba277f6243457a97a81f82954e74f1980d",
+      "bytes": 5018,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/review-fixes-20260924/check_candidate.py": {
+      "sha256": "3915abd65c68644c63cae1d30b5f2cb8dc7b35282149c63a050b819ea33254da",
+      "bytes": 1402,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/review-fixes-20260924/release.py": {
+      "sha256": "57081a9cf7c6619cae6d9e52baa9910bf0b2a7b82d975aa10222045d02db952a",
+      "bytes": 7316,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/review-fixes-20260930/candidate.py": {
+      "sha256": "606446b3c739f052f792ad468a5c79da6ba301b91ed4f97fb8a8501693c920b9",
+      "bytes": 3388,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/review-fixes-20260930/release.py": {
+      "sha256": "fa605f85e7e92be16e3b655b7af5b83f1f3d5d9b1e267fd8a358dab4a2e38a50",
+      "bytes": 11399,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/review-fixes-20261008/release.py": {
+      "sha256": "638df85311241c67d25deca6c4ef748e2654d3e9565dd543ace9e37b646424aa",
+      "bytes": 8334,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/stream-direction-20260923/perses_release.py": {
+      "sha256": "c62da9c3d91d7e84e6be47141718e5741a0b6b1024e517ef2b36ff39fe69e302",
+      "bytes": 3351,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/stream-direction-20260923/service_release.py": {
+      "sha256": "62b3eca5b99ce2cd0ce99619967bb238925ce35c12e1760fc366f47118619168",
+      "bytes": 4889,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/time-navigation-20260925/candidate_api.py": {
+      "sha256": "c15bbbac9dbfa413e4bb833865604d809e9049b2348299962fd304d9131d7105",
+      "bytes": 1333,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/time-navigation-20260925/release_api.py": {
+      "sha256": "6ba6844674a355802544c6d61a303eb60cfa732a1f7778b13ab6b316bac7888b",
+      "bytes": 7363,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/verify_host_cpu_release.py": {
+      "sha256": "d7652cfffdc1a4ddd410559b54d3b58412663d0479429c8ad2907c1fb51d4639",
+      "bytes": 4868,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/xpu-cache-20260923/release.py": {
+      "sha256": "2469973550c731ce134db93246f0bbf5a15a130315cc00e5b983428faef13bf6",
+      "bytes": 5809,
+      "reason": "completed release batch or frozen source/benchmark snapshot"
+    },
+    "deploy/xpu_gateway_publish.py": {
+      "sha256": "51669b94185737a7d66241c067382bb74e7d9e4ff0e4f0bc82a10fe6e5c53239",
+      "bytes": 1469,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/xpu_hardware_release.py": {
+      "sha256": "56e1760784e069d0e932c9458d2c2680cfe0ddc44cc509ac01b2c1e4928e4336",
+      "bytes": 4216,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/xpu_hosts_release.py": {
+      "sha256": "8ddd6fd723a20ef7c1a7e82174af56031c7fd3ba555d1f43e642329de6e89835",
+      "bytes": 6382,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/xpu_perses_release.py": {
+      "sha256": "537d340a8f65835d7a98f9573dc70dcb0562d17aabaeccbdeeb14ef5c4eee268",
+      "bytes": 2059,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/xpu_prefill_metrics.py": {
+      "sha256": "fd284faf538979c281e3e0be11b6d55388f23bc7b063dd4a4352df55f8d9768e",
+      "bytes": 1923,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/xpu_prefill_publish.py": {
+      "sha256": "0c233281d26bbb5cb28744647f13263b3ae22e7280e00bbf45a767bcc05e4095",
+      "bytes": 1386,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/xpu_release.py": {
+      "sha256": "0c22d82ba967f692247d822bf746ebff42d9bfde35e7651cc7fea61f1d36bd62",
+      "bytes": 5439,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/xpu_topology_release.py": {
+      "sha256": "e40714f3774a493726dcfaac1bcbdb4ffe212d99e637785a8032a3bcaac24b2e",
+      "bytes": 8910,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/xpu_verify.py": {
+      "sha256": "7402ee0a21857000adc2e308fbbc4f015afe9cbe1c7cc7527e9274665be37446",
+      "bytes": 2360,
+      "reason": "superseded by shared container/dashboard release tools"
+    },
+    "deploy/perses_acceleration/release_api.py": {
+      "sha256": "3ef800d086b7b0e80f05e8d2ac0c97329aed430b6ad3d7e9f321bb886cb15c2c",
+      "bytes": 9603,
+      "reason": "retired shadow bootstrap or hard-coded historical batch"
+    },
+    "deploy/perses_acceleration/shadow_watch.py": {
+      "sha256": "2b2ff30d02e114f3742651fd05cbc536c6a4eb6fc6facc673300f7473bebc323",
+      "bytes": 5102,
+      "reason": "retired shadow bootstrap or hard-coded historical batch"
+    },
+    "deploy/perses_acceleration/recover_dcu.py": {
+      "sha256": "61608c5332853fb5488d61dccc32978f3e1a760d8f9c5040723a424a29012fa3",
+      "bytes": 3120,
+      "reason": "retired shadow bootstrap or hard-coded historical batch"
+    },
+    "deploy/perses_acceleration/publish_user_merges.py": {
+      "sha256": "22f1aa17b79ae3063ee15428da3c8693f7fdf6e9d9900766abea7aef49431389",
+      "bytes": 3893,
+      "reason": "retired shadow bootstrap or hard-coded historical batch"
+    },
+    "deploy/perses_acceleration/candidate_api.py": {
+      "sha256": "2cf94a08a3480e0c2f6d4c10dae04418abc5e513db72650a5229c2e9bc92ca58",
+      "bytes": 3125,
+      "reason": "retired shadow bootstrap or hard-coded historical batch"
+    },
+    "deploy/perses_acceleration/profile_query_candidate.py": {
+      "sha256": "b192057d1177eaec7db1e60b364ebb0a758abea8b9d0a415f4e124b4c92dd60e",
+      "bytes": 3623,
+      "reason": "retired shadow bootstrap or hard-coded historical batch"
+    },
+    "perses/alignment_release.py": {
+      "sha256": "4616a181365fc3fbcfdb563da587f63f42f97c67f14a5a0dfaf7f9a2042c8306",
+      "bytes": 5828,
+      "reason": "superseded dashboard migration/publication entry"
+    },
+    "perses/xpu_role_release.py": {
+      "sha256": "d472c32b1849d79e16b02627c8cbc4fcf78e7f255d60a0b8d2fb5782b25cc828",
+      "bytes": 5783,
+      "reason": "superseded dashboard migration/publication entry"
+    },
+    "perses/fix_gateway_rate_matching.py": {
+      "sha256": "90c3682592901e6518426d06d80c8b70b0fb6dd75a88bd0bd2620d7f2241ddd8",
+      "bytes": 3179,
+      "reason": "superseded dashboard migration/publication entry"
+    },
+    "perses/publish_a3.py": {
+      "sha256": "95fdd61cae045cdb1e7dc29ba6e795b25d9df540ee41b4aa34c2a41c78e82984",
+      "bytes": 2400,
+      "reason": "superseded dashboard migration/publication entry"
+    },
+    "perses/publish_gateway_generation.py": {
+      "sha256": "5d36614916252736cbea9f6ee8076fd38c5c14abbd5df199f710c7c95ec34d0c",
+      "bytes": 4751,
+      "reason": "superseded dashboard migration/publication entry"
+    },
+    "perses/publish_gateway_live.py": {
+      "sha256": "89fc1721168509243e3e7f7b994215e2dc479194441787bda800fb68a0b4469c",
+      "bytes": 4553,
+      "reason": "superseded dashboard migration/publication entry"
+    },
+    "perses/publish_gateway_scope.py": {
+      "sha256": "8edbbba09ab73e2af9e9620ab3108bc567be0880653d9e45069ebcfe6b32f5cb",
+      "bytes": 5694,
+      "reason": "superseded dashboard migration/publication entry"
+    },
+    "perses/project_polish.py": {
+      "sha256": "c21d95261a93046d807ce1dbef50f46586fefdd31e04c113c04047b3ba93a15d",
+      "bytes": 2466,
+      "reason": "superseded dashboard migration/publication entry"
+    },
+    "perses/update_defaults.py": {
+      "sha256": "6b6919c6653bf1d8f902855ed00bbe00bc81f7a9b4d5268b292f774721e7e414",
+      "bytes": 1009,
+      "reason": "superseded dashboard migration/publication entry"
+    },
+    "perses/generate_a3.py": {
+      "sha256": "58fc82ee708285f7f2dbd43731e4b80edddd6c183bdf6dc753da8039e84f14f7",
+      "bytes": 5175,
+      "reason": "superseded dashboard migration/publication entry"
+    },
+    "perses/performance/publish_quantiles.py": {
+      "sha256": "1bf91d03f5aba71552e62fdf2dbe3f989a4761219e8b00bb5160e4f9ca3ab1a1",
+      "bytes": 6276,
+      "reason": "completed legacy quantile migration and dedicated checks"
+    },
+    "perses/performance/quantile_release.py": {
+      "sha256": "683ab278edffb12f73395879e06b07d5ee9d57672c97943a6588a7a0714d0083",
+      "bytes": 3295,
+      "reason": "completed legacy quantile migration and dedicated checks"
+    },
+    "perses/performance/tests/dashboard_quantiles.py": {
+      "sha256": "d176560b5bbd1ea4c416ab0ae2f9af9037e3e3bf94ed06630a77fe2d9d7e47da",
+      "bytes": 4922,
+      "reason": "completed legacy quantile migration and dedicated checks"
+    },
+    "perses/performance/tests/test_release.py": {
+      "sha256": "4bbb07206a0316691cb248bb878161f21336615ae7b2408ccbe79fa93def554d",
+      "bytes": 2470,
+      "reason": "completed legacy quantile migration and dedicated checks"
+    },
+    "perses/dashboards/a3-cache.json": {
+      "sha256": "924124e2b73d3ce2d856d2c2803bd9ffa04213c357ac082c430c200a870960fc",
+      "bytes": 8547,
+      "reason": "obsolete single-project baseline; current resources are perses/projects"
+    },
+    "perses/dashboards/a3-hosts.json": {
+      "sha256": "5093ce9fdcef507551edca03ccadea7dca424099822f49332a3fc86a53d9747c",
+      "bytes": 20727,
+      "reason": "obsolete single-project baseline; current resources are perses/projects"
+    },
+    "perses/dashboards/a3-overview.json": {
+      "sha256": "41595013738d8e80ad84e32556f757e8e0b9ddd6d6fe7437a9626e22a73d3391",
+      "bytes": 25682,
+      "reason": "obsolete single-project baseline; current resources are perses/projects"
+    },
+    "perses/dashboards/cache-store.json": {
+      "sha256": "eb2e4e307c6ab60b26c9b720258cc789514823018fdfaa950d284f838adb8b25",
+      "bytes": 21015,
+      "reason": "obsolete single-project baseline; current resources are perses/projects"
+    },
+    "perses/dashboards/gateway-generation.json": {
+      "sha256": "b4fedac5caf38c0bee1461147f440d9a8ece5fee7230dc5dc3953d0e6a4b6cde",
+      "bytes": 252987,
+      "reason": "obsolete single-project baseline; current resources are perses/projects"
+    },
+    "perses/dashboards/gateway.json": {
+      "sha256": "c5ef47737985fea02ca3655fe9b31bd510506e7dc43775bcdc81201a4efa6e9f",
+      "bytes": 19601,
+      "reason": "obsolete single-project baseline; current resources are perses/projects"
+    },
+    "perses/dashboards/hosts-dcu.json": {
+      "sha256": "93a2ce7f02326527a988c3933e525f1449b3676f2a9c15282384adb4cbe130ea",
+      "bytes": 24894,
+      "reason": "obsolete single-project baseline; current resources are perses/projects"
+    },
+    "perses/dashboards/overview.json": {
+      "sha256": "0d7384b0895444a0f9b07187f8eead2a56621ecd177cc4827b34127f122eb747",
+      "bytes": 25698,
+      "reason": "obsolete single-project baseline; current resources are perses/projects"
+    },
+    "perses/datasource.json": {
+      "sha256": "d32e5ded89a884df6494613bc3f44729732ee527e13763f024784cd99495dcfd",
+      "bytes": 1728,
+      "reason": "obsolete single-project baseline; current resources are perses/projects"
+    },
+    "perses/project.json": {
+      "sha256": "8f8cb4d6cd49a59dcb3806575158ae2617681a7371909edba3988e1fd673c168",
+      "bytes": 141,
+      "reason": "obsolete single-project baseline; current resources are perses/projects"
+    },
+    "tests/test_xpu_release.py": {
+      "sha256": "442cb1c9bde41060cb44892e341c03423a2285c4ba84f3bccfacfb2fa0e8d2bb",
+      "bytes": 6231,
+      "reason": "tests specific to retired release scripts"
+    },
+    "tests/test_time_navigation_release.py": {
+      "sha256": "7cbf28d6dbdac5d3d247c9f4e1dc7c28196b36d0ba47f26d0036776978c67499",
+      "bytes": 3397,
+      "reason": "tests specific to retired release scripts"
+    },
+    "tests/test_acceleration_release_logging.py": {
+      "sha256": "5811738a43d6d0e609767ae12be4173ba933eecb76d5609c96dc533ad20e8ac4",
+      "bytes": 5668,
+      "reason": "tests specific to retired release scripts"
+    },
+    "perses/test_gateway_scope.py": {
+      "sha256": "4efd3656577450a1c29b92d85d7028514fa4973d17c4a7430e971fde3759704f",
+      "bytes": 2532,
+      "reason": "tests specific to retired gateway scope migration; current scope/guard tests remain"
+    },
+    "tests/test_shadow_watch.py": {
+      "sha256": "77f85902535a25dddbc0b4bdc5e3290724908dc66b7c5dc3e4ea64f3197c1995",
+      "bytes": 3394,
+      "reason": "shadow-only tests retired; reusable admin concurrency test extracted"
+    },
+    "deploy/perses_acceleration/merge_noise_control.py": {
+      "sha256": "36413b1ed22f437a50f494f78ed2ca38c64729e877669bee796fcebffd409d94",
+      "bytes": 3214,
+      "reason": "hard-coded historical benchmark batch; viewport_audit retained"
+    }
+  }
+}

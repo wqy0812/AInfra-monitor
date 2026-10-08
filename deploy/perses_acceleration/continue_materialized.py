@@ -9,6 +9,7 @@ import json
 import os
 import time
 from pathlib import Path
+from api_readiness import publication
 
 import admit_when_ready as admission
 import materialized_release as release
@@ -65,7 +66,7 @@ def main(build, browser, hours):
     with (build / 'continuation.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         started = time.time(); deadline = started + hours * 3600
-        expected = json.loads((build / 'shadow-started.json').read_text())
+        expected = publication(build)
         report = {'started_at': started, 'scope': list(release.GROUPS), 'events': []}
         try:
             while time.time() < deadline:

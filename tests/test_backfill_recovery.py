@@ -18,7 +18,6 @@ def setup(tmp_path, monkeypatch, *, failure=False, complete=True):
     }.items(): (tmp_path / name).write_text(json.dumps(value))
     monkeypatch.setattr(recovery, 'time', SimpleNamespace(time=lambda: clock[0], sleep=lambda s: clock.__setitem__(0,clock[0]+s)))
     monkeypatch.setattr(recovery, 'inspect', lambda _: {'Id': 'new', 'Image': 'image'})
-    monkeypatch.setattr(recovery, 'protected', lambda: {'vm': 'same'})
     monkeypatch.setattr(recovery, 'update', lambda *a, **k: changes.append((a[1],k)))
     def health():
         done = complete and clock[0] >= 1060

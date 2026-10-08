@@ -24,7 +24,7 @@ def load(name, path):
 
 
 validation = load('review_live_validation', 'scripts/validate_live.py')
-checker = load('review_gateway_checker', 'deploy/check_gateway_monitor_candidate.py')
+checker = load('review_gateway_checker', 'scripts/check_gateway_history.py')
 
 
 @pytest.mark.parametrize('existing', [False, True])
@@ -140,13 +140,3 @@ async def test_gateway_candidate_checks_all_ranges_and_rejects_vm_writes(monkeyp
         assert result['passed'] and result['read_only_vm_queries']
         assert queried == [(env, hours) for env in ('dcu-pd', 'a3-vllm') for hours in (1, 6, 24, 168, 720)]
         assert calls == [('GET', '/api/v1/query_range')] * 10
-
-
-def test_gateway_release_fails_before_docker_when_checker_is_not_packaged(tmp_path, monkeypatch):
-    release = load('review_local_release', 'deploy/local_latest_release.py')
-    monkeypatch.setitem(sys.modules, 'local_latest_release', release)
-    gateway = load('review_gateway_release', 'deploy/gateway_monitor_release.py')
-    monkeypatch.setattr(release, 'ROOT', tmp_path)
-    monkeypatch.setattr(release, 'command', lambda *a: pytest.fail('Docker must not be called'))
-    with pytest.raises(AssertionError, match='Missing API candidate checker'):
-        gateway.prepare()
