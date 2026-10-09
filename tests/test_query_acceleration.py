@@ -15,8 +15,8 @@ ROOT = Path(__file__).parents[1] / 'perses' / 'projects'
 def test_full_snapshot_consolidation_preserves_every_other_field():
     before = read_resources(ROOT)
     after, changes = prepare(before)
-    assert sum(len(d['spec']['panels']) for d in after['dashboards']) == 204
-    assert sum(len(p['spec']['queries']) for d in after['dashboards'] for p in d['spec']['panels'].values()) == 279
+    assert sum(len(d['spec']['panels']) for d in after['dashboards']) == 249
+    assert sum(len(p['spec']['queries']) for d in after['dashboards'] for p in d['spec']['panels'].values()) == 339
     assert 0 <= len(changes) <= 14
     for change in changes:
         old, new = copy.deepcopy(change['before']), copy.deepcopy(change['after'])

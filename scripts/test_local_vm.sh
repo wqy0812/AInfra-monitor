@@ -57,8 +57,9 @@ export MONITORING_TEST_VM_URL
 export HOST_CPU_TEST_VM_URL="$MONITORING_TEST_VM_URL"
 export GATEWAY_TEST_VM_URL="$MONITORING_TEST_VM_URL"
 export PERSES_ACCELERATION_TEST_VM_URL="$MONITORING_TEST_VM_URL"
+export SUMMARY_TEST_VM_URL="$MONITORING_TEST_VM_URL"
 
 if [ "$#" -eq 0 ]; then
-  set -- tests/test_host_cpu_vm.py tests/test_gateway_live_vm.py tests/test_perses_acceleration.py -q -rs
+  set -- tests/test_host_cpu_vm.py tests/test_gateway_live_vm.py tests/test_perses_acceleration.py tests/test_summary_vm.py -q -rs
 fi
 "$MONITORING_TEST_PYTHON" -m pytest "$@"

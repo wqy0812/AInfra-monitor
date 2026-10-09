@@ -24,7 +24,7 @@ class ProjectSplitTest(unittest.TestCase):
 
     def test_resource_structure_and_no_request_filters(self):
         split.validate(self.resources)
-        self.assertEqual(len(self.resources["dashboards"]), 27)
+        self.assertEqual(len(self.resources["dashboards"]), 30)
         self.assertEqual(split.no_request_filter(
             'm{request_scope="streaming",a="b"} + m{a="b",is_streaming!="false"} + m{stream="true"}'),
             'm{a="b"} + m{a="b"} + m{}')
@@ -108,7 +108,7 @@ class ProjectSplitTest(unittest.TestCase):
                      for kind, docs in self.resources.items()}
         generated = split.build(resources)
         split.validate(generated)
-        self.assertEqual(len(generated['dashboards']), 18)
+        self.assertEqual(len(generated["dashboards"]), 20)
         for d in generated['dashboards']:
             self.assertFalse(set(d['spec']['panels']) & {'live-idle-5', 'live-idle-15', 'live-idle-30', 'live-idle-60'})
 

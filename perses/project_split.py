@@ -326,9 +326,10 @@ def shared_health(project):
 def build(snapshot):
     from dashboard_reorg import migrate
     from panel_trim import apply as trim
+    from summary_dashboard import apply as summarize
     if any(d['metadata']['name'] == 'backend-performance' for d in snapshot['dashboards']):
         from align_dashboards import align
-        return trim(align(migrate(snapshot)[0])[0])
+        return summarize(trim(align(migrate(snapshot)[0])[0]))
     by_key = {(d["metadata"]["project"], d["metadata"]["name"]): d for d in snapshot["dashboards"]}
     result = {"projects": [], "datasources": [], "dashboards": []}
     ds = next(x for x in snapshot["datasources"] if x["metadata"]["name"] == "victoriametrics")
@@ -366,7 +367,7 @@ def build(snapshot):
     from dcu_bottlenecks import default_configure
     result['dashboards'] = [default_configure(remove_panels(d)) for d in result['dashboards']]
     from align_dashboards import align
-    return trim(align(migrate(result)[0])[0])
+    return summarize(trim(align(migrate(result)[0])[0]))
 
 
 def validate(resources):
@@ -407,7 +408,7 @@ def validate(resources):
                 assert used <= variables, (project, name, used - variables)
     for project in projects:
         names = {d['metadata']['name'] for d in resources['dashboards'] if d['metadata']['project'] == project}
-        required = {'backend-performance', 'accelerator-resources', 'gateway-requests', 'gateway-generation', 'monitoring-health'}
+        required = {'summary', 'backend-performance', 'accelerator-resources', 'gateway-requests', 'gateway-generation', 'monitoring-health'}
         required |= {'backend-prefill', 'backend-decode', 'a3-hosts', 'a3-cache'} if project == 'a3-monitoring' else {'backend-prefill', 'backend-decode', 'cache-store', 'hosts-xpu' if project == 'xpu-monitoring' else 'hosts-dcu'}
         assert required <= names, (project, required - names)
 
