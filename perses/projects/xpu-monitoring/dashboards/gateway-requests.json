@@ -599,7 +599,10 @@
         "kind": "Grid",
         "spec": {
           "display": {
-            "title": "Token 与 Usage"
+            "title": "Token 与 Usage",
+            "collapse": {
+              "open": false
+            }
           },
           "items": [
             {

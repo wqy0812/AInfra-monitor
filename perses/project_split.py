@@ -327,9 +327,10 @@ def build(snapshot):
     from dashboard_reorg import migrate
     from panel_trim import apply as trim
     from summary_dashboard import apply as summarize
+    from drilldown_layout import apply as drilldown
     if any(d['metadata']['name'] == 'backend-performance' for d in snapshot['dashboards']):
         from align_dashboards import align
-        return summarize(trim(align(migrate(snapshot)[0])[0]))
+        return summarize(drilldown(trim(align(migrate(snapshot)[0])[0])))
     by_key = {(d["metadata"]["project"], d["metadata"]["name"]): d for d in snapshot["dashboards"]}
     result = {"projects": [], "datasources": [], "dashboards": []}
     ds = next(x for x in snapshot["datasources"] if x["metadata"]["name"] == "victoriametrics")
@@ -367,7 +368,7 @@ def build(snapshot):
     from dcu_bottlenecks import default_configure
     result['dashboards'] = [default_configure(remove_panels(d)) for d in result['dashboards']]
     from align_dashboards import align
-    return summarize(trim(align(migrate(result)[0])[0]))
+    return summarize(drilldown(trim(align(migrate(result)[0])[0])))
 
 
 def validate(resources):

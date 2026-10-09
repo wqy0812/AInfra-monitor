@@ -777,6 +777,9 @@
       {
         "kind": "Grid",
         "spec": {
+          "display": {
+            "title": "命中与容量"
+          },
           "items": [
             {
               "x": 0,
@@ -822,10 +825,23 @@
               "content": {
                 "$ref": "#/spec/panels/p5"
               }
-            },
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Store 查询",
+            "collapse": {
+              "open": false
+            }
+          },
+          "items": [
             {
-              "x": 12,
-              "y": 16,
+              "x": 0,
+              "y": 0,
               "width": 12,
               "height": 8,
               "content": {
@@ -833,8 +849,8 @@
               }
             },
             {
-              "x": 0,
-              "y": 24,
+              "x": 12,
+              "y": 0,
               "width": 12,
               "height": 8,
               "content": {
@@ -842,8 +858,30 @@
               }
             },
             {
-              "x": 12,
-              "y": 24,
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-store-rate"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "HiCache 与分片明细",
+            "collapse": {
+              "open": false
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
               "width": 12,
               "height": 8,
               "content": {
@@ -851,8 +889,8 @@
               }
             },
             {
-              "x": 0,
-              "y": 32,
+              "x": 12,
+              "y": 0,
               "width": 12,
               "height": 8,
               "content": {
@@ -860,17 +898,8 @@
               }
             },
             {
-              "x": 12,
-              "y": 32,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-store-rate"
-              }
-            },
-            {
               "x": 0,
-              "y": 40,
+              "y": 8,
               "width": 12,
               "height": 8,
               "content": {
@@ -879,7 +908,7 @@
             },
             {
               "x": 12,
-              "y": 40,
+              "y": 8,
               "width": 12,
               "height": 8,
               "content": {
@@ -888,7 +917,7 @@
             },
             {
               "x": 0,
-              "y": 48,
+              "y": 16,
               "width": 12,
               "height": 8,
               "content": {
@@ -897,7 +926,7 @@
             },
             {
               "x": 12,
-              "y": 48,
+              "y": 16,
               "width": 12,
               "height": 8,
               "content": {
@@ -906,7 +935,7 @@
             },
             {
               "x": 0,
-              "y": 56,
+              "y": 24,
               "width": 12,
               "height": 8,
               "content": {

@@ -1,4 +1,4 @@
-"""Real-VM acceptance for the summary dashboards using disposable localhost data."""
+"""Real-VM acceptance for the summary and drill-down dashboards using disposable localhost data."""
 import json
 import os
 import sys
@@ -51,6 +51,17 @@ def fixtures(base):
                     labels = dict(environment='a3-vllm', job='vllm-a3', node=node, instance=f'{node}:{port}')
                     emit('up', 1, **labels)
                     emit('vllm:num_requests_waiting', value, **labels, engine='0')
+            # A3 prefix cache counters: 10 and 20 Token/s on a3-1; in 'down' one engine resets.
+            for port, speed in ((7100, 10), (7101, 20)):
+                labels = dict(environment='a3-vllm', job='vllm-a3', node='a3-1', instance=f'a3-1:{port}')
+                reset = case == 'down' and port == 7101 and i >= 58
+                for metric in ('vllm:prefix_cache_queries_total', 'vllm:prefix_cache_hits_total'):
+                    emit(metric, (i - 58 if reset else i + 100) * 5 * speed, **labels, engine='0')
+            # DCU host disks: one physical disk and one device-mapper volume repeating its I/O.
+            labels = dict(environment='dcu-pd', job='node-prefill', node='dcu1', instance='dcu1:9100')
+            emit('up', 1, **labels)
+            for device in ('sda', 'dm-0'):
+                emit('node_disk_read_bytes_total', (i + 100) * 5 * GIB, **labels, device=device)
             # DCU cards: two per node, 64 GiB each.
             for role, node, used in (('prefill', 'dcu1', (10, 20)), ('decode', 'dcu2', (30, 5))):
                 labels = dict(environment='dcu-pd', job='dcu-' + role, node=node, instance=node + ':19500')
@@ -85,6 +96,11 @@ def summary_vm():
         yield query, ends
     finally:
         client.close()
+
+
+def detail(project, name, key):
+    d = next(d for d in dashboards() if d['metadata']['project'] == project and d['metadata']['name'] == name)
+    return [q['spec']['plugin']['spec'] for q in d['spec']['panels'][key]['spec']['queries']]
 
 
 def dashboards():
@@ -130,3 +146,17 @@ def test_card_memory_is_the_fullest_card_per_node_with_total_reference(summary_v
 def test_scrape_down_counts_failed_targets_and_shows_zero_when_healthy(summary_vm, project, case, expected):
     query, ends = summary_vm
     assert query(summary(project)['scrape-down'][0]['query'], ends[case]) == {(None, None): expected}
+
+
+@pytest.mark.parametrize('case,expected', [('normal', {('Prefill', 'a3-1'): 30}), ('down', {})])
+def test_a3_prefix_cache_sums_engines_per_node_and_blanks_incomplete_nodes(summary_vm, case, expected):
+    query, ends = summary_vm
+    for spec in detail('a3-monitoring', 'a3-cache', 'extra-prefix_cache_'):
+        assert query(spec['query'], ends[case]) == pytest.approx(expected)
+
+
+def test_disk_throughput_skips_device_mapper_volumes(summary_vm):
+    query, ends = summary_vm
+    reads = detail('dcu-monitoring', 'hosts-dcu', 'core-p3')[0]['query'].replace('$node', '.*').replace('$role', '.*')
+    response = query('label_replace(' + reads + ', "role", "$1", "device", "(.*)")', ends['normal'])
+    assert response == pytest.approx({('sda', 'dcu1'): 1024})

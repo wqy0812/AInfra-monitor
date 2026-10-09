@@ -409,7 +409,10 @@
         "kind": "Grid",
         "spec": {
           "display": {
-            "title": "专属诊断"
+            "title": "专属诊断",
+            "collapse": {
+              "open": false
+            }
           },
           "items": [
             {

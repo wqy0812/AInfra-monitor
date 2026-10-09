@@ -1,6 +1,6 @@
 # Perses 看板与维护
 
-现行定义位于 `projects/`：DCU、A3、XPU 各 1 张总览和 9 张专业看板，共 249 个面板。总览（`summary`）每图按角色或节点聚合、最多 4 条线，由 `summary_dashboard.py` 根据明细面板的现有查询重建，不保留网页编辑；`panel_trim.py` 记录已删除或合并的面板。非缓存看板使用公共核心及平台扩展，保留平台真实的指标、角色和统计口径；A3 分 Prefill/Decode，主机与加速卡分开。
+现行定义位于 `projects/`：DCU、A3、XPU 各 1 张总览和 9 张专业看板，共 249 个面板。总览（`summary`）每图按角色或节点聚合、最多 4 条线，由 `summary_dashboard.py` 根据明细面板的现有查询重建，不保留网页编辑；`panel_trim.py` 记录已删除或合并的面板；`drilldown_layout.py` 把明细看板的诊断分组默认折叠，并减少非加速面板的曲线数。非缓存看板使用公共核心及平台扩展，保留平台真实的指标、角色和统计口径；A3 分 Prefill/Decode，主机与加速卡分开。
 
 默认数据源直接查询 VM，`perses-accelerated` 为独立专用数据源。生成器读取 `acceleration_state.json` 保留已准入的 14 个合并面板和 CPU/DCU/A3 三组绑定，当前 JSON 有 18 个加速面板。这是仓库配置，线上一致性和健康需操作时检查。详见 [当前加速清单](../deploy/perses_acceleration/STATUS.md) 和 [查询口径](../docs/perses-query-acceleration.md)。
 

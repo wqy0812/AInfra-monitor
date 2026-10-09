@@ -25,6 +25,8 @@ def configure(document):
     d = copy.deepcopy(document)
     # Replace only this catalog; retain all engine/user panels and their layout.
     d['spec']['panels'] = {k: v for k, v in d['spec']['panels'].items() if not k.startswith('mooncake-')}
+    # Rebuilt groups keep their display settings, such as being collapsed by default.
+    displays = {l['spec']['display']['title']: l['spec']['display'] for l in d['spec']['layouts'] if l['spec'].get('display', {}).get('title')}
     layouts = []
     for layout in d['spec']['layouts']:
         layout['spec']['items'] = [i for i in layout['spec']['items'] if not i['content']['$ref'].split('/')[-1].startswith('mooncake-')]
@@ -57,6 +59,6 @@ def configure(document):
         add('Mooncake 驱逐与写入清理', key, title + '速率', unit, [(q.rate(m), label) for m, label in metrics], '对象操作计数，不代表物理 SSD 吞吐。')
     add('Mooncake 驱逐与写入清理', 'staging', '待释放暂存内存', 'MiB', [(q.gauge('master_put_start_discarded_staging_size') + ' / 1024^2', '已丢弃未释放')])
     for title, keys in groups.items():
-        d['spec']['layouts'].append({'kind': 'Grid', 'spec': {'display': {'title': title}, 'items': [
+        d['spec']['layouts'].append({'kind': 'Grid', 'spec': {'display': displays.get(title, {'title': title}), 'items': [
             {'x': i % 2 * 12, 'y': i // 2 * 8, 'width': 12, 'height': 8, 'content': {'$ref': '#/spec/panels/' + key}} for i, key in enumerate(keys)]}})
     return d

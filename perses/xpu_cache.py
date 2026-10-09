@@ -52,7 +52,8 @@ def configure(source):
         {'x': 12 * (i % 2), 'y': 8 * (i // 2), 'width': 24 if len(keys) == 1 else 12, 'height': 8,
          'content': {'$ref': '#/spec/panels/' + key}} for i, key in enumerate(keys)]}} for title, keys in groups]
     from panel_trim import retire
-    return retire(d)
+    from drilldown_layout import present
+    return present(retire(d))
 
 
 if __name__ == '__main__':

@@ -237,7 +237,10 @@
         "kind": "Grid",
         "spec": {
           "display": {
-            "title": "HiCache 预取等待"
+            "title": "HiCache 预取等待",
+            "collapse": {
+              "open": false
+            }
           },
           "items": [
             {

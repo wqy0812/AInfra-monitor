@@ -103,6 +103,25 @@ class ProjectSplitTest(unittest.TestCase):
         for d in self.resources['dashboards']:
             self.assertIs(retire(d), d)
 
+    def test_drilldown_collapses_details_and_draws_fewer_lines(self):
+        from drilldown_layout import COLLAPSED, FEWER_DEVICES, present
+        for d in self.resources['dashboards']:
+            name = d['metadata']['name']
+            self.assertEqual(present(d), d)
+            for layout in d['spec']['layouts']:
+                display = layout['spec'].get('display', {})
+                self.assertEqual(display.get('collapse') == {'open': False}, display.get('title') in COLLAPSED.get(name, ()), (name, display))
+            if name in ('hosts-dcu', 'a3-hosts', 'hosts-xpu'):
+                load = d['spec']['panels']['core-extra-load']['spec']['queries']
+                self.assertEqual([q['spec']['plugin']['spec']['seriesNameFormat'] for q in load], ['{{node}} · 5m'])
+                for key in ('core-p3', 'core-p4'):
+                    for q in d['spec']['panels'][key]['spec']['queries']:
+                        self.assertIn('device!~"' + FEWER_DEVICES + '"', q['spec']['plugin']['spec']['query'])
+            if name == 'a3-cache':
+                for key in ('extra-prefix_cache_', 'extra-external_prefix_cache_'):
+                    for q in d['spec']['panels'][key]['spec']['queries']:
+                        self.assertIn('sum by(environment,node)', q['spec']['plugin']['spec']['query'])
+
     def test_legacy_two_project_generation_and_retired_panels(self):
         resources = {kind: [d for d in docs if d['metadata'].get('project', d['metadata']['name']) != 'xpu-monitoring']
                      for kind, docs in self.resources.items()}
