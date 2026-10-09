@@ -14,17 +14,22 @@ def test_all_core_catalogs_match_and_a3_mixed_dashboard_is_gone():
     r=read_resources(ROOT/'projects');validate(r)
     assert len(r['dashboards'])==30
     assert all(d['metadata']['name']!='backend-diagnostics' for d in r['dashboards'])
-    for family in ('backend-performance','backend-prefill','backend-decode','accelerator-resources','gateway','gateway-generation','gateway-requests','monitoring-health'):
+    for family in ('backend-performance','backend-prefill','backend-decode','accelerator-resources','gateway-generation','gateway-requests','monitoring-health'):
         sets=[]
         for d in r['dashboards']:
             if d['metadata']['name']!=family:continue
             keys=ordered(d)
             if family.startswith('backend-') or family=='accelerator-resources':keys=[k for k in keys if k.startswith('core-')]
+            if family in ('backend-prefill','backend-decode'):
+                # DCU shows KV pool Token values instead of the core-kv ratio; A3/XPU only expose the ratio.
+                dcu=d['metadata']['project']=='dcu-monitoring'
+                assert ('core-kv' in keys)!=dcu and (family.replace('backend','bn')+'-kv-capacity' in ordered(d)[:2])==dcu,(d['metadata']['project'],family)
+                keys=[k for k in keys if k!='core-kv']
             sets.append([(k,d['spec']['panels'][k]['spec']['display']['name']) for k in keys])
         assert len(sets)==3 and sets[0]==sets[1]==sets[2],family
     hosts=[d for d in r['dashboards'] if d['metadata']['name'] in ('a3-hosts','hosts-dcu','hosts-xpu')]
     cores=[[(k,d['spec']['panels'][k]['spec']['display']['name']) for k in ordered(d) if k.startswith('core-')] for d in hosts]
-    assert len(cores[0])==10 and cores[0]==cores[1]==cores[2]
+    assert len(cores[0])==8 and cores[0]==cores[1]==cores[2]
 
 
 def test_alignment_and_generation_are_idempotent_for_project_subsets():

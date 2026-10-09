@@ -39,8 +39,8 @@ Docker Desktop 启动后，从仓库根目录执行：
 入口使用 [Compose 配置](compose.vm.yml) 启动 `monitoring-test-vm`，版本为
 VictoriaMetrics 1.151.0，地址为 `http://127.0.0.1:18543`。运行前会重建该测试容器，
 清空 tmpfs 中的合成数据，并设置 `HOST_CPU_TEST_VM_URL`、`GATEWAY_TEST_VM_URL`、
-`PERSES_ACCELERATION_TEST_VM_URL`，默认仅执行 `test_host_cpu_vm.py`、
-`test_gateway_live_vm.py` 和 `test_perses_acceleration.py` 三个 VM 语义测试文件。
+`PERSES_ACCELERATION_TEST_VM_URL`、`SUMMARY_TEST_VM_URL`，默认仅执行 `test_host_cpu_vm.py`、
+`test_gateway_live_vm.py`、`test_perses_acceleration.py` 和 `test_summary_vm.py` 四个 VM 语义测试文件。
 容器限制为 1 CPU / 1 GiB 内存，数据随容器停止丢弃。测试成功、失败或中断后，
 入口都会停止并移除该测试容器及其 Compose 网络；平时不运行。镜像保留在本机缓存中。
 

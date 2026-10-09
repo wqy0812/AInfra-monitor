@@ -101,50 +101,6 @@
           ]
         }
       },
-      "extra-ended": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "网关 · 请求结束结果（请求/秒）",
-            "description": "指标含义\n画像记录的全部结束结果，按 outcome 分线；完成、拒绝、取消分别展示。\n\nXPU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。\n\n源口径\n画像包含流式及非流式。网关首增量只统计有效流式输出；Token 和总耗时在请求结束时计入。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(sum by(environment,backend,model,outcome) ((rate(aigate_requests_ended_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) and ((time() - timestamp(aigate_requests_ended_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15) and (count_over_time(aigate_requests_ended_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= $__interval) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15))) and (count_over_time(aigate_requests_ended_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_requests_ended_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (resets(aigate_requests_ended_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= (1m / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= 1m) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15))))))) unless on(environment,backend,model,outcome) (count by(environment,backend,model,outcome) ((count_over_time(aigate_requests_ended_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) unless ((time() - timestamp(aigate_requests_ended_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15) and (count_over_time(aigate_requests_ended_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= $__interval) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15))) and (count_over_time(aigate_requests_ended_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_requests_ended_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (resets(aigate_requests_ended_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= (1m / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= 1m) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15)))))))",
-                    "seriesNameFormat": "后端 {{backend}} · {{model}} · {{outcome}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "extra-first": {
         "kind": "Panel",
         "spec": {
@@ -378,50 +334,6 @@
           ]
         }
       },
-      "extra-usage": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "网关 · Usage 缺失比例（%）",
-            "description": "指标含义\n按输入/输出字段分别计算缺失次数 /（已知次数 + 缺失次数）；没有结束样本时留空。\n\nXPU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。\n\n源口径\n画像包含流式及非流式。网关首增量只统计有效流式输出；Token 和总耗时在请求结束时计入。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "100 * (((sum by(environment,backend,model,field) ((rate(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) and ((time() - timestamp(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15) and (count_over_time(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= $__interval) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15))) and (count_over_time(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (resets(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= (1m / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= 1m) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15))))))) unless on(environment,backend,model,field) (count by(environment,backend,model,field) ((count_over_time(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) unless ((time() - timestamp(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15) and (count_over_time(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= $__interval) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15))) and (count_over_time(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (resets(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= (1m / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= 1m) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15)))))))) / on(environment,backend,model,field) ((((sum by(environment,backend,model,field) ((rate(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) and ((time() - timestamp(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15) and (count_over_time(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= $__interval) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15))) and (count_over_time(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (resets(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= (1m / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= 1m) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15))))))) unless on(environment,backend,model,field) (count by(environment,backend,model,field) ((count_over_time(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) unless ((time() - timestamp(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15) and (count_over_time(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= $__interval) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15))) and (count_over_time(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (resets(aigate_usage_missing_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= (1m / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= 1m) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15)))))))) + ((sum by(environment,backend,model,field) ((rate(aigate_usage_known_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) and ((time() - timestamp(aigate_usage_known_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15) and (count_over_time(aigate_usage_known_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= $__interval) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15))) and (count_over_time(aigate_usage_known_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_usage_known_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (resets(aigate_usage_known_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= (1m / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= 1m) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15))))))) unless on(environment,backend,model,field) (count by(environment,backend,model,field) ((count_over_time(aigate_usage_known_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) unless ((time() - timestamp(aigate_usage_known_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15) and (count_over_time(aigate_usage_known_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= $__interval) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15))) and (count_over_time(aigate_usage_known_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_usage_known_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (resets(aigate_usage_known_total{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"aigate\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"aigate\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"aigate\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}[1m]) >= (1m / 5)) and (time() - aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"} >= 1m) and (time() - timestamp(aigate_profile_counter_start_time_seconds{environment=\"xpu-pd\",job=\"aigate\",request_scope=\"all\"}) < 15))))))))) > 0))",
-                    "seriesNameFormat": "后端 {{backend}} · {{model}} · {{field}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "gateway-arrivals": {
         "kind": "Panel",
         "spec": {
@@ -470,8 +382,8 @@
         "kind": "Panel",
         "spec": {
           "display": {
-            "name": "网关 · 生成结束速率（请求/秒）",
-            "description": "指标含义\n进入下游生成阶段的请求结束速率（含流式与非流式），使用最近 1 分钟结束计数的 rate。包含正常完成、错误、客户端取消、客户端断开和未知结果，不是成功请求速率；与到达速率的差异可能来自在途请求积压或释放。\n\nXPU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。"
+            "name": "网关 · 生成结束结果（请求/秒）",
+            "description": "指标含义\n最近 1 分钟进入下游生成阶段的请求结束速率，含流式与非流式。「全部结束」包含正常完成、错误、客户端取消、客户端断开和未知结果，不是成功请求速率；其余三条是其中按结束结果拆出的速率，后端错误见「后端错误速率」。客户端取消不能单独判定是用户操作还是上游超时；客户端断开通常与向客户端写入失败有关；未知结果不能按正常完成解释。\n\nXPU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -509,7 +421,46 @@
                   "spec": {
                     "minStep": "5s",
                     "query": "(sum by(environment) (rate(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))",
-                    "seriesNameFormat": "XPU 主机网关"
+                    "seriesNameFormat": "全部结束"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(sum by(environment) (rate(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))",
+                    "seriesNameFormat": "客户端取消"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(sum by(environment) (rate(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))",
+                    "seriesNameFormat": "客户端断开"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(sum by(environment) (rate(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))",
+                    "seriesNameFormat": "未知结果"
                   }
                 }
               }
@@ -567,214 +518,6 @@
             }
           ]
         }
-      },
-      "generation-2": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "网关 · 后端错误率（%）",
-            "description": "指标含义\n后端错误计数速率 ÷ 全部生成结束请求速率 × 100%。分母包含完成、错误、取消、断开和未知结果；不包含入口拒绝、模型发现或探测。\n\nXPU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "querySettings": [
-                {
-                  "colorMode": "fixed",
-                  "colorValue": "#1976D2",
-                  "queryIndex": 0
-                }
-              ],
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 2
-              },
-              "yAxis": {
-                "max": 100,
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "100 * (((sum by(environment) (rate(aigate_upstream_errors_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_upstream_errors_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_upstream_errors_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_upstream_errors_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_upstream_errors_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_upstream_errors_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_upstream_errors_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))) / on(environment) (((sum by(environment) (rate(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))) > 0))",
-                    "seriesNameFormat": "XPU 主机网关"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "generation-3": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "网关 · 客户端取消占比（%）",
-            "description": "指标含义\n结束结果为 client_cancelled 的请求速率 ÷ 全部生成结束请求速率 × 100%。表示网关观察到请求上下文被取消；仅凭此图不能判定是用户主动操作、上游超时还是其他取消原因。\n\nXPU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "querySettings": [
-                {
-                  "colorMode": "fixed",
-                  "colorValue": "#1976D2",
-                  "queryIndex": 0
-                }
-              ],
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 2
-              },
-              "yAxis": {
-                "max": 100,
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "100 * (((sum by(environment) (rate(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_cancelled\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))) / on(environment) (((sum by(environment) (rate(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))) > 0))",
-                    "seriesNameFormat": "XPU 主机网关"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "generation-4": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "网关 · 客户端断开占比（%）",
-            "description": "指标含义\n结束结果为 client_disconnected 的请求速率 ÷ 全部生成结束请求速率 × 100%。通常与网关向客户端写入失败有关，需结合日志定位；不能据此直接判定模型服务失败。\n\nXPU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "querySettings": [
-                {
-                  "colorMode": "fixed",
-                  "colorValue": "#1976D2",
-                  "queryIndex": 0
-                }
-              ],
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 2
-              },
-              "yAxis": {
-                "max": 100,
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "100 * (((sum by(environment) (rate(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"client_disconnected\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))) / on(environment) (((sum by(environment) (rate(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))) > 0))",
-                    "seriesNameFormat": "XPU 主机网关"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "generation-5": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "网关 · 未知结果占比（%）",
-            "description": "指标含义\n结束结果为 unknown 的请求速率 ÷ 全部生成结束请求速率 × 100%。表示网关没有得到足够证据归入其他结束结果，不能按正常完成解释。\n\nXPU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "querySettings": [
-                {
-                  "colorMode": "fixed",
-                  "colorValue": "#1976D2",
-                  "queryIndex": 0
-                }
-              ],
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 2
-              },
-              "yAxis": {
-                "max": 100,
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "100 * (((sum by(environment) (rate(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",result=\"unknown\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))) / on(environment) (((sum by(environment) (rate(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"xpu-pd\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"xpu-pd\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))) > 0))",
-                    "seriesNameFormat": "XPU 主机网关"
-                  }
-                }
-              }
-            }
-          ]
-        }
       }
     },
     "layouts": [
@@ -809,57 +552,12 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/generation-2"
-              }
-            },
-            {
-              "x": 12,
-              "y": 8,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/generation-3"
-              }
-            },
-            {
-              "x": 0,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/generation-4"
-              }
-            },
-            {
-              "x": 12,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/generation-5"
-              }
-            },
-            {
-              "x": 0,
-              "y": 24,
-              "width": 12,
-              "height": 8,
-              "content": {
                 "$ref": "#/spec/panels/extra-routed"
               }
             },
             {
               "x": 12,
-              "y": 24,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-ended"
-              }
-            },
-            {
-              "x": 0,
-              "y": 32,
+              "y": 8,
               "width": 12,
               "height": 8,
               "content": {
@@ -901,7 +599,10 @@
         "kind": "Grid",
         "spec": {
           "display": {
-            "title": "Token 与 Usage"
+            "title": "Token 与 Usage",
+            "collapse": {
+              "open": false
+            }
           },
           "items": [
             {
@@ -938,15 +639,6 @@
               "height": 8,
               "content": {
                 "$ref": "#/spec/panels/extra-cache"
-              }
-            },
-            {
-              "x": 0,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-usage"
               }
             }
           ]

@@ -34,9 +34,9 @@ class ProjectSplitTest(unittest.TestCase):
             if d["metadata"]["name"] == "gateway-generation":
                 env = split.PROJECTS[d["metadata"]["project"]]
                 self.assertIn("live-stages", d["spec"]["panels"])
-                self.assertEqual(len(d["spec"]["panels"]), 8)
+                self.assertEqual(len(d["spec"]["panels"]), 6)
                 d = next(x for x in self.resources["dashboards"] if x["metadata"]["project"] == d["metadata"]["project"] and x["metadata"]["name"] == "gateway-requests")
-                self.assertEqual(len(d["spec"]["panels"]["generation-0"]["spec"]["queries"]), 1)
+                self.assertEqual(len(d["spec"]["panels"]["generation-0"]["spec"]["queries"]), 4)
                 setting = d["spec"]["panels"]["generation-0"]["spec"]["plugin"]["spec"]["querySettings"]
                 self.assertEqual(setting[0]["queryIndex"], 0)
 
@@ -65,12 +65,69 @@ class ProjectSplitTest(unittest.TestCase):
         with self.assertRaises(AssertionError):
             split.validate(resources)
 
+    def test_trimmed_panels_stay_retired(self):
+        from panel_trim import RETIRED, RETIRED_DASHBOARDS, PROFILE_DROPS, retire
+        dashboards = {(d['metadata']['project'], d['metadata']['name']): d for d in self.resources['dashboards']}
+        self.assertFalse({name for _, name in dashboards} & set(RETIRED_DASHBOARDS))
+        for (project, name), retired in RETIRED.items():
+            d = dashboards[(project, name)]
+            self.assertFalse(set(retired) & set(d['spec']['panels']), (project, name))
+            for keeper in filter(None, retired.values()):
+                self.assertIn(keeper, d['spec']['panels'])
+        for (project, name), d in dashboards.items():
+            self.assertFalse([k for k in d['spec']['panels'] if k.endswith('-samples')], (project, name))
+            if name == 'gateway-requests':
+                merged = d['spec']['panels']['generation-0']['spec']['queries']
+                self.assertEqual([q['spec']['plugin']['spec']['seriesNameFormat'] for q in merged],
+                                 ['全部结束', '客户端取消', '客户端断开', '未知结果'])
+                self.assertTrue(all('aigate_generation_requests_ended_total' in q['spec']['plugin']['spec']['query'] and
+                                    not q['spec']['plugin']['spec']['query'].startswith('100 *') for q in merged))
+            if name == 'accelerator-resources':
+                used = d['spec']['panels']['core-memory-used']['spec']['queries']
+                self.assertEqual(used[-1]['spec']['plugin']['spec']['seriesNameFormat'], '单卡总量')
+                self.assertTrue(used[-1]['spec']['plugin']['spec']['query'].startswith('max('))
+            if name == 'monitoring-health':
+                self.assertEqual(len(d['spec']['panels']), 7)
+                self.assertIn('aigate_profile_dropped_events_total', d['spec']['panels'][PROFILE_DROPS]['spec']['queries'][0]['spec']['plugin']['spec']['query'])
+        hosts = dashboards[('dcu-monitoring', 'hosts-dcu')]
+        order = [x['content']['$ref'].rsplit('/', 1)[1] for x in hosts['spec']['layouts'][0]['spec']['items']]
+        self.assertEqual(order[:3], ['core-p0', 'core-p1', 'core-extra-fs-free'])
+        decode = dashboards[('dcu-monitoring', 'backend-decode')]
+        core = [x['content']['$ref'].rsplit('/', 1)[1] for x in decode['spec']['layouts'][0]['spec']['items']]
+        self.assertEqual(core, ['core-queue', 'bn-decode-kv-capacity'])
+        # Restoring a retired panel is removed again with the value panel back in its slot.
+        restored = copy.deepcopy(hosts)
+        restored['spec']['panels']['core-p2'] = copy.deepcopy(restored['spec']['panels']['core-p1'])
+        restored['spec']['layouts'][0]['spec']['items'] = split.grid(order[:2] + ['core-p2'] + order[2:])
+        self.assertEqual(retire(restored), hosts)
+        for d in self.resources['dashboards']:
+            self.assertIs(retire(d), d)
+
+    def test_drilldown_collapses_details_and_draws_fewer_lines(self):
+        from drilldown_layout import COLLAPSED, FEWER_DEVICES, present
+        for d in self.resources['dashboards']:
+            name = d['metadata']['name']
+            self.assertEqual(present(d), d)
+            for layout in d['spec']['layouts']:
+                display = layout['spec'].get('display', {})
+                self.assertEqual(display.get('collapse') == {'open': False}, display.get('title') in COLLAPSED.get(name, ()), (name, display))
+            if name in ('hosts-dcu', 'a3-hosts', 'hosts-xpu'):
+                load = d['spec']['panels']['core-extra-load']['spec']['queries']
+                self.assertEqual([q['spec']['plugin']['spec']['seriesNameFormat'] for q in load], ['{{node}} · 5m'])
+                for key in ('core-p3', 'core-p4'):
+                    for q in d['spec']['panels'][key]['spec']['queries']:
+                        self.assertIn('device!~"' + FEWER_DEVICES + '"', q['spec']['plugin']['spec']['query'])
+            if name == 'a3-cache':
+                for key in ('extra-prefix_cache_', 'extra-external_prefix_cache_'):
+                    for q in d['spec']['panels'][key]['spec']['queries']:
+                        self.assertIn('sum by(environment,node)', q['spec']['plugin']['spec']['query'])
+
     def test_legacy_two_project_generation_and_retired_panels(self):
         resources = {kind: [d for d in docs if d['metadata'].get('project', d['metadata']['name']) != 'xpu-monitoring']
                      for kind, docs in self.resources.items()}
         generated = split.build(resources)
         split.validate(generated)
-        self.assertEqual(len(generated['dashboards']), 20)
+        self.assertEqual(len(generated["dashboards"]), 20)
         for d in generated['dashboards']:
             self.assertFalse(set(d['spec']['panels']) & {'live-idle-5', 'live-idle-15', 'live-idle-30', 'live-idle-60'})
 

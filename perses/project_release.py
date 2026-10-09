@@ -248,7 +248,8 @@ def apply(resources, root):
         assert audit(resources, root, published=True)["passed"]
         from dashboard_reorg import RETIRED
         candidates = flattened(resources)
-        retired = copy.deepcopy(RETIRED)
+        from panel_trim import RETIRED_DASHBOARDS
+        retired = {p: names + RETIRED_DASHBOARDS for p, names in RETIRED.items()}
         if ('Dashboard', 'a3-monitoring', 'backend-prefill') in candidates:
             retired['a3-monitoring'] += ('backend-diagnostics',)
         for project, names in retired.items():

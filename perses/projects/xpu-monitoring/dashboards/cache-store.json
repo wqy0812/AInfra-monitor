@@ -13,96 +13,6 @@
       "description": "XPU Prefill 缓存复用和 HiCache 预取等待。设备 KV 池占用见 Prefill 诊断。仅展示当前原生指标；没有 CPU 缓存容量、分层命中率或回载/淘汰传输指标。"
     },
     "panels": {
-      "p0": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "采集状态（up）",
-            "description": "1 表示指标抓取成功，0 表示抓取失败。仅取当前 Prefill。每 5 秒采集；失败、过期和缺样留空，有效零值保留。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "min": 0,
-                "max": 1
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 1,
-                "connectNulls": false
-              },
-              "tooltip": {
-                "enablePinning": true
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "query": "up{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"} and (time() - timestamp(up{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}) < 15)",
-                    "seriesNameFormat": "Prefill",
-                    "minStep": "5s"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "p1": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "最近批次前缀缓存命中率（%）",
-            "description": "原生 cache_hit_rate = 最近上报批次的复用 Token /（新增计算 Token + 复用 Token）。取 TP0/PP0；无新批次时可能保持上一值。它不是 CPU 独立命中率。仅取当前 Prefill。每 5 秒采集；失败、过期和缺样留空，有效零值保留。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "position": "bottom",
-                "mode": "list"
-              },
-              "yAxis": {
-                "min": 0,
-                "max": 100
-              },
-              "visual": {
-                "display": "line",
-                "lineWidth": 1,
-                "connectNulls": false
-              },
-              "tooltip": {
-                "enablePinning": true
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "query": "((sglang:cache_hit_rate{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\",tp_rank=\"0\",pp_rank=\"0\"} and ((time() - timestamp(sglang:cache_hit_rate{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\",tp_rank=\"0\",pp_rank=\"0\"}) < 15) and (count_over_time(sglang:cache_hit_rate{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\",tp_rank=\"0\",pp_rank=\"0\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}[$__interval]) >= ($__interval / 5))))) >= 0 and (sglang:cache_hit_rate{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\",tp_rank=\"0\",pp_rank=\"0\"} and ((time() - timestamp(sglang:cache_hit_rate{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\",tp_rank=\"0\",pp_rank=\"0\"}) < 15) and (count_over_time(sglang:cache_hit_rate{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\",tp_rank=\"0\",pp_rank=\"0\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"sglang-prefill\",instance=\"122.209.21.34:8501\"}[$__interval]) >= ($__interval / 5))))) <= 1) * 100",
-                    "seriesNameFormat": "最近批次",
-                    "minStep": "5s"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "p2": {
         "kind": "Panel",
         "spec": {
@@ -308,7 +218,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p1"
+                "$ref": "#/spec/panels/cache-hit-window"
               }
             },
             {
@@ -317,25 +227,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/cache-hit-window"
-              }
-            },
-            {
-              "x": 0,
-              "y": 8,
-              "width": 12,
-              "height": 8,
-              "content": {
                 "$ref": "#/spec/panels/p2"
-              }
-            },
-            {
-              "x": 12,
-              "y": 8,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/p0"
               }
             }
           ]
@@ -345,7 +237,10 @@
         "kind": "Grid",
         "spec": {
           "display": {
-            "title": "HiCache 预取等待"
+            "title": "HiCache 预取等待",
+            "collapse": {
+              "open": false
+            }
           },
           "items": [
             {

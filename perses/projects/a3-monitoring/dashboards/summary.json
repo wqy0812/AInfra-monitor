@@ -1,0 +1,927 @@
+{
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "summary",
+    "project": "a3-monitoring"
+  },
+  "spec": {
+    "display": {
+      "name": "总览",
+      "description": "一眼定位：每图按角色或节点聚合，最多 4 条线；发现异常后到对应看板查看明细。由生成器根据明细面板重建。"
+    },
+    "duration": "1h",
+    "refreshInterval": "15s",
+    "variables": [],
+    "panels": {
+      "gateway-arrivals": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "网关请求到达速率（请求/秒）",
+            "description": "网关完成解析、进入画像的请求速率，含流式与非流式。明细见「网关请求流量与质量」。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(rate(aigate_requests_started_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) and (resets(aigate_requests_started_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_requests_started_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12)) and on(job,instance) ((min_over_time(up{environment=\"a3-vllm\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"a3-vllm\",job=~\"aigate\"}) < 15)) and on(job,instance) ((changes(aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12) and (time() - aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= 60) and on(job,instance) (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) == 1) and on(job,instance) (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) >= 12))",
+                    "seriesNameFormat": "到达",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "gateway-errors": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "网关后端错误速率（次/秒）",
+            "description": "网关记录的下游生成错误速率；高于 0 即有错误。结束结果拆分见「网关请求流量与质量」。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(sum by(environment) (rate(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))",
+                    "seriesNameFormat": "后端错误",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "gateway-inflight": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "网关在途请求（请求）",
+            "description": "当前尚未结束的请求数；持续上升说明后端处理不过来。处理阶段见「网关在途请求诊断」。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "(aigate_requests_inflight{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) and on(job,instance) ((min_over_time(up{environment=\"a3-vllm\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"a3-vllm\",job=~\"aigate\"}) < 15))",
+                    "seriesNameFormat": "在途",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "gateway-wait-max": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "等待首个有效输出 · 最长等待（秒）",
+            "description": "当前仍在等待首个有效输出的请求中最长的等待时间；持续升高说明有请求卡在后端。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "max by(environment) ((aigate_stream_first_output_wait_max_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"streaming\"} and ((count_over_time(aigate_stream_first_output_wait_max_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_first_output_wait_max_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_first_output_wait_max_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_first_output_wait_max_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))) unless on(environment) (count by(environment) ((count_over_time(aigate_stream_first_output_wait_max_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"streaming\"}[$__interval]) unless ((count_over_time(aigate_stream_first_output_wait_max_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"streaming\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(aigate_stream_first_output_wait_max_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"streaming\"}) < 15) and on(job,instance,environment) ((count by(job,instance,environment) (aigate_stream_first_output_wait_max_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"streaming\"} and (time() - timestamp(aigate_stream_first_output_wait_max_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"streaming\"}) < 15)) == on(job,instance,environment) (aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} * 1)) and on(job,instance,environment) (time() - timestamp(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) (count_over_time(aigate_live_backend_groups{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - timestamp(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (time() - aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= $__interval) and (changes(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_profile_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)))))))))",
+                    "seriesNameFormat": "最长等待",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "backend-ttft": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "首 Token 延迟 TTFT P95（秒）",
+            "description": "后端原生 TTFT 的 P95，按 Prefill / Decode 分线。P50 / P99 与明细见「后端请求性能」。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "label_replace(label_replace(sort_by_label((label_replace((label_replace((label_replace((((monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.ttft.p95\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.ttft.p95\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.ttft.p95\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.ttft.p95\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.ttft.p95\"}) < 15)) * 1000) * 0.001), \"perses_order\", \"00\", \"path\", \".*[.]p50\")), \"perses_order\", \"01\", \"path\", \".*[.]p95\")), \"perses_order\", \"02\", \"path\", \".*[.]p99\")), \"perses_order\", \"path\"), \"role\", \"Prefill\", \"path\", \"nodes[.]prefill[.].*\"), \"role\", \"Decode\", \"path\", \"nodes[.]decode[.].*\")",
+                    "seriesNameFormat": "{{role}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "backend-e2e": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "端到端延迟 E2E P95（秒）",
+            "description": "后端原生 E2E 的 P95，按 Prefill / Decode 分线。P50 / P99 与明细见「后端请求性能」。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "label_replace(label_replace(sort_by_label((label_replace((label_replace((label_replace(((monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.e2e.p95\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.e2e.p95\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.e2e.p95\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.e2e.p95\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.e2e.p95\"}) < 15)) * 1), \"perses_order\", \"00\", \"path\", \".*[.]p50\")), \"perses_order\", \"01\", \"path\", \".*[.]p95\")), \"perses_order\", \"02\", \"path\", \".*[.]p99\")), \"perses_order\", \"path\"), \"role\", \"Prefill\", \"path\", \"nodes[.]prefill[.].*\"), \"role\", \"Decode\", \"path\", \"nodes[.]decode[.].*\")",
+                    "seriesNameFormat": "{{role}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "backend-output": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "后端输出 Token 吞吐（Token/秒）",
+            "description": "服务侧输出 Token 速率，按角色分线；P/D 分离时 Prefill 侧通常只有首个 Token。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "label_replace(label_replace((monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.decode_tokens\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.decode_tokens\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.decode_tokens\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.decode_tokens\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.decode_tokens\"}) < 15)) * 1, \"role\", \"Prefill\", \"path\", \"nodes[.]prefill[.].*\"), \"role\", \"Decode\", \"path\", \"nodes[.]decode[.].*\")",
+                    "seriesNameFormat": "{{role}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "backend-queue": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "排队请求 · 单实例最大（请求）",
+            "description": "各实例或 rank 排队请求数的最大值，按角色分线；不把复制 rank 相加。明细见 Prefill / Decode 诊断。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "max((vllm:num_requests_waiting{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"} and ((time() - timestamp(vllm:num_requests_waiting{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}) < 15) and (count_over_time(vllm:num_requests_waiting{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}[$__interval]) >= ($__interval / 5))))))",
+                    "seriesNameFormat": "Prefill",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "max((vllm:num_requests_waiting{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"} and ((time() - timestamp(vllm:num_requests_waiting{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"}) < 15) and (count_over_time(vllm:num_requests_waiting{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"}[$__interval]) >= ($__interval / 5))))))",
+                    "seriesNameFormat": "Decode",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "backend-kv": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "KV 池占用 · 单实例最大（%）",
+            "description": "各实例 KV 池占用比例的最大值，按角色分线；接近 100% 说明 KV 池将满。明细见 Prefill / Decode 诊断。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "max((vllm:kv_cache_usage_perc{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"} and ((time() - timestamp(vllm:kv_cache_usage_perc{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}) < 15) and (count_over_time(vllm:kv_cache_usage_perc{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}[$__interval]) >= ($__interval / 5))))) * 100)",
+                    "seriesNameFormat": "Prefill",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "max((vllm:kv_cache_usage_perc{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"} and ((time() - timestamp(vllm:kv_cache_usage_perc{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"}) < 15) and (count_over_time(vllm:kv_cache_usage_perc{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-2\"}[$__interval]) >= ($__interval / 5))))) * 100)",
+                    "seriesNameFormat": "Decode",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "cache-hit": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "前缀缓存命中率（%）",
+            "description": "最近约 60 秒本地与外部 KV 前缀缓存命中率，按角色分线；两者分母不同，不能相加。明细见「缓存与存储」。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "label_replace(label_replace((monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.ratio\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.ratio\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.ratio\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.ratio\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.ratio\"}) < 15)) * 100, \"role\", \"Prefill\", \"path\", \"nodes[.]prefill[.].*\"), \"role\", \"Decode\", \"path\", \"nodes[.]decode[.].*\")",
+                    "seriesNameFormat": "本地 · {{role}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "label_replace(label_replace((monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.external_ratio\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.external_ratio\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.external_ratio\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.external_ratio\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.external_ratio\"}) < 15)) * 100, \"role\", \"Prefill\", \"path\", \"nodes[.]prefill[.].*\"), \"role\", \"Decode\", \"path\", \"nodes[.]decode[.].*\")",
+                    "seriesNameFormat": "外部 KV · {{role}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "accelerator-utilization": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡平均利用率（%）",
+            "description": "每个节点所有加速卡利用率的平均值。逐卡明细见「加速卡资源」。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "label_replace(label_replace(avg by(node) ((npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"} and ((npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"} >= 0) and (npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"} < +Inf) and (npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"} <= 100)) and (time() - timestamp(npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"}) >= 0) and (time() - timestamp(npu_chip_info_utilization{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"}[$__interval]) >= ($__interval / 5))))), \"role\", \"Prefill\", \"node\", \"a3-1\"), \"role\", \"Decode\", \"node\", \"a3-2\")",
+                    "seriesNameFormat": "{{role}} · {{node}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "accelerator-memory": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "加速卡显存 · 单卡最大已用（GiB）",
+            "description": "每个节点显存已用最多的那张卡；灰线为单卡总量。逐卡明细见「加速卡资源」。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "querySettings": [
+                {
+                  "queryIndex": 1,
+                  "colorMode": "fixed",
+                  "colorValue": "#9E9E9E"
+                }
+              ]
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "label_replace(label_replace(max by(node) ((((npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"} and ((npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"} >= 0) and (npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"}[$__interval]) >= ($__interval / 5))))) <= ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"} and ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"} >= 0) and (npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"}[$__interval]) >= ($__interval / 5)))))) / 1024), \"role\", \"Prefill\", \"node\", \"a3-1\"), \"role\", \"Decode\", \"node\", \"a3-2\")",
+                    "seriesNameFormat": "{{role}} · {{node}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "max((((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"} and ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"} >= 0) and (npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",id=~\".*\",node=~\".*\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\".*\",node=~\".*\"}[$__interval]) >= ($__interval / 5))))) > 0) / 1024)",
+                    "seriesNameFormat": "单卡总量",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "host-cpu": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "CPU 使用率（%）",
+            "description": "主机 CPU 忙碌比例，按节点分线。负载、I/O 等待与磁盘网络见「主机资源」。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "label_replace(label_replace((monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\".*\",node=~\".*\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\".*\",node=~\".*\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\".*\",node=~\".*\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\".*\",node=~\".*\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\".*\",node=~\".*\"}) >= 0) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\".*\",node=~\".*\"}) < 15)), \"role\", \"Prefill\", \"node\", \"a3-1\"), \"role\", \"Decode\", \"node\", \"a3-2\")",
+                    "seriesNameFormat": "{{role}} · {{node}}",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "host-memory": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "主机内存（GiB）",
+            "description": "主机已用内存与总量，按节点分线。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "label_replace(label_replace(((node_memory_MemTotal_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\".*\",node=~\".*\"} - node_memory_MemAvailable_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\".*\",node=~\".*\"}) / 1024^3) and on(job,instance) ((min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\".*\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\".*\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\".*\"}) < 15)), \"role\", \"Prefill\", \"node\", \"a3-1\"), \"role\", \"Decode\", \"node\", \"a3-2\")",
+                    "seriesNameFormat": "{{role}} · {{node}} 已用",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "label_replace(label_replace((node_memory_MemTotal_bytes{environment=\"a3-vllm\",job=\"node-a3\",node=~\".*\",node=~\".*\"} / 1024^3) and on(job,instance) ((min_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\".*\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\".*\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"node-a3\",node=~\".*\"}) < 15)), \"role\", \"Prefill\", \"node\", \"a3-1\"), \"role\", \"Decode\", \"node\", \"a3-2\")",
+                    "seriesNameFormat": "{{role}} · {{node}} 总量",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "scrape-down": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "异常采集目标数（个）",
+            "description": "本环境当前抓取失败的采集目标数；0 为正常，没有任何新鲜采集时留空。具体目标见「采集与监控健康」。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              },
+              "tooltip": {
+                "enablePinning": true
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "count((up{environment=\"a3-vllm\"} and (time() - timestamp(up{environment=\"a3-vllm\"}) < 15)) == 0) or (count(up{environment=\"a3-vllm\"} and (time() - timestamp(up{environment=\"a3-vllm\"}) < 15)) * 0)",
+                    "seriesNameFormat": "异常目标",
+                    "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "网关"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/gateway-arrivals"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/gateway-errors"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/gateway-inflight"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/gateway-wait-max"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "后端"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/backend-ttft"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/backend-e2e"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/backend-output"
+              }
+            },
+            {
+              "x": 12,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/backend-queue"
+              }
+            },
+            {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/backend-kv"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "缓存与加速卡"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/cache-hit"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/accelerator-utilization"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/accelerator-memory"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "主机与采集"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/host-cpu"
+              }
+            },
+            {
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/host-memory"
+              }
+            },
+            {
+              "x": 0,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/scrape-down"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

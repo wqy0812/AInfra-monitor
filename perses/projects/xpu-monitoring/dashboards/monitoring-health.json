@@ -13,94 +13,6 @@
       "description": "统一核心图表；来源特有指标列于专属诊断。单位见标题，统计差异见图表提示。"
     },
     "panels": {
-      "extra-cpu": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "监控服务 CPU（CPU 核）",
-            "description": "共享中央监控服务状态，不表示 XPU 模型或硬件指标。指标含义\n进程 CPU 用时增长率，1 表示占用约一个逻辑 CPU 核。\n\ntest4，共享于 XPU / A3；不表示某一个推理集群的资源。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(rate(process_cpu_seconds_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) and ((time() - timestamp(process_cpu_seconds_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (count_over_time(process_cpu_seconds_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15))) and (count_over_time(process_cpu_seconds_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) >= 12) and (resets(process_cpu_seconds_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) == 0) and (resets(process_cpu_seconds_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) >= (1m / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} >= 1m) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15)))))",
-                    "seriesNameFormat": "{{job}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "extra-data": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "VM 数据容量（GiB）",
-            "description": "共享中央监控服务状态，不表示 XPU 模型或硬件指标。指标含义\n按 VM 原始数据类型及分区展示存储容量，保留标签避免隐藏不同组成。\n\ntest4，共享于 XPU / A3；不表示某一个推理集群的资源。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(vm_data_size_bytes{environment=\"dcu-pd\",job=\"victoriametrics\"} and ((time() - timestamp(vm_data_size_bytes{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (count_over_time(vm_data_size_bytes{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"victoriametrics\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15))))) / 1024^3",
-                    "seriesNameFormat": "{{type}} · {{partition}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "extra-disk": {
         "kind": "Panel",
         "spec": {
@@ -202,138 +114,6 @@
           ]
         }
       },
-      "extra-ingest": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "VM 写入速率（样本/秒）",
-            "description": "共享中央监控服务状态，不表示 XPU 模型或硬件指标。指标含义\nVM 接收的指标样本写入计数速率，按输入类型汇总。\n\ntest4，共享于 XPU / A3；不表示某一个推理集群的资源。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(sum by(environment,job,type) ((rate(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) and ((time() - timestamp(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (count_over_time(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"victoriametrics\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15))) and (count_over_time(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) >= 12) and (resets(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) == 0) and (resets(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"victoriametrics\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) >= (1m / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"} >= 1m) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15))))))) unless on(environment,job,type) (count by(environment,job,type) ((count_over_time(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) unless ((time() - timestamp(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (count_over_time(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"victoriametrics\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15))) and (count_over_time(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) >= 12) and (resets(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) == 0) and (resets(vm_rows_inserted_total{environment=\"dcu-pd\",job=\"victoriametrics\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"victoriametrics\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}[1m]) >= (1m / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"} >= 1m) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=\"victoriametrics\"}) < 15)))))))",
-                    "seriesNameFormat": "{{type}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "extra-memory": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "监控服务常驻内存（GiB）",
-            "description": "共享中央监控服务状态，不表示 XPU 模型或硬件指标。指标含义\nVM / vmagent 进程实际常驻内存。\n\ntest4，共享于 XPU / A3；不表示某一个推理集群的资源。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(process_resident_memory_bytes{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} and ((time() - timestamp(process_resident_memory_bytes{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (count_over_time(process_resident_memory_bytes{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15))))) / 1024^3",
-                    "seriesNameFormat": "{{job}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "extra-parse": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "监控数据解析错误（次/秒）",
-            "description": "共享中央监控服务状态，不表示 XPU 模型或硬件指标。指标含义\n公共监控组件解析输入指标数据时记录的错误速率。\n\ntest4，共享于 XPU / A3；不表示某一个推理集群的资源。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(rate(vm_protoparser_parse_errors_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) and ((time() - timestamp(vm_protoparser_parse_errors_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (count_over_time(vm_protoparser_parse_errors_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) >= ($__interval / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} >= $__interval) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15))) and (count_over_time(vm_protoparser_parse_errors_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) >= 12) and (resets(vm_protoparser_parse_errors_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) == 0) and (resets(vm_protoparser_parse_errors_total{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) == 0) and (count_over_time(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}[1m]) >= (1m / 5)) and (time() - process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} >= 1m) and (time() - timestamp(process_start_time_seconds{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15)))))",
-                    "seriesNameFormat": "{{job}} · {{type}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "extra-pending": {
         "kind": "Panel",
         "spec": {
@@ -422,107 +202,6 @@
           ]
         }
       },
-      "extra-up": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "VM / vmagent 采集状态（1 = 正常）",
-            "description": "共享中央监控服务状态，不表示 XPU 模型或硬件指标。指标含义\n公共服务监控端点的抓取状态，不代表推理服务可用。\n\ntest4，共享于 XPU / A3；不表示某一个推理集群的资源。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"} and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"victoriametrics|vmagent\"}) < 15)",
-                    "seriesNameFormat": "{{job}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "overview-extra-derived-valid": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "派生指标有效性（字段数）",
-            "description": "指标含义\n按 schema 展示当前有效及已观测派生字段数。无请求造成部分字段无效属于正常口径，不是服务故障率。\n\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "sum by(schema) (monitoring_chart_valid{environment=\"xpu-pd\"} and (time() - timestamp(monitoring_chart_valid{environment=\"xpu-pd\"}) < 15))",
-                    "seriesNameFormat": "{{schema}} · 有效字段"
-                  }
-                }
-              }
-            },
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "count by(schema) (monitoring_chart_valid{environment=\"xpu-pd\"} and (time() - timestamp(monitoring_chart_valid{environment=\"xpu-pd\"}) < 15))",
-                    "seriesNameFormat": "{{schema}} · 已观测字段"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "overview-extra-sample-age": {
         "kind": "Panel",
         "spec": {
@@ -559,50 +238,6 @@
                   "spec": {
                     "minStep": "5s",
                     "query": "time() - timestamp(up{environment=\"xpu-pd\"})",
-                    "seriesNameFormat": "{{job}} · {{instance}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "overview-extra-scrape-duration": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "指标采集耗时（秒）",
-            "description": "指标含义\n每次抓取指标所耗时间；接近 scrape timeout 时需检查源端或网络。\n\nXPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "scrape_duration_seconds{environment=\"xpu-pd\"} and (time() - timestamp(scrape_duration_seconds{environment=\"xpu-pd\"}) < 15)",
                     "seriesNameFormat": "{{job}} · {{instance}}"
                   }
                 }
@@ -654,6 +289,50 @@
             }
           ]
         }
+      },
+      "overview-gateway-dropped": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "网关画像事件丢弃速率（事件/秒）",
+            "description": "指标含义\n最近 1 分钟画像丢弃事件计数的平均增长速率。队列满或事件超过记录大小限制等情况可导致丢弃；它说明画像证据不完整，不等于业务请求被丢弃。\n\nXPU 主机网关。按采集环境归属；图例区分本环境的后端或阶段。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "mode": "list",
+                "position": "bottom"
+              },
+              "tooltip": {
+                "enablePinning": true
+              },
+              "visual": {
+                "connectNulls": false,
+                "display": "line",
+                "lineWidth": 1
+              },
+              "yAxis": {
+                "min": 0
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "(rate(aigate_profile_dropped_events_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) and (resets(aigate_profile_dropped_events_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_dropped_events_total{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12)) and on(job,instance) ((min_over_time(up{environment=\"xpu-pd\",job=~\"aigate\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=~\"aigate\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"xpu-pd\",job=~\"aigate\"}) < 15)) and on(job,instance) ((changes(aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"}[1m]) >= 12) and (time() - aigate_profile_counter_start_time_seconds{job=\"aigate\",environment=\"xpu-pd\",request_scope=\"all\"} >= 60) and on(job,instance) (min_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) == 1) and on(job,instance) (count_over_time(up{job=\"aigate\",environment=\"xpu-pd\"}[1m]) >= 12))",
+                    "seriesNameFormat": "画像事件丢弃速率"
+                  }
+                }
+              }
+            }
+          ]
+        }
       }
     },
     "layouts": [
@@ -679,7 +358,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/overview-extra-scrape-duration"
+                "$ref": "#/spec/panels/overview-extra-sample-age"
               }
             },
             {
@@ -688,16 +367,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/overview-extra-sample-age"
-              }
-            },
-            {
-              "x": 12,
-              "y": 8,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/overview-extra-derived-valid"
+                "$ref": "#/spec/panels/overview-gateway-dropped"
               }
             }
           ]
@@ -716,7 +386,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/extra-up"
+                "$ref": "#/spec/panels/extra-disk"
               }
             },
             {
@@ -725,57 +395,12 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/extra-cpu"
-              }
-            },
-            {
-              "x": 0,
-              "y": 8,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-memory"
-              }
-            },
-            {
-              "x": 12,
-              "y": 8,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-data"
-              }
-            },
-            {
-              "x": 0,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-disk"
-              }
-            },
-            {
-              "x": 12,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
                 "$ref": "#/spec/panels/extra-readonly"
               }
             },
             {
               "x": 0,
-              "y": 24,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-ingest"
-              }
-            },
-            {
-              "x": 12,
-              "y": 24,
+              "y": 8,
               "width": 12,
               "height": 8,
               "content": {
@@ -783,21 +408,12 @@
               }
             },
             {
-              "x": 0,
-              "y": 32,
+              "x": 12,
+              "y": 8,
               "width": 12,
               "height": 8,
               "content": {
                 "$ref": "#/spec/panels/extra-dropped"
-              }
-            },
-            {
-              "x": 12,
-              "y": 32,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-parse"
               }
             }
           ]

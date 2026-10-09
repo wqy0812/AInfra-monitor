@@ -249,50 +249,6 @@
           ]
         }
       },
-      "bn-prefill-hicache_backup_duration_seconds-samples": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "Prefill HiCache 备份耗时 · 样本数（次）",
-            "description": "指标含义\n对应计时器最近一分钟观测次数估算；阶段可能每请求记录多次，不作为去重请求数。\n\nDCU；按角色、实例和 rank 区分，不累加复制 rank。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(rate(sglang:hicache_backup_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) and ((time() - timestamp(sglang:hicache_backup_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (count_over_time(sglang:hicache_backup_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-prefill\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(sglang:hicache_backup_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) >= 12) and (resets(sglang:hicache_backup_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) == 0) and (resets(sglang:hicache_backup_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-prefill\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) >= (1m / 5))))) * 60",
-                    "seriesNameFormat": "{{role}} · DP {{dp_rank}} / TP {{tp_rank}} · {{stage}} {{cache_type}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "bn-prefill-load_back_duration_seconds": {
         "kind": "Panel",
         "spec": {
@@ -337,50 +293,6 @@
           ]
         }
       },
-      "bn-prefill-load_back_duration_seconds-samples": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "Prefill HiCache 回载耗时 · 样本数（次）",
-            "description": "指标含义\n对应计时器最近一分钟观测次数估算；阶段可能每请求记录多次，不作为去重请求数。\n\nDCU；按角色、实例和 rank 区分，不累加复制 rank。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(rate(sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) and ((time() - timestamp(sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (count_over_time(sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-prefill\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) >= 12) and (resets(sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) == 0) and (resets(sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-prefill\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) >= (1m / 5))))) * 60",
-                    "seriesNameFormat": "{{role}} · DP {{dp_rank}} / TP {{tp_rank}} · {{stage}} {{cache_type}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "extra-hicache-ranks": {
         "kind": "Panel",
         "spec": {
@@ -417,50 +329,6 @@
                   "spec": {
                     "minStep": "5s",
                     "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.resources.hicache_rank_ratio..*\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.resources.hicache_rank_ratio..*\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.resources.hicache_rank_ratio..*\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.resources.hicache_rank_ratio..*\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.resources.hicache_rank_ratio..*\"}) < 15)) * 1",
-                    "seriesNameFormat": "{{path}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "extra-segment-ratio": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "Mooncake 各 segment 占用（%）",
-            "description": "指标含义\n使用现有有效性标记的派生值；逐 rank/segment 展示，不累加复制容量。\n\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segment_ratio..*\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segment_ratio..*\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segment_ratio..*\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segment_ratio..*\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segment_ratio..*\"}) < 15)) * 1",
                     "seriesNameFormat": "{{path}}"
                   }
                 }
@@ -676,50 +544,6 @@
                   "spec": {
                     "minStep": "5s",
                     "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"}) < 15)) * 100",
-                    "seriesNameFormat": "{{path}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "p2": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "HiCache 容量使用率（%）",
-            "description": "指标含义\n代表 rank 的 HiCache 已用 Token 容量 ÷ 总 Token 容量 × 100%。这是容量占用率，不是命中率；代表 rank 用于避免直接累加复制容量。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"}) < 15)) * 100",
                     "seriesNameFormat": "{{path}}"
                   }
                 }
@@ -953,6 +777,9 @@
       {
         "kind": "Grid",
         "spec": {
+          "display": {
+            "title": "命中与容量"
+          },
           "items": [
             {
               "x": 0,
@@ -978,7 +805,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p2"
+                "$ref": "#/spec/panels/p3"
               }
             },
             {
@@ -987,30 +814,34 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p3"
-              }
-            },
-            {
-              "x": 0,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
                 "$ref": "#/spec/panels/p4"
               }
             },
             {
-              "x": 12,
+              "x": 0,
               "y": 16,
               "width": 12,
               "height": 8,
               "content": {
                 "$ref": "#/spec/panels/p5"
               }
-            },
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Store 查询",
+            "collapse": {
+              "open": false
+            }
+          },
+          "items": [
             {
               "x": 0,
-              "y": 24,
+              "y": 0,
               "width": 12,
               "height": 8,
               "content": {
@@ -1019,7 +850,7 @@
             },
             {
               "x": 12,
-              "y": 24,
+              "y": 0,
               "width": 12,
               "height": 8,
               "content": {
@@ -1028,7 +859,29 @@
             },
             {
               "x": 0,
-              "y": 32,
+              "y": 8,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/extra-store-rate"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "HiCache 与分片明细",
+            "collapse": {
+              "open": false
+            }
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
               "width": 12,
               "height": 8,
               "content": {
@@ -1037,7 +890,7 @@
             },
             {
               "x": 12,
-              "y": 32,
+              "y": 0,
               "width": 12,
               "height": 8,
               "content": {
@@ -1046,25 +899,7 @@
             },
             {
               "x": 0,
-              "y": 40,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-segment-ratio"
-              }
-            },
-            {
-              "x": 12,
-              "y": 40,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-store-rate"
-              }
-            },
-            {
-              "x": 0,
-              "y": 48,
+              "y": 8,
               "width": 12,
               "height": 8,
               "content": {
@@ -1073,7 +908,7 @@
             },
             {
               "x": 12,
-              "y": 48,
+              "y": 8,
               "width": 12,
               "height": 8,
               "content": {
@@ -1082,7 +917,7 @@
             },
             {
               "x": 0,
-              "y": 56,
+              "y": 16,
               "width": 12,
               "height": 8,
               "content": {
@@ -1091,16 +926,7 @@
             },
             {
               "x": 12,
-              "y": 56,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/bn-prefill-hicache_backup_duration_seconds-samples"
-              }
-            },
-            {
-              "x": 0,
-              "y": 64,
+              "y": 16,
               "width": 12,
               "height": 8,
               "content": {
@@ -1108,17 +934,8 @@
               }
             },
             {
-              "x": 12,
-              "y": 64,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/bn-prefill-load_back_duration_seconds-samples"
-              }
-            },
-            {
               "x": 0,
-              "y": 72,
+              "y": 24,
               "width": 12,
               "height": 8,
               "content": {

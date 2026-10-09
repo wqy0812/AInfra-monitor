@@ -135,100 +135,12 @@
       }
     ],
     "panels": {
-      "core-memory-ratio": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "加速卡显存占用比例（%）",
-            "description": "指标：node_xpu_memutil，单位：%。按节点与卡号 devid 展示瞬时观测。直接使用 exporter 的百分数，不再次乘以 100。每 5 秒采集，默认每 15 秒刷新。有效零值保留；负值、缺样、超过 15 秒的采样和失败抓取留空。超过 100% 的值留空。新鲜度依据抓取时间，exporter 未提供独立设备观测时间。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "((node_xpu_memutil{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\",node=~\"$role\"} >= 0) and (node_xpu_memutil{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\",node=~\"$role\"} <= 100) and (time() - timestamp(node_xpu_memutil{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\",node=~\"$role\"}) < 15) and (count_over_time(node_xpu_memutil{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5))))",
-                    "seriesNameFormat": "{{node}} · XPU {{devid}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "core-memory-total": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "加速卡显存总量（GiB）",
-            "description": "指标：node_xpu_memtotal，单位：GiB。按节点与卡号 devid 展示瞬时观测。Exporter 的 MiB 除以 1024 转为 GiB。每 5 秒采集，默认每 15 秒刷新。有效零值保留；负值、缺样、超过 15 秒的采样和失败抓取留空。新鲜度依据抓取时间，exporter 未提供独立设备观测时间。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "((node_xpu_memtotal{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\",node=~\"$role\"} >= 0) and (time() - timestamp(node_xpu_memtotal{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\",node=~\"$role\"}) < 15) and (count_over_time(node_xpu_memtotal{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)))) / 1024",
-                    "seriesNameFormat": "{{node}} · XPU {{devid}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "core-memory-used": {
         "kind": "Panel",
         "spec": {
           "display": {
             "name": "加速卡显存已用（GiB）",
-            "description": "指标：node_xpu_memused，单位：GiB。按节点与卡号 devid 展示瞬时观测。Exporter 的 MiB 除以 1024 转为 GiB。每 5 秒采集，默认每 15 秒刷新。有效零值保留；负值、缺样、超过 15 秒的采样和失败抓取留空。新鲜度依据抓取时间，exporter 未提供独立设备观测时间。"
+            "description": "指标：node_xpu_memused，单位：GiB。按节点与卡号 devid 展示瞬时观测。Exporter 的 MiB 除以 1024 转为 GiB。每 5 秒采集，默认每 15 秒刷新。有效零值保留；负值、缺样、超过 15 秒的采样和失败抓取留空。新鲜度依据抓取时间，exporter 未提供独立设备观测时间。灰线为单卡总量，用于判断余量。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -247,7 +159,14 @@
               },
               "yAxis": {
                 "min": 0
-              }
+              },
+              "querySettings": [
+                {
+                  "queryIndex": 1,
+                  "colorMode": "fixed",
+                  "colorValue": "#9E9E9E"
+                }
+              ]
             }
           },
           "queries": [
@@ -260,6 +179,19 @@
                     "minStep": "5s",
                     "query": "((node_xpu_memused{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\",node=~\"$role\"} >= 0) and (time() - timestamp(node_xpu_memused{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\",node=~\"$role\"}) < 15) and (count_over_time(node_xpu_memused{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)))) / 1024",
                     "seriesNameFormat": "{{node}} · XPU {{devid}}"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "max(((node_xpu_memtotal{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\",node=~\"$role\"} >= 0) and (time() - timestamp(node_xpu_memtotal{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\",node=~\"$role\"}) < 15) and (count_over_time(node_xpu_memtotal{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",devid=~\"$device\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"xpu-pd\",job=\"xpu-hardware\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)))) / 1024)",
+                    "seriesNameFormat": "单卡总量"
                   }
                 }
               }
@@ -442,24 +374,6 @@
               "height": 8,
               "content": {
                 "$ref": "#/spec/panels/core-power"
-              }
-            },
-            {
-              "x": 0,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/core-memory-total"
-              }
-            },
-            {
-              "x": 12,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/core-memory-ratio"
               }
             }
           ]
