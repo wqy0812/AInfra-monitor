@@ -18,18 +18,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'perses'))
 from query_acceleration import prepare, SERIES_LABEL, ORDER_LABEL
 from release_support import save, record_failure, snapshot as resource_snapshot, readback
+from connection import BASE, opener
 
 
 def snapshot():
     return resource_snapshot(api)
 
-BASE = 'http://122.247.53.162:18431'
 VM = 'http://127.0.0.1:18428'
 SERVICES = ('monitoring-perses', 'monitoring-vm', 'monitoring-vmagent', 'monitoring-api')
 ROOT = Path(__file__).resolve().parent
 TOKEN = None
 AUTH_LOCK = threading.Lock()
-OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+OPENER = opener(direct=True)
 
 
 def api(path, method='GET', data=None):

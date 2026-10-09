@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize('component', [
-    'container', 'image', 'dashboards', 'runtime', 'acceleration', 'acceleration-ready', 'merges',
+    'container', 'image', 'dashboards', 'runtime', 'acceleration', 'acceleration-ready', 'merges', 'queries',
 ])
 def test_unified_help_loads_each_implementation_without_workspace_path_assumptions(component, tmp_path):
     result = subprocess.run([sys.executable, str(ROOT / 'deploy/release.py'), component, '--help'],

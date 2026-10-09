@@ -4,12 +4,12 @@ import base64
 import json
 from pathlib import Path
 
-MODULES = ('align_dashboards.py', 'dashboard_reorg.py', 'project_split.py', 'project_release.py', 'release_support.py', 'generate_xpu.py',
+MODULES = ('connection.py', 'align_dashboards.py', 'dashboard_reorg.py', 'project_split.py', 'project_release.py', 'release_support.py', 'generate_xpu.py',
            'metric_scope.py', 'generate.py', 'project_queries.py', 'dcu_bottlenecks.py',
            'remove_idle_thresholds.py', 'host_cpu_panel.py', 'npu_panels.py', 'xpu_hosts.py',
            'xpu_hardware.py', 'xpu_cache.py', 'xpu_topology.py', 'query_acceleration.py', 'acceleration_catalog.py',
            'acceleration_publication.py', 'acceleration_state.json', 'a3_coverage.py', 'a3_cache.py', 'a3_mooncake.py',
-           'panel_trim.py', 'summary_dashboard.py', 'drilldown_layout.py')
+           'panel_trim.py', 'summary_dashboard.py', 'drilldown_layout.py', 'query_slimming.py')
 
 
 def encoded(path):

@@ -114,7 +114,7 @@ def main():
         project, name = d["metadata"]["project"], d["metadata"]["name"]
         descriptions.setdefault(project, {})[name] = {k: p["spec"]["display"].get("description", "") for k, p in d["spec"]["panels"].items()}
         guide += ["## " + project + " / " + d["spec"]["display"]["name"], "",
-                  "[打开看板](http://122.247.53.162:18431/projects/" + project + "/dashboards/" + name + ")", ""]
+                  "[打开看板](https://122.247.53.162:18431/projects/" + project + "/dashboards/" + name + ")", ""]
         for p in d["spec"]["panels"].values():
             guide += ["### " + p["spec"]["display"]["name"], "", p["spec"]["display"].get("description", ""), ""]
     (ROOT / "panel_descriptions.json").write_text(json.dumps(descriptions, ensure_ascii=False, indent=2) + "\n")

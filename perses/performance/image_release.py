@@ -3,15 +3,15 @@ import argparse,hashlib,json,os,subprocess,sys,time,urllib.error,urllib.parse,ur
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from release_support import save, record_failure, snapshot as resource_snapshot
+from connection import BASE, opener, urlopen
 NAME='monitoring-perses'
 BACKUP=NAME+'-before-perf1'
-BASE='http://122.247.53.162:18431'
 
 class PersesClient:
  """Keep credentials and per-server access tokens on the deployment host."""
  def __init__(self,base):
   self.base=base.rstrip('/');self.token=None
-  self.opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
+  self.opener=opener(direct=True)
  def login(self):
   credentials=Path(os.environ.get('PERSES_CREDENTIALS_FILE','/data2/monitoring/perses/admin-credentials.json'))
   request=urllib.request.Request(self.base+'/api/auth/providers/native/login',data=credentials.read_bytes(),headers={'Content-Type':'application/json'})
@@ -71,7 +71,7 @@ def apply_image(root,image,version,previous_image,validation):
 def health(base):
  for _ in range(80):
   try:
-   with urllib.request.urlopen(base+'/api/v1/health',timeout=2) as r:return json.load(r)
+   with urlopen(base+'/api/v1/health',timeout=2) as r:return json.load(r)
   except OSError:time.sleep(.25)
  raise RuntimeError('Perses health timed out')
 def resources(base=BASE):
@@ -96,7 +96,12 @@ def create(old,name,image,binds,listen):
  args+=['--label','monitoring.release=performance-20260916']
  args+=['--label','monitoring.transaction='+old['Id']]
  for bind in binds:args+=['--volume',bind]
- args += [image,'--config=/etc/perses/config.yaml','--web.listen-address='+listen,'--log.level=info']
+ # Preserve TLS and other deployed flags during later image upgrades.
+ command=list(cfg['Cmd'])
+ for i,value in enumerate(command):
+  if value.startswith('--web.listen-address='):command[i]='--web.listen-address='+listen;break
+ else:raise ValueError('Missing explicit listen address')
+ args += [image,*command]
  return run(*args)
 def main():
  global BACKUP

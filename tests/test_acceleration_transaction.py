@@ -34,6 +34,7 @@ def test_generator_install_preserves_unrelated_queries_and_records_original_byte
     runtime, evidence, path = fixture(tmp_path, monkeypatch)
     before = path.read_bytes()
     transaction.install(evidence)
+    assert (runtime / 'query_slimming.py').is_file(), 'Publication dependency must ship for legacy paths too'
     document = json.loads(path.read_text())
     assert document['spec']['panels']['target']['spec']['queries'] == ['after']
     assert document['spec']['panels']['untouched']['spec']['queries'] == ['other']
@@ -47,10 +48,12 @@ def test_generator_install_preserves_unrelated_queries_and_records_original_byte
 
 def test_generator_install_rejects_concurrent_edit(tmp_path, monkeypatch):
     runtime, evidence, path = fixture(tmp_path, monkeypatch)
+    original_generator = (runtime / 'dashboard_reorg.py').read_bytes()
     path.write_text('concurrent edit')
     with pytest.raises(AssertionError, match='Concurrent generator edit'):
         transaction.install(evidence)
     assert path.read_text() == 'concurrent edit'
+    assert (runtime / 'dashboard_reorg.py').read_bytes() == original_generator
 
 
 def test_later_materialized_batch_preserves_previous_merge(tmp_path, monkeypatch):
@@ -84,9 +87,11 @@ def test_runtime_guides_survive_migrated_source_docs_and_repeated_publication(tm
     document = runtime / 'perses-query-acceleration.md'
     assert document.is_file()
     assert 'monitoring_perses_complete' in document.read_text()
-    for destination in re.findall(r'\]\(([^)]+)\)', document.read_text()):
-        assert (runtime / destination).is_file(), destination
-    first = {name: (runtime / name).read_bytes() for name in (*before, document.name)}
+    for name in transaction.DOCUMENTS:
+        for destination in re.findall(r'\]\(([^)]+)\)', (runtime / name).read_text()):
+            assert (runtime / destination).is_file(), (name, destination)
+        assert '](releases/' not in (runtime / name).read_text()
+    first = {name: (runtime / name).read_bytes() for name in (*before, *transaction.DOCUMENTS)}
     for name in before:
         assert first[name].startswith(before[name].rstrip())
         assert first[name].count(b'](perses-query-acceleration.md)') == 1

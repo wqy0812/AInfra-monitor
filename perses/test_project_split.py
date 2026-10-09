@@ -36,7 +36,7 @@ class ProjectSplitTest(unittest.TestCase):
                 self.assertIn("live-stages", d["spec"]["panels"])
                 self.assertEqual(len(d["spec"]["panels"]), 6)
                 d = next(x for x in self.resources["dashboards"] if x["metadata"]["project"] == d["metadata"]["project"] and x["metadata"]["name"] == "gateway-requests")
-                self.assertEqual(len(d["spec"]["panels"]["generation-0"]["spec"]["queries"]), 4)
+                self.assertEqual(len(d["spec"]["panels"]["generation-0"]["spec"]["queries"]), 2)
                 setting = d["spec"]["panels"]["generation-0"]["spec"]["plugin"]["spec"]["querySettings"]
                 self.assertEqual(setting[0]["queryIndex"], 0)
 
@@ -79,7 +79,13 @@ class ProjectSplitTest(unittest.TestCase):
             if name == 'gateway-requests':
                 merged = d['spec']['panels']['generation-0']['spec']['queries']
                 self.assertEqual([q['spec']['plugin']['spec']['seriesNameFormat'] for q in merged],
-                                 ['全部结束', '客户端取消', '客户端断开', '未知结果'])
+                                 ['全部结束', '{{perses_series}}'])
+                result_query = merged[1]['spec']['plugin']['spec']['query']
+                for order, result, label in [('01', 'client_cancelled', '客户端取消'),
+                                             ('02', 'client_disconnected', '客户端断开'),
+                                             ('03', 'unknown', '未知结果')]:
+                    self.assertIn('"perses_series", "' + label + '", "result", "' + result + '"', result_query)
+                    self.assertIn('"perses_order", "' + order + '", "result", "' + result + '"', result_query)
                 self.assertTrue(all('aigate_generation_requests_ended_total' in q['spec']['plugin']['spec']['query'] and
                                     not q['spec']['plugin']['spec']['query'].startswith('100 *') for q in merged))
             if name == 'accelerator-resources':

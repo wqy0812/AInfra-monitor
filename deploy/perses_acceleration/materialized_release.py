@@ -188,18 +188,36 @@ def require_serial_preparation(root):
             assert batch_terminal(sibling), 'Finish prepared batch before preparing another: ' + str(sibling)
 
 
-def prepare(root, group):
+def prepare(root, group, previous_catalog=None):
     with (root.parent / 'batch-preparation.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        _prepare(root, group)
+        if previous_catalog is None:
+            _prepare(root, group)
+        else:
+            _prepare(root, group, previous_catalog)
 
 
-def _prepare(root, group):
+def _prepare(root, group, previous_catalog=None):
     assert not (root / 'batch-before.json').exists(), 'Use fresh evidence for every batch'
     require_serial_preparation(root)
     catalog = json.loads(CATALOG.read_text())
     before = snapshot()
     after = published(before, {'schema': 1, 'merges': [], 'groups': [group]})
+    replacing = previous_catalog is not None
+    if replacing:
+        from query_slimming import validate_revision_catalog, prepare as rewrite_prepare
+        from query_release import runtime_snapshot
+        previous = json.loads(previous_catalog.read_text())
+        validate_revision_catalog(previous, catalog, group)
+        old_entries = {p['id']: p for p in previous['panels']}
+        for entry in catalog['panels']:
+            if entry['group'] != group:
+                continue
+            document = next(d for d in before['dashboards'] if (d['metadata']['project'], d['metadata']['name']) == (entry['project'], entry['dashboard']))
+            spec = document['spec']['panels'][entry['panel']]['spec']['queries'][0]['spec']['plugin']['spec']
+            assert spec.get('datasource', {}).get('name') == NAME, 'Replacement requires an already accelerated panel'
+            assert spec['query'] == old_entries[entry['id']]['expression'], 'Previous catalog differs from live panel'
+        after, _ = rewrite_prepare(after, 'a3-histograms')
     for source in after['datasources']:
         if source['metadata']['name'] == NAME:
             assert not source['spec']['default']
@@ -210,11 +228,24 @@ def _prepare(root, group):
         documents = [next(d for d in resource['dashboards'] if (d['metadata']['project'], d['metadata']['name']) == (panel['project'], panel['dashboard'])) for resource in (before, after)]
         old, new = [d['spec']['panels'][panel['panel']] for d in documents]
         assert old != new, 'Already switched'
-        assert old['spec']['queries'][0]['spec']['plugin']['spec']['query'] == panel['expression'], 'Target expression edited'
+        expected = old_entries[panel['id']]['expression'] if replacing else panel['expression']
+        assert old['spec']['queries'][0]['spec']['plugin']['spec']['query'] == expected, 'Target expression edited'
+        assert new['spec']['queries'][0]['spec']['plugin']['spec']['query'] == panel['expression'], 'Candidate differs from new catalog'
         changes.append({'project': panel['project'], 'dashboard': panel['dashboard'], 'panel': panel['panel'], 'before': old, 'after': new})
     save(root, 'batch-before.json', before); save(root, 'batch-candidate.json', after)
     save(root, 'batch-changes.json', changes); save(root, 'batch-services.json', fingerprint())
-    save(root, 'batch-meta.json', {'group': group, 'catalog_sha256': hashlib.sha256(CATALOG.read_bytes()).hexdigest(), 'candidate_sha256': sha(after)})
+    meta = {'group': group, 'catalog_sha256': hashlib.sha256(CATALOG.read_bytes()).hexdigest(), 'candidate_sha256': sha(after)}
+    if replacing:
+        meta.update(replace_revision=True, previous_catalog_sha256=hashlib.sha256(previous_catalog.read_bytes()).hexdigest())
+        # Save the exact old bytes separately; both digests are checked at apply.
+        (root / 'batch-previous-catalog.json').write_bytes(previous_catalog.read_bytes())
+        runtime_before = runtime_snapshot(changes)
+        frozen = root / 'query-runtime-before.json'
+        if frozen.exists():
+            assert json.loads(frozen.read_text()) == runtime_before, 'Runtime changed after raw-query audit'
+        else:
+            save(root, frozen.name, runtime_before)
+    save(root, 'batch-meta.json', meta)
     # Add only non-default sources, enabling authenticated proxy acceptance while
     # every panel continues using its original datasource.
     created = []
@@ -385,7 +416,23 @@ def apply(root, group):
     readiness(json.loads(CATALOG.read_text()), group)
     changes = json.loads((root / 'batch-changes.json').read_text())
     sources = [d for d in after['datasources'] if d['metadata']['name'] == NAME]
-    generator_plan(root, changes, group, sources)
+    meta = json.loads((root / 'batch-meta.json').read_text())
+    if meta.get('replace_revision'):
+        from query_slimming import validate_revision_catalog
+        from query_release import validate_admission
+        previous = root / 'batch-previous-catalog.json'
+        assert hashlib.sha256(previous.read_bytes()).hexdigest() == meta['previous_catalog_sha256']
+        assert hashlib.sha256(CATALOG.read_bytes()).hexdigest() == meta['catalog_sha256']
+        validate_revision_catalog(json.loads(previous.read_text()), json.loads(CATALOG.read_text()), group)
+        raw_before, raw_after, raw_changes = validate_admission(root, 'a3-histograms', allow_revision=True)
+        assert normalized(raw_before) == normalized(before) and normalized(raw_after) == normalized(after)
+        assert {(c['project'], c['dashboard'], c['panel']) for c in raw_changes} == {(c['project'], c['dashboard'], c['panel']) for c in changes}
+        entries = [[c['project'], c['dashboard'], c['panel'], 'histogram-monotonic'] for c in changes]
+        # The datasource already exists and is unchanged. Do not rewrite any
+        # datasource, especially those belonging to the other accelerated groups.
+        generator_plan(root, changes, group=group, rewrites=entries, replace_revision=True)
+    else:
+        generator_plan(root, changes, group, sources)
     journal = []; save(root, 'batch-journal.json', journal)
     try:
         for candidate in after['dashboards']:
@@ -445,14 +492,16 @@ def observe(root, group):
             save(root, 'batch-observation.json', report)
             time.sleep(5)
     except BaseException as error:
-        error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
+        if hasattr(error, 'add_note'):
+            error.add_note('Automatic rollback is disabled; preserve current state and fix forward.')
         report.update(passed=False, state='failed', end=time.time(),
                       error=type(error).__name__ + ': ' + str(error)[:300],
                       recovery='fix_forward', automatic_rollback=False)
         try:
             save(root, 'batch-observation.json', report)
         except OSError as reporting_error:
-            error.add_note('Failure report could not be saved: ' + str(reporting_error))
+            if hasattr(error, 'add_note'):
+                error.add_note('Failure report could not be saved: ' + str(reporting_error))
         raise
 
 
@@ -461,8 +510,13 @@ if __name__ == '__main__':
     parser.add_argument('--group', choices=GROUPS, required=True); parser.add_argument('--evidence', type=Path, required=True)
     parser.add_argument('--resume', action='store_true', help='Resume interrupted audit with unchanged resources and saved fixed windows')
     parser.add_argument('--catalog', type=Path, default=CATALOG, help='Catalog matching the deployed API')
+    parser.add_argument('--replace-revision', action='store_true', help='Explicitly replace an already accelerated A3 group at prepare')
+    parser.add_argument('--previous-catalog', type=Path, help='Frozen catalog before the expression replacement')
     args = parser.parse_args(); assert args.evidence.is_dir()
     CATALOG = args.catalog.resolve()
     assert not args.resume or args.action == 'audit', '--resume is only for audit'
-    if args.resume: audit(args.evidence, args.group, resume=True)
+    assert bool(args.previous_catalog) == args.replace_revision, 'Use --replace-revision with --previous-catalog'
+    assert not args.replace_revision or (args.action == 'prepare' and args.group == 'a3'), 'Revision replacement is an A3 prepare operation'
+    if args.replace_revision: prepare(args.evidence, args.group, args.previous_catalog)
+    elif args.resume: audit(args.evidence, args.group, resume=True)
     else: globals()[args.action](args.evidence, args.group)

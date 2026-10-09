@@ -13,6 +13,7 @@ COMMANDS = {
     'acceleration': ('deploy/perses_acceleration/materialized_release.py', 'Admit and publish materialized-query groups'),
     'acceleration-ready': ('deploy/perses_acceleration/api_readiness.py', 'Check API acceleration startup after container replacement'),
     'merges': ('deploy/perses_acceleration/merge_release.py', 'Validate and publish query merges'),
+    'queries': ('deploy/perses_acceleration/query_release.py', 'Audit and publish scoped query rewrites'),
 }
 
 

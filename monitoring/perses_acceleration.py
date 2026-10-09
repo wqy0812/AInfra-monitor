@@ -145,6 +145,11 @@ class AccelerationService:
         self.panels = {p['id']: p for p in catalog['panels']}
         if len(self.panels) != len(catalog['panels']):
             raise ValueError('Duplicate catalog panel')
+        # Persistent state retains retired revisions for evidence and recovery.
+        # Only exact jobs in the current catalog participate in live status or
+        # scheduling; a panel id alone does not identify its active revision.
+        self.current_jobs = {self.job_key(panel, step): panel
+                             for panel in self.panels.values() for step in self.steps}
         self.matches = {}
         for panel in self.panels.values():
             keys = sorted(panel['variables'])
@@ -202,6 +207,8 @@ class AccelerationService:
     def status(self):
         jobs = []
         for key, state in self.watermarks.items():
+            if key not in self.current_jobs:
+                continue
             step = int(key.rsplit(':', 1)[1])
             due = int((self.now() - SEAL_SECONDS) // step) * step
             history = self.backfills.get(key)
@@ -377,7 +384,7 @@ class AccelerationService:
             raise ValueError('Only bounded 12/24-hour backfills are supported')
         changed = False
         for key, forward in self.watermarks.items():
-            if 'backfill:' + key in self.busy:
+            if key not in self.current_jobs or 'backfill:' + key in self.busy:
                 continue
             step = int(key.rsplit(':', 1)[1])
             start = forward['start'] - seconds
@@ -413,8 +420,8 @@ class AccelerationService:
 
     def backfill_priority(self, admin):
         return bool(admin.get('backfill') and self.now() < admin.get('backfill_priority_until', 0)
-                    and any(s['watermark'] < s['end'] and
-                            self.panels[key.rsplit(':', 2)[0]]['group'] not in admin.get('disabled_groups', [])
+                    and any(key in self.current_jobs and s['watermark'] < s['end'] and
+                            self.current_jobs[key]['group'] not in admin.get('disabled_groups', [])
                             for key, s in self.backfills.items()))
 
     def next_batch(self, admin, historical_group=None):

@@ -121,12 +121,14 @@ def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=N
                   'image': image, 'acceptance': 'passed'}
         save(evidence, 'container-publication.json', result)
     except BaseException as error:
-        error.add_note('Rollback is disabled; preserve current containers and fix forward. Temporary container: ' + backup)
+        if hasattr(error, 'add_note'):
+            error.add_note('Rollback is disabled; preserve current containers and fix forward. Temporary container: ' + backup)
         try:
             save(evidence, 'container-failure.json', {'error': str(error), 'type': type(error).__name__,
                  'recovery': 'fix_forward', 'automatic_rollback': False, 'at': time.time()})
         except OSError as reporting_error:
-            error.add_note('Failure report could not be saved: ' + str(reporting_error))
+            if hasattr(error, 'add_note'):
+                error.add_note('Failure report could not be saved: ' + str(reporting_error))
         raise
     return result
 

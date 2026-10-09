@@ -44,4 +44,5 @@ def published(resources, state=None):
         datasource['spec']['default'] = False
         datasource['spec']['plugin']['spec']['proxy']['spec']['url'] = 'http://127.0.0.1:18430/internal/perses'
         result['datasources'].append(datasource)
-    return result
+    from query_slimming import apply
+    return apply(result, state.get('rewrites', []))[0]

@@ -9,3 +9,5 @@
 预计算直接复用冻结的原表达式，CPU、直方图、rank、engine、分位数、单位及缺样规则不变，不平均各 rank 的 P95/P99。1080p 实测支持步长为 5、15、20、60、120、600、3600 秒，每种步长单独计算。已完成的空结果保持业务空白；失败、未完成、历史覆盖缺口及最近 60 秒回到原始表达式。未识别表达式、筛选或参数也回源，保留图表编辑能力。
 
 独立存储为 `monitoring_perses_value`、`monitoring_perses_complete`，不写 `monitoring_chart_*`，不改变 latest/history API。原始历史修正前必须通过 [运维说明](../deploy/perses_acceleration/README.md) 作废相应区间；不做近 30 天全量回填。
+
+查询瘦身及分批准入流程见[面板查询瘦身](query-slimming.md)。当前清单保留 15 项网关 `rewrites`；本次依据用户在知悉性能失败后的单独授权发布，未修改常规准入门槛。A3 候选 revision 已撤回，继续使用原物化表达式及 catalog。范围、收益判断和验收证据见[本次记录](releases/query-slimming-20261009.md)。候选生成本身不代表已发布；以后更换 revision 仍需核验覆盖与实际收益。

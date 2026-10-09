@@ -18,12 +18,12 @@ from pathlib import Path
 
 from project_split import PROJECTS, no_request_filter, read_resources, validate
 from release_support import save, record_failure, snapshot as resource_snapshot, readback
+from connection import BASE, urlopen
 
 
 def snapshot():
     return resource_snapshot(lambda route: http(BASE + route))
 
-BASE = "http://122.247.53.162:18431"
 VM = "http://127.0.0.1:18428"
 SERVICES = ("monitoring-perses", "monitoring-vm", "monitoring-vmagent", "monitoring-api")
 
@@ -37,7 +37,7 @@ def auth_headers():
     if TOKEN is None and credentials.exists():
         req = urllib.request.Request(BASE + '/api/auth/providers/native/login',
             data=credentials.read_bytes(), headers={'Content-Type': 'application/json'})
-        with urllib.request.urlopen(req, timeout=20) as response:
+        with urlopen(req, timeout=20) as response:
             TOKEN = json.load(response)['access_token']
     return {'Authorization': 'Bearer ' + TOKEN} if TOKEN else {}
 
@@ -49,7 +49,7 @@ def http(url, method="GET", data=None):
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
-        with urllib.request.urlopen(req, timeout=40) as r:
+        with urlopen(req, timeout=40) as r:
             body = r.read()
             return json.loads(body) if body else None
     except urllib.error.HTTPError as e:
@@ -116,7 +116,7 @@ def query(base, expression, start, end, step):
     req = urllib.request.Request(base + "/api/v1/query_range", data=urllib.parse.urlencode(params).encode(),
                                  headers=auth_headers() if base.startswith(BASE) else {})
     try:
-        with urllib.request.urlopen(req, timeout=45) as r:
+        with urlopen(req, timeout=45) as r:
             data = json.load(r)
     except urllib.error.HTTPError as e:
         raise RuntimeError(e.read().decode()[:1500]) from e

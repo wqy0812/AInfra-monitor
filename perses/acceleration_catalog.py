@@ -53,7 +53,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('snapshot', type=Path)
     parser.add_argument('output', type=Path)
-    parser.add_argument('--steps', default='5,15,60')
+    parser.add_argument('--steps', help='Initial catalog steps (default 5,15,60)')
+    parser.add_argument('--previous-catalog', type=Path, help='Replace only A3 histogram revisions, retaining existing steps and other entries')
     args = parser.parse_args()
-    result = build(json.loads(args.snapshot.read_text()), [int(s) for s in args.steps.split(',')])
+    if args.previous_catalog:
+        assert args.steps is None, 'Revision replacement must retain the existing steps'
+        from query_slimming import replace_catalog
+        result, _, _ = replace_catalog(json.loads(args.previous_catalog.read_text()), json.loads(args.snapshot.read_text()))
+    else:
+        result = build(json.loads(args.snapshot.read_text()), [int(s) for s in (args.steps or '5,15,60').split(',')])
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')

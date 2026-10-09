@@ -1,5 +1,11 @@
 # Perses 看板与维护
 
+入口使用 [HTTPS](https://122.247.53.162:18431)，支持 HTTP/2。证书为自签 IP 证书，SAN 为 `IP:122.247.53.162`；访问设备需要信任证书。服务器证书位于 `/data2/monitoring/perses/tls/server.crt`，私钥 `server.key` 仅保留服务器，由容器用户只读访问。证书到期前需更新证书并重启 Perses。
+
+维护客户端默认使用 HTTPS，在服务器上自动加载上述证书进行校验。本机执行时设置 `PERSES_CA_FILE=/path/to/server.crt`；`PERSES_URL` 可指定其他环境。不要关闭证书验证。镜像替换必须保留证书挂载和全部 `--web.tls-*` 参数；登录 Cookie 使用 `security.cookie.secure: true`。
+
+首次切换使用 `perses/tls_setup.py --help`，核对容器 ID、镜像 ID 和配置摘要后在停机窗口执行。工具创建证书、保留资源、替换同版本容器，并检查 TLS、HTTP/2、鉴权和数据源代理；失败保留现场并修复当前版本。
+
 现行定义位于 `projects/`：DCU、A3、XPU 各 1 张总览和 9 张专业看板，共 249 个面板。总览（`summary`）每图按角色或节点聚合、最多 4 条线，由 `summary_dashboard.py` 根据明细面板的现有查询重建，不保留网页编辑；`panel_trim.py` 记录已删除或合并的面板；`drilldown_layout.py` 把明细看板的诊断分组默认折叠，并减少非加速面板的曲线数。非缓存看板使用公共核心及平台扩展，保留平台真实的指标、角色和统计口径；A3 分 Prefill/Decode，主机与加速卡分开。
 
 默认数据源直接查询 VM，`perses-accelerated` 为独立专用数据源。生成器读取 `acceleration_state.json` 保留已准入的 14 个合并面板和 CPU/DCU/A3 三组绑定，当前 JSON 有 18 个加速面板。这是仓库配置，线上一致性和健康需操作时检查。详见 [当前加速清单](../deploy/perses_acceleration/STATUS.md) 和 [查询口径](../docs/perses-query-acceleration.md)。

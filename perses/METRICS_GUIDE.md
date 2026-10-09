@@ -6,7 +6,7 @@
 
 ## a3-monitoring / 缓存与存储
 
-[打开看板](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/a3-cache)
+[打开看板](https://122.247.53.162:18431/projects/a3-monitoring/dashboards/a3-cache)
 
 ### 外部前缀缓存查询与命中（Token/秒）
 
@@ -106,7 +106,7 @@ Master 管理的 segment 内存，不是 NPU 显存。
 
 ## a3-monitoring / 主机资源 · Node Exporter
 
-[打开看板](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/a3-hosts)
+[打开看板](https://122.247.53.162:18431/projects/a3-monitoring/dashboards/a3-hosts)
 
 ### CPU 使用率（%）
 
@@ -221,7 +221,7 @@ A3 环境；实例、节点或 rank 分线展示，复制数据不直接相加�
 
 ## a3-monitoring / 加速卡资源
 
-[打开看板](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/accelerator-resources)
+[打开看板](https://122.247.53.162:18431/projects/a3-monitoring/dashboards/accelerator-resources)
 
 ### 加速卡利用率（%）
 
@@ -257,7 +257,7 @@ exporter 按芯片 ID 上报的功耗读数，保留原始粒度，不跨芯片�
 
 ## a3-monitoring / Decode 诊断
 
-[打开看板](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/backend-decode)
+[打开看板](https://122.247.53.162:18431/projects/a3-monitoring/dashboards/backend-decode)
 
 ### Decode 运行与排队请求（请求）
 
@@ -341,7 +341,7 @@ Prefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）�
 
 ## a3-monitoring / 后端请求性能
 
-[打开看板](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/backend-performance)
+[打开看板](https://122.247.53.162:18431/projects/a3-monitoring/dashboards/backend-performance)
 
 ### 后端请求速率（请求/秒）
 
@@ -430,7 +430,7 @@ Prefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）�
 
 ## a3-monitoring / Prefill 诊断
 
-[打开看板](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/backend-prefill)
+[打开看板](https://122.247.53.162:18431/projects/a3-monitoring/dashboards/backend-prefill)
 
 ### Prefill 运行与排队请求（请求）
 
@@ -514,7 +514,7 @@ Prefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）�
 
 ## a3-monitoring / 网关在途请求诊断
 
-[打开看板](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/gateway-generation)
+[打开看板](https://122.247.53.162:18431/projects/a3-monitoring/dashboards/gateway-generation)
 
 ### 等待首个有效输出 · 最长等待（秒）
 
@@ -554,7 +554,7 @@ A3 主机网关。按采集环境归属；图例区分本环境的后端或阶�
 
 ## a3-monitoring / 网关请求流量与质量
 
-[打开看板](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/gateway-requests)
+[打开看板](https://122.247.53.162:18431/projects/a3-monitoring/dashboards/gateway-requests)
 
 ### 网关 · 生成结束结果（请求/秒）
 
@@ -649,7 +649,7 @@ A3 主机网关。按采集环境归属；图例区分本环境的后端或阶�
 
 ## a3-monitoring / 采集与监控健康
 
-[打开看板](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/monitoring-health)
+[打开看板](https://122.247.53.162:18431/projects/a3-monitoring/dashboards/monitoring-health)
 
 ### 采集目标状态（1 = 正常）
 
@@ -723,7 +723,7 @@ Prefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）�
 
 ## a3-monitoring / 总览
 
-[打开看板](http://122.247.53.162:18431/projects/a3-monitoring/dashboards/summary)
+[打开看板](https://122.247.53.162:18431/projects/a3-monitoring/dashboards/summary)
 
 ### 网关请求到达速率（请求/秒）
 
@@ -787,7 +787,7 @@ Prefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）�
 
 ## dcu-monitoring / 加速卡资源
 
-[打开看板](http://122.247.53.162:18431/projects/dcu-monitoring/dashboards/accelerator-resources)
+[打开看板](https://122.247.53.162:18431/projects/dcu-monitoring/dashboards/accelerator-resources)
 
 ### 加速卡利用率（%）
 
@@ -819,7 +819,7 @@ DCU 环境。图例区分节点、角色、实例、设备或统计分位数；�
 
 ## dcu-monitoring / Decode 诊断
 
-[打开看板](http://122.247.53.162:18431/projects/dcu-monitoring/dashboards/backend-decode)
+[打开看板](https://122.247.53.162:18431/projects/dcu-monitoring/dashboards/backend-decode)
 
 ### Decode 运行与排队请求（请求）
 
@@ -886,7 +886,7 @@ DCU；按角色、实例和 rank 区分，不累加复制 rank。
 
 ## dcu-monitoring / 后端请求性能
 
-[打开看板](http://122.247.53.162:18431/projects/dcu-monitoring/dashboards/backend-performance)
+[打开看板](https://122.247.53.162:18431/projects/dcu-monitoring/dashboards/backend-performance)
 
 ### 后端请求速率（请求/秒）
 
@@ -940,7 +940,7 @@ DCU 环境。图例区分节点、角色、实例、设备或统计分位数；�
 
 ## dcu-monitoring / Prefill 诊断
 
-[打开看板](http://122.247.53.162:18431/projects/dcu-monitoring/dashboards/backend-prefill)
+[打开看板](https://122.247.53.162:18431/projects/dcu-monitoring/dashboards/backend-prefill)
 
 ### Prefill 运行与排队请求（请求）
 
@@ -1035,7 +1035,7 @@ DCU；按角色、实例和 rank 区分，不累加复制 rank。
 
 ## dcu-monitoring / 缓存与存储
 
-[打开看板](http://122.247.53.162:18431/projects/dcu-monitoring/dashboards/cache-store)
+[打开看板](https://122.247.53.162:18431/projects/dcu-monitoring/dashboards/cache-store)
 
 ### Prefill HiCache 搬运字节速率（GiB/秒）
 
@@ -1144,7 +1144,7 @@ DCU 环境。图例区分节点、角色、实例、设备或统计分位数；�
 
 ## dcu-monitoring / 网关在途请求诊断
 
-[打开看板](http://122.247.53.162:18431/projects/dcu-monitoring/dashboards/gateway-generation)
+[打开看板](https://122.247.53.162:18431/projects/dcu-monitoring/dashboards/gateway-generation)
 
 ### 等待首个有效输出 · 最长等待（秒）
 
@@ -1184,7 +1184,7 @@ DCU 主机网关。按采集环境归属；图例区分本环境的后端或阶�
 
 ## dcu-monitoring / 网关请求流量与质量
 
-[打开看板](http://122.247.53.162:18431/projects/dcu-monitoring/dashboards/gateway-requests)
+[打开看板](https://122.247.53.162:18431/projects/dcu-monitoring/dashboards/gateway-requests)
 
 ### 网关 · 生成结束结果（请求/秒）
 
@@ -1279,7 +1279,7 @@ DCU 主机网关。按采集环境归属；图例区分本环境的后端或阶�
 
 ## dcu-monitoring / 主机资源 · Node Exporter
 
-[打开看板](http://122.247.53.162:18431/projects/dcu-monitoring/dashboards/hosts-dcu)
+[打开看板](https://122.247.53.162:18431/projects/dcu-monitoring/dashboards/hosts-dcu)
 
 ### CPU 使用率（%）
 
@@ -1339,7 +1339,7 @@ DCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加�
 
 ## dcu-monitoring / 采集与监控健康
 
-[打开看板](http://122.247.53.162:18431/projects/dcu-monitoring/dashboards/monitoring-health)
+[打开看板](https://122.247.53.162:18431/projects/dcu-monitoring/dashboards/monitoring-health)
 
 ### 采集目标状态（1 = 正常）
 
@@ -1392,7 +1392,7 @@ DCU 主机网关。按采集环境归属；图例区分本环境的后端或阶�
 
 ## dcu-monitoring / 总览
 
-[打开看板](http://122.247.53.162:18431/projects/dcu-monitoring/dashboards/summary)
+[打开看板](https://122.247.53.162:18431/projects/dcu-monitoring/dashboards/summary)
 
 ### 网关请求到达速率（请求/秒）
 
@@ -1456,7 +1456,7 @@ DCU 主机网关。按采集环境归属；图例区分本环境的后端或阶�
 
 ## xpu-monitoring / 加速卡资源
 
-[打开看板](http://122.247.53.162:18431/projects/xpu-monitoring/dashboards/accelerator-resources)
+[打开看板](https://122.247.53.162:18431/projects/xpu-monitoring/dashboards/accelerator-resources)
 
 ### 加速卡显存已用（GiB）
 
@@ -1476,7 +1476,7 @@ DCU 主机网关。按采集环境归属；图例区分本环境的后端或阶�
 
 ## xpu-monitoring / Decode 诊断
 
-[打开看板](http://122.247.53.162:18431/projects/xpu-monitoring/dashboards/backend-decode)
+[打开看板](https://122.247.53.162:18431/projects/xpu-monitoring/dashboards/backend-decode)
 
 ### Decode KV 池占用（%）
 
@@ -1494,7 +1494,7 @@ XPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加�
 
 ## xpu-monitoring / 后端请求性能
 
-[打开看板](http://122.247.53.162:18431/projects/xpu-monitoring/dashboards/backend-performance)
+[打开看板](https://122.247.53.162:18431/projects/xpu-monitoring/dashboards/backend-performance)
 
 ### 端到端延迟 E2E（秒）
 
@@ -1548,7 +1548,7 @@ XPU 环境。图例区分节点、角色、实例、设备或统计分位数；�
 
 ## xpu-monitoring / Prefill 诊断
 
-[打开看板](http://122.247.53.162:18431/projects/xpu-monitoring/dashboards/backend-prefill)
+[打开看板](https://122.247.53.162:18431/projects/xpu-monitoring/dashboards/backend-prefill)
 
 ### Prefill KV 池占用（%）
 
@@ -1566,7 +1566,7 @@ XPU 环境；实例、节点或 rank 分线展示，复制数据不直接相加�
 
 ## xpu-monitoring / 缓存与存储
 
-[打开看板](http://122.247.53.162:18431/projects/xpu-monitoring/dashboards/cache-store)
+[打开看板](https://122.247.53.162:18431/projects/xpu-monitoring/dashboards/cache-store)
 
 ### Prefill 计算与缓存复用（Token/秒）
 
@@ -1586,7 +1586,7 @@ waiting_queue 中有请求等待 HiCache L3 预取，当前无可运行批次且
 
 ## xpu-monitoring / 网关在途请求诊断
 
-[打开看板](http://122.247.53.162:18431/projects/xpu-monitoring/dashboards/gateway-generation)
+[打开看板](https://122.247.53.162:18431/projects/xpu-monitoring/dashboards/gateway-generation)
 
 ### 在途请求（请求）
 
@@ -1626,7 +1626,7 @@ XPU 主机网关。按采集环境归属；图例区分本环境的后端或阶�
 
 ## xpu-monitoring / 网关请求流量与质量
 
-[打开看板](http://122.247.53.162:18431/projects/xpu-monitoring/dashboards/gateway-requests)
+[打开看板](https://122.247.53.162:18431/projects/xpu-monitoring/dashboards/gateway-requests)
 
 ### 网关缓存 Token 比例（%）
 
@@ -1721,7 +1721,7 @@ XPU 主机网关。按采集环境归属；图例区分本环境的后端或阶�
 
 ## xpu-monitoring / 主机资源 · Node Exporter
 
-[打开看板](http://122.247.53.162:18431/projects/xpu-monitoring/dashboards/hosts-xpu)
+[打开看板](https://122.247.53.162:18431/projects/xpu-monitoring/dashboards/hosts-xpu)
 
 ### 文件系统剩余容量（GiB）
 
@@ -1781,7 +1781,7 @@ XPU 环境。图例区分节点、角色、实例、设备或统计分位数；�
 
 ## xpu-monitoring / 采集与监控健康
 
-[打开看板](http://122.247.53.162:18431/projects/xpu-monitoring/dashboards/monitoring-health)
+[打开看板](https://122.247.53.162:18431/projects/xpu-monitoring/dashboards/monitoring-health)
 
 ### VM 磁盘余量（GiB）
 
@@ -1834,7 +1834,7 @@ XPU 主机网关。按采集环境归属；图例区分本环境的后端或阶�
 
 ## xpu-monitoring / 总览
 
-[打开看板](http://122.247.53.162:18431/projects/xpu-monitoring/dashboards/summary)
+[打开看板](https://122.247.53.162:18431/projects/xpu-monitoring/dashboards/summary)
 
 ### 网关请求到达速率（请求/秒）
 

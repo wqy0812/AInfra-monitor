@@ -11,6 +11,8 @@
 
 发布清单记录 `cpu`、`dcu`、`a3` 三组，以及 14 个查询合并面板。预计算目录包含 18 个目标表达式，支持 5、15、20、60、120、600、3600 秒步长。合并面板数量与专用数据源绑定数量是不同统计。
 
+2026-10-09 查询瘦身另保留 15 项网关 `rewrites`：3 项 generation 合并、6 项延迟桶简化、6 项 Token 桶简化。当前共 327 条查询、6355 个选择器出现次数。A3 新 revision 因尚未证明相对原物化方案的收益而撤回，保留原 18 项 catalog；具体过程、性能未达标项及恢复验收见[本次记录](../../docs/releases/query-slimming-20261009.md)。
+
 日常升级按 [停机窗口流程](../../docs/maintenance-window-upgrade.md)。当前工具见 [运维说明](README.md)。新的专项验收只依据当批目录的原始证据；不能把运行时长、旧 PID 或旧成功标记作为通过依据。
 
 此前“CPU 完成、DCU 待发布、A3 排队”等内容属于旧执行阶段，完整正文已移入 [历史执行快照](../../docs/releases/perses-acceleration-20260926.md)，诊断过程见 [历史根因记录](../../docs/releases/perses-acceleration-root-cause-20260927.md)。

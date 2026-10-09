@@ -12,12 +12,14 @@ def save(root, name, data):
 
 
 def record_failure(root, name, error):
-    error.add_note('Rollback is disabled; preserve current state and fix forward.')
+    if hasattr(error, 'add_note'):
+        error.add_note('Rollback is disabled; preserve current state and fix forward.')
     try:
         save(root, name, {'passed': False, 'at': time.time(), 'type': type(error).__name__,
                          'error': str(error)[:500], 'recovery': 'fix_forward', 'automatic_rollback': False})
     except OSError as reporting_error:
-        error.add_note('Failure report could not be saved: ' + str(reporting_error))
+        if hasattr(error, 'add_note'):
+            error.add_note('Failure report could not be saved: ' + str(reporting_error))
 
 
 def snapshot(fetch, *, grouped=False):
