@@ -18,6 +18,10 @@ class XpuHostsTest(unittest.TestCase):
         self.source['spec']['panels'] = {k.removeprefix('core-'):v for k,v in self.source['spec']['panels'].items()}
         aliases = dict(zip(['utilization','memory-used','temperature','power','memory-total','memory-ratio'], ['p5','p6','p7','p8','extra-vram-total','extra-vram-ratio']))
         self.source['spec']['panels'].update({aliases[k.removeprefix('core-')]:v for k,v in hardware['spec']['panels'].items()})
+        # The legacy input still had the ratio panels retired on 2026-10-09; stand in with same-source panels.
+        panels = self.source['spec']['panels']
+        for legacy, source in (('p2', 'extra-fs-free'), ('extra-memory-ratio', 'p1'), ('extra-vram-ratio', 'extra-vram-total')):
+            panels.setdefault(legacy, copy.deepcopy(panels[source]))
         for p in self.source['spec']['panels'].values():
             for q in p['spec']['queries']:
                 x=q['spec']['plugin']['spec'];x['query']=x['query'].replace(',node=~"$role"','')

@@ -425,50 +425,6 @@
           ]
         }
       },
-      "extra-segment-ratio": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "Mooncake 各 segment 占用（%）",
-            "description": "指标含义\n使用现有有效性标记的派生值；逐 rank/segment 展示，不累加复制容量。\n\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segment_ratio..*\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segment_ratio..*\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segment_ratio..*\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segment_ratio..*\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segment_ratio..*\"}) < 15)) * 1",
-                    "seriesNameFormat": "{{path}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "extra-segments": {
         "kind": "Panel",
         "spec": {
@@ -676,50 +632,6 @@
                   "spec": {
                     "minStep": "5s",
                     "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"}) < 15)) * 100",
-                    "seriesNameFormat": "{{path}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "p2": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "HiCache 容量使用率（%）",
-            "description": "指标含义\n代表 rank 的 HiCache 已用 Token 容量 ÷ 总 Token 容量 × 100%。这是容量占用率，不是命中率；代表 rank 用于避免直接累加复制容量。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.ratio\"}) < 15)) * 100",
                     "seriesNameFormat": "{{path}}"
                   }
                 }
@@ -978,7 +890,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p2"
+                "$ref": "#/spec/panels/p3"
               }
             },
             {
@@ -987,20 +899,11 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p3"
-              }
-            },
-            {
-              "x": 0,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
                 "$ref": "#/spec/panels/p4"
               }
             },
             {
-              "x": 12,
+              "x": 0,
               "y": 16,
               "width": 12,
               "height": 8,
@@ -1009,8 +912,8 @@
               }
             },
             {
-              "x": 0,
-              "y": 24,
+              "x": 12,
+              "y": 16,
               "width": 12,
               "height": 8,
               "content": {
@@ -1018,7 +921,7 @@
               }
             },
             {
-              "x": 12,
+              "x": 0,
               "y": 24,
               "width": 12,
               "height": 8,
@@ -1027,8 +930,8 @@
               }
             },
             {
-              "x": 0,
-              "y": 32,
+              "x": 12,
+              "y": 24,
               "width": 12,
               "height": 8,
               "content": {
@@ -1036,7 +939,7 @@
               }
             },
             {
-              "x": 12,
+              "x": 0,
               "y": 32,
               "width": 12,
               "height": 8,
@@ -1045,17 +948,8 @@
               }
             },
             {
-              "x": 0,
-              "y": 40,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-segment-ratio"
-              }
-            },
-            {
               "x": 12,
-              "y": 40,
+              "y": 32,
               "width": 12,
               "height": 8,
               "content": {
@@ -1064,7 +958,7 @@
             },
             {
               "x": 0,
-              "y": 48,
+              "y": 40,
               "width": 12,
               "height": 8,
               "content": {
@@ -1073,7 +967,7 @@
             },
             {
               "x": 12,
-              "y": 48,
+              "y": 40,
               "width": 12,
               "height": 8,
               "content": {
@@ -1082,7 +976,7 @@
             },
             {
               "x": 0,
-              "y": 56,
+              "y": 48,
               "width": 12,
               "height": 8,
               "content": {
@@ -1091,7 +985,7 @@
             },
             {
               "x": 12,
-              "y": 56,
+              "y": 48,
               "width": 12,
               "height": 8,
               "content": {
@@ -1100,7 +994,7 @@
             },
             {
               "x": 0,
-              "y": 64,
+              "y": 56,
               "width": 12,
               "height": 8,
               "content": {
@@ -1109,7 +1003,7 @@
             },
             {
               "x": 12,
-              "y": 64,
+              "y": 56,
               "width": 12,
               "height": 8,
               "content": {
@@ -1118,7 +1012,7 @@
             },
             {
               "x": 0,
-              "y": 72,
+              "y": 64,
               "width": 12,
               "height": 8,
               "content": {

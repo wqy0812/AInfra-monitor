@@ -67,50 +67,6 @@
           ]
         }
       },
-      "core-kv": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "Decode KV 池占用（%）",
-            "description": "指标含义\n源调度器 token_usage，反映 KV Token 池占用，不是整卡显存占用。\n\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(sglang:token_usage{environment=\"dcu-pd\",job=\"sglang-decode\"} and ((time() - timestamp(sglang:token_usage{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (count_over_time(sglang:token_usage{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5))))) * 100",
-                    "seriesNameFormat": "{{node}} · DP {{dp_rank}} / TP {{tp_rank}} / EP {{moe_ep_rank}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "bn-decode-queue_time_seconds": {
         "kind": "Panel",
         "spec": {
@@ -663,50 +619,6 @@
           ]
         }
       },
-      "bn-decode-kv-usage": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "Decode KV 池占用（%）",
-            "description": "指标含义\n源调度器池占用比例，不是整卡显存使用率。\n\nDCU；按角色、实例和 rank 区分，不累加复制 rank。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(sglang:token_usage{environment=\"dcu-pd\",job=\"sglang-decode\"} and ((time() - timestamp(sglang:token_usage{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (count_over_time(sglang:token_usage{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5))))) * 100",
-                    "seriesNameFormat": "{{role}} · DP {{dp_rank}} / TP {{tp_rank}} · {{stage}} {{cache_type}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "bn-decode-swa-capacity": {
         "kind": "Panel",
         "spec": {
@@ -789,50 +701,6 @@
             }
           ]
         }
-      },
-      "bn-decode-swa-usage": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "Decode SWA 池占用（%）",
-            "description": "指标含义\n源调度器池占用比例，不是整卡显存使用率。\n\nDCU；按角色、实例和 rank 区分，不累加复制 rank。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(sglang:swa_token_usage{environment=\"dcu-pd\",job=\"sglang-decode\"} and ((time() - timestamp(sglang:swa_token_usage{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (count_over_time(sglang:swa_token_usage{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5))))) * 100",
-                    "seriesNameFormat": "{{role}} · DP {{dp_rank}} / TP {{tp_rank}} · {{stage}} {{cache_type}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
       }
     },
     "layouts": [
@@ -858,7 +726,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/core-kv"
+                "$ref": "#/spec/panels/bn-decode-kv-capacity"
               }
             }
           ]
@@ -967,34 +835,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/bn-decode-kv-capacity"
-              }
-            },
-            {
-              "x": 12,
-              "y": 40,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/bn-decode-kv-usage"
-              }
-            },
-            {
-              "x": 0,
-              "y": 48,
-              "width": 12,
-              "height": 8,
-              "content": {
                 "$ref": "#/spec/panels/bn-decode-swa-capacity"
-              }
-            },
-            {
-              "x": 12,
-              "y": 48,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/bn-decode-swa-usage"
               }
             }
           ]

@@ -65,6 +65,28 @@ class ProjectSplitTest(unittest.TestCase):
         with self.assertRaises(AssertionError):
             split.validate(resources)
 
+    def test_duplicate_ratio_panels_stay_retired(self):
+        from retire_duplicate_ratios import RETIRED, retire
+        dashboards = {(d['metadata']['project'], d['metadata']['name']): d for d in self.resources['dashboards']}
+        for (project, name), retired in RETIRED.items():
+            d = dashboards[(project, name)]
+            self.assertFalse(set(retired) & set(d['spec']['panels']), (project, name))
+            for keeper in filter(None, retired.values()):
+                self.assertIn(keeper, d['spec']['panels'])
+        hosts = dashboards[('dcu-monitoring', 'hosts-dcu')]
+        order = [x['content']['$ref'].rsplit('/', 1)[1] for x in hosts['spec']['layouts'][0]['spec']['items']]
+        self.assertEqual(order[:3], ['core-p0', 'core-p1', 'core-extra-fs-free'])
+        decode = dashboards[('dcu-monitoring', 'backend-decode')]
+        core = [x['content']['$ref'].rsplit('/', 1)[1] for x in decode['spec']['layouts'][0]['spec']['items']]
+        self.assertEqual(core, ['core-queue', 'bn-decode-kv-capacity'])
+        # Restoring a retired panel is removed again with the value panel back in its slot.
+        restored = copy.deepcopy(hosts)
+        restored['spec']['panels']['core-p2'] = copy.deepcopy(restored['spec']['panels']['core-p1'])
+        restored['spec']['layouts'][0]['spec']['items'] = split.grid(order[:2] + ['core-p2'] + order[2:])
+        self.assertEqual(retire(restored), hosts)
+        for d in self.resources['dashboards']:
+            self.assertIs(retire(d), d)
+
     def test_legacy_two_project_generation_and_retired_panels(self):
         resources = {kind: [d for d in docs if d['metadata'].get('project', d['metadata']['name']) != 'xpu-monitoring']
                      for kind, docs in self.resources.items()}

@@ -348,50 +348,6 @@
             }
           ]
         }
-      },
-      "core-memory-ratio": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "加速卡显存占用比例（%）",
-            "description": "指标含义\n每卡已用显存 / 总显存，要求 DCU 采样成功且新鲜。\n\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "100 * ((dcu_memory_used_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"} and ((time() - timestamp(dcu_memory_used_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"}) < 15) and (count_over_time(dcu_memory_used_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)))))) / (((dcu_memory_total_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"} and ((time() - timestamp(dcu_memory_total_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"}) < 15) and (count_over_time(dcu_memory_total_bytes{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",device=~\"$device\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)))))) > 0) and on(job,instance) ((dcu_sample_success{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$role\"} == 1) and (time() - dcu_sample_timestamp_seconds{environment=\"dcu-pd\",job=~\"dcu-prefill|dcu-decode\",node=~\"$role\"} < 15))",
-                    "seriesNameFormat": "{{node}} · {{device}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
       }
     },
     "layouts": [
@@ -445,15 +401,6 @@
               "height": 8,
               "content": {
                 "$ref": "#/spec/panels/core-memory-total"
-              }
-            },
-            {
-              "x": 12,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/core-memory-ratio"
               }
             }
           ]

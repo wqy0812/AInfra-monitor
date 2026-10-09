@@ -112,58 +112,6 @@
           ]
         }
       },
-      "generation-2": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "网关 · 后端错误率（%）",
-            "description": "指标含义\n后端错误计数速率 ÷ 全部生成结束请求速率 × 100%。分母包含完成、错误、取消、断开和未知结果；不包含入口拒绝、模型发现或探测。\n\nA3 主机网关。按采集环境归属；图例区分本环境的后端或阶段。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "querySettings": [
-                {
-                  "colorMode": "fixed",
-                  "colorValue": "#ED6C02",
-                  "queryIndex": 0
-                }
-              ],
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 2
-              },
-              "yAxis": {
-                "max": 100,
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "100 * (((sum by(environment) (rate(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_upstream_errors_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))) / on(environment) (((sum by(environment) (rate(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) and ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))) unless on(environment) (count by(environment) ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) unless ((count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5)) and (resets(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (time() - timestamp(aigate_generation_requests_ended_total{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and on(job,instance,environment) ((up{job=\"aigate\",environment=\"a3-vllm\"} == 1) and (time() - timestamp(up{job=\"aigate\",environment=\"a3-vllm\"}) < 15) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[1m]) >= 12) and (min_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) == 1) and (count_over_time(up{job=\"aigate\",environment=\"a3-vllm\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((time() - aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"} >= 60) and (time() - timestamp(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}) < 15) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[1m]) >= 12) and (changes(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) == 0) and (count_over_time(aigate_error_metrics_start_time_seconds{job=\"aigate\",environment=\"a3-vllm\",request_scope=\"all\"}[$__interval]) >= ($__interval / 5))))))))) > 0))",
-                    "seriesNameFormat": "A3 主机网关"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "generation-3": {
         "kind": "Panel",
         "spec": {
@@ -806,7 +754,7 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/generation-2"
+                "$ref": "#/spec/panels/generation-3"
               }
             },
             {
@@ -815,20 +763,11 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/generation-3"
-              }
-            },
-            {
-              "x": 0,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
                 "$ref": "#/spec/panels/generation-4"
               }
             },
             {
-              "x": 12,
+              "x": 0,
               "y": 16,
               "width": 12,
               "height": 8,
@@ -837,8 +776,8 @@
               }
             },
             {
-              "x": 0,
-              "y": 24,
+              "x": 12,
+              "y": 16,
               "width": 12,
               "height": 8,
               "content": {
@@ -846,7 +785,7 @@
               }
             },
             {
-              "x": 12,
+              "x": 0,
               "y": 24,
               "width": 12,
               "height": 8,
@@ -855,8 +794,8 @@
               }
             },
             {
-              "x": 0,
-              "y": 32,
+              "x": 12,
+              "y": 24,
               "width": 12,
               "height": 8,
               "content": {

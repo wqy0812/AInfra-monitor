@@ -325,9 +325,10 @@ def shared_health(project):
 
 def build(snapshot):
     from dashboard_reorg import migrate
+    from retire_duplicate_ratios import apply as retire_ratios
     if any(d['metadata']['name'] == 'backend-performance' for d in snapshot['dashboards']):
         from align_dashboards import align
-        return align(migrate(snapshot)[0])[0]
+        return retire_ratios(align(migrate(snapshot)[0])[0])
     by_key = {(d["metadata"]["project"], d["metadata"]["name"]): d for d in snapshot["dashboards"]}
     result = {"projects": [], "datasources": [], "dashboards": []}
     ds = next(x for x in snapshot["datasources"] if x["metadata"]["name"] == "victoriametrics")
@@ -365,7 +366,7 @@ def build(snapshot):
     from dcu_bottlenecks import default_configure
     result['dashboards'] = [default_configure(remove_panels(d)) for d in result['dashboards']]
     from align_dashboards import align
-    return align(migrate(result)[0])[0]
+    return retire_ratios(align(migrate(result)[0])[0])
 
 
 def validate(resources):
