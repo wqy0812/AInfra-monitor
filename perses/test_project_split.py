@@ -24,7 +24,7 @@ class ProjectSplitTest(unittest.TestCase):
 
     def test_resource_structure_and_no_request_filters(self):
         split.validate(self.resources)
-        self.assertEqual(len(self.resources["dashboards"]), 30)
+        self.assertEqual(len(self.resources["dashboards"]), 27)
         self.assertEqual(split.no_request_filter(
             'm{request_scope="streaming",a="b"} + m{a="b",is_streaming!="false"} + m{stream="true"}'),
             'm{a="b"} + m{a="b"} + m{}')
@@ -34,9 +34,9 @@ class ProjectSplitTest(unittest.TestCase):
             if d["metadata"]["name"] == "gateway-generation":
                 env = split.PROJECTS[d["metadata"]["project"]]
                 self.assertIn("live-stages", d["spec"]["panels"])
-                self.assertEqual(len(d["spec"]["panels"]), 8)
+                self.assertEqual(len(d["spec"]["panels"]), 6)
                 d = next(x for x in self.resources["dashboards"] if x["metadata"]["project"] == d["metadata"]["project"] and x["metadata"]["name"] == "gateway-requests")
-                self.assertEqual(len(d["spec"]["panels"]["generation-0"]["spec"]["queries"]), 1)
+                self.assertEqual(len(d["spec"]["panels"]["generation-0"]["spec"]["queries"]), 4)
                 setting = d["spec"]["panels"]["generation-0"]["spec"]["plugin"]["spec"]["querySettings"]
                 self.assertEqual(setting[0]["queryIndex"], 0)
 
@@ -65,14 +65,30 @@ class ProjectSplitTest(unittest.TestCase):
         with self.assertRaises(AssertionError):
             split.validate(resources)
 
-    def test_duplicate_ratio_panels_stay_retired(self):
-        from retire_duplicate_ratios import RETIRED, retire
+    def test_trimmed_panels_stay_retired(self):
+        from panel_trim import RETIRED, RETIRED_DASHBOARDS, PROFILE_DROPS, retire
         dashboards = {(d['metadata']['project'], d['metadata']['name']): d for d in self.resources['dashboards']}
+        self.assertFalse({name for _, name in dashboards} & set(RETIRED_DASHBOARDS))
         for (project, name), retired in RETIRED.items():
             d = dashboards[(project, name)]
             self.assertFalse(set(retired) & set(d['spec']['panels']), (project, name))
             for keeper in filter(None, retired.values()):
                 self.assertIn(keeper, d['spec']['panels'])
+        for (project, name), d in dashboards.items():
+            self.assertFalse([k for k in d['spec']['panels'] if k.endswith('-samples')], (project, name))
+            if name == 'gateway-requests':
+                merged = d['spec']['panels']['generation-0']['spec']['queries']
+                self.assertEqual([q['spec']['plugin']['spec']['seriesNameFormat'] for q in merged],
+                                 ['全部结束', '客户端取消', '客户端断开', '未知结果'])
+                self.assertTrue(all('aigate_generation_requests_ended_total' in q['spec']['plugin']['spec']['query'] and
+                                    not q['spec']['plugin']['spec']['query'].startswith('100 *') for q in merged))
+            if name == 'accelerator-resources':
+                used = d['spec']['panels']['core-memory-used']['spec']['queries']
+                self.assertEqual(used[-1]['spec']['plugin']['spec']['seriesNameFormat'], '单卡总量')
+                self.assertTrue(used[-1]['spec']['plugin']['spec']['query'].startswith('max('))
+            if name == 'monitoring-health':
+                self.assertEqual(len(d['spec']['panels']), 7)
+                self.assertIn('aigate_profile_dropped_events_total', d['spec']['panels'][PROFILE_DROPS]['spec']['queries'][0]['spec']['plugin']['spec']['query'])
         hosts = dashboards[('dcu-monitoring', 'hosts-dcu')]
         order = [x['content']['$ref'].rsplit('/', 1)[1] for x in hosts['spec']['layouts'][0]['spec']['items']]
         self.assertEqual(order[:3], ['core-p0', 'core-p1', 'core-extra-fs-free'])
@@ -92,7 +108,7 @@ class ProjectSplitTest(unittest.TestCase):
                      for kind, docs in self.resources.items()}
         generated = split.build(resources)
         split.validate(generated)
-        self.assertEqual(len(generated['dashboards']), 20)
+        self.assertEqual(len(generated['dashboards']), 18)
         for d in generated['dashboards']:
             self.assertFalse(set(d['spec']['panels']) & {'live-idle-5', 'live-idle-15', 'live-idle-30', 'live-idle-60'})
 

@@ -211,7 +211,7 @@
         "spec": {
           "display": {
             "name": "加速卡显存已用（GiB）",
-            "description": "芯片 HBM 已用容量；源单位 MiB，除以 1024 转为 GiB。不是 vLLM KV Cache 占用。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
+            "description": "芯片 HBM 已用容量；源单位 MiB，除以 1024 转为 GiB。不是 vLLM KV Cache 占用。灰线为单卡总量，用于判断余量。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -230,7 +230,14 @@
               },
               "yAxis": {
                 "min": 0
-              }
+              },
+              "querySettings": [
+                {
+                  "queryIndex": 1,
+                  "colorMode": "fixed",
+                  "colorValue": "#9E9E9E"
+                }
+              ]
             }
           },
           "queries": [
@@ -243,6 +250,19 @@
                     "minStep": "5s",
                     "query": "(((npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} and ((npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} >= 0) and (npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_used_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5))))) <= ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} and ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} >= 0) and (npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)))))) / 1024",
                     "seriesNameFormat": "{{node}} · NPU {{id}}"
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "minStep": "5s",
+                    "query": "max((((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} and ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} >= 0) and (npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5))))) > 0) / 1024)",
+                    "seriesNameFormat": "单卡总量"
                   }
                 }
               }
@@ -337,50 +357,6 @@
             }
           ]
         }
-      },
-      "core-memory-total": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "加速卡显存总量（GiB）",
-            "description": "芯片 HBM 总容量；源单位 MiB，除以 1024 转为 GiB。\n\n按 A3 节点及 NPU 芯片 ID 展示，每节点 16 个芯片。\n每 5 秒抓取，保留 exporter 原始观测时间；观测超过 15 秒、抓取失败、缺失或非法数据留空，有效零值保留，曲线不跨空值连接。\n历史从接入时开始积累；默认 1 小时、15 秒刷新。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} and ((npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} >= 0) and (npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"} < +Inf)) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) >= 0) and (time() - timestamp(npu_chip_info_hbm_total_memory{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",id=~\"$device\",node=~\"$role\"}) < 15) and on(job,instance,environment) ((up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"a3-vllm\",job=\"npu-a3\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5))))) > 0) / 1024",
-                    "seriesNameFormat": "{{node}} · NPU {{id}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
       }
     },
     "layouts": [
@@ -425,15 +401,6 @@
               "height": 8,
               "content": {
                 "$ref": "#/spec/panels/core-power"
-              }
-            },
-            {
-              "x": 0,
-              "y": 16,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/core-memory-total"
               }
             }
           ]

@@ -249,50 +249,6 @@
           ]
         }
       },
-      "bn-prefill-hicache_backup_duration_seconds-samples": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "Prefill HiCache 备份耗时 · 样本数（次）",
-            "description": "指标含义\n对应计时器最近一分钟观测次数估算；阶段可能每请求记录多次，不作为去重请求数。\n\nDCU；按角色、实例和 rank 区分，不累加复制 rank。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(rate(sglang:hicache_backup_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) and ((time() - timestamp(sglang:hicache_backup_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (count_over_time(sglang:hicache_backup_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-prefill\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(sglang:hicache_backup_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) >= 12) and (resets(sglang:hicache_backup_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) == 0) and (resets(sglang:hicache_backup_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-prefill\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) >= (1m / 5))))) * 60",
-                    "seriesNameFormat": "{{role}} · DP {{dp_rank}} / TP {{tp_rank}} · {{stage}} {{cache_type}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "bn-prefill-load_back_duration_seconds": {
         "kind": "Panel",
         "spec": {
@@ -330,50 +286,6 @@
                     "minStep": "5s",
                     "query": "(label_replace((label_replace((label_replace((histogram_quantiles(\"perses_quantile\", 0.5, 0.95, 0.99, sum by(le,environment,job,instance,node,role,engine_type,model_name,dp_rank,tp_rank,pp_rank,moe_ep_rank,stage,cache_type) (rate(sglang:load_back_duration_seconds_bucket{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]))) unless on(environment,job,instance,node,role,engine_type,model_name,dp_rank,tp_rank,pp_rank,moe_ep_rank,stage,cache_type) (count by(environment,job,instance,node,role,engine_type,model_name,dp_rank,tp_rank,pp_rank,moe_ep_rank,stage,cache_type) ((count_over_time({environment=\"dcu-pd\",job=\"sglang-prefill\",__name__=~\"sglang:load_back_duration_seconds_(bucket|count|sum)\"}[1m]) unless ((time() - timestamp({environment=\"dcu-pd\",job=\"sglang-prefill\",__name__=~\"sglang:load_back_duration_seconds_(bucket|count|sum)\"}) < 15) and (count_over_time({environment=\"dcu-pd\",job=\"sglang-prefill\",__name__=~\"sglang:load_back_duration_seconds_(bucket|count|sum)\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-prefill\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5))) and (count_over_time({environment=\"dcu-pd\",job=\"sglang-prefill\",__name__=~\"sglang:load_back_duration_seconds_(bucket|count|sum)\"}[1m]) >= 12) and (resets({environment=\"dcu-pd\",job=\"sglang-prefill\",__name__=~\"sglang:load_back_duration_seconds_(bucket|count|sum)\"}[1m]) == 0) and (resets({environment=\"dcu-pd\",job=\"sglang-prefill\",__name__=~\"sglang:load_back_duration_seconds_(bucket|count|sum)\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-prefill\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) >= (1m / 5))))) or (count without(le) (sglang:load_back_duration_seconds_bucket{environment=\"dcu-pd\",job=\"sglang-prefill\"}) != 19) or (sglang:load_back_duration_seconds_bucket{environment=\"dcu-pd\",job=\"sglang-prefill\",le=\"+Inf\"} != ignoring(le) sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}) or (sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"} unless ignoring(le) sglang:load_back_duration_seconds_bucket{environment=\"dcu-pd\",job=\"sglang-prefill\"}) or (sglang:load_back_duration_seconds_bucket{environment=\"dcu-pd\",job=\"sglang-prefill\"} unless ignoring(le) sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}) or (sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"} unless sglang:load_back_duration_seconds_sum{environment=\"dcu-pd\",job=\"sglang-prefill\"}))) and on(environment,job,instance,node,role,engine_type,model_name,dp_rank,tp_rank,pp_rank,moe_ep_rank,stage,cache_type) (sum by(environment,job,instance,node,role,engine_type,model_name,dp_rank,tp_rank,pp_rank,moe_ep_rank,stage,cache_type) (rate(sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m])) > 0)), \"perses_quantile\", \"P50\", \"perses_quantile\", \"0[.]5\")), \"perses_quantile\", \"P95\", \"perses_quantile\", \"0[.]95\")), \"perses_quantile\", \"P99\", \"perses_quantile\", \"0[.]99\")) * 1",
                     "seriesNameFormat": "{{role}} · DP {{dp_rank}} / TP {{tp_rank}} · {{stage}} {{cache_type}} · {{perses_quantile}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "bn-prefill-load_back_duration_seconds-samples": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "Prefill HiCache 回载耗时 · 样本数（次）",
-            "description": "指标含义\n对应计时器最近一分钟观测次数估算；阶段可能每请求记录多次，不作为去重请求数。\n\nDCU；按角色、实例和 rank 区分，不累加复制 rank。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(rate(sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) and ((time() - timestamp(sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (count_over_time(sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-prefill\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) >= 12) and (resets(sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) == 0) and (resets(sglang:load_back_duration_seconds_count{environment=\"dcu-pd\",job=\"sglang-prefill\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-prefill\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-prefill\"}[1m]) >= (1m / 5))))) * 60",
-                    "seriesNameFormat": "{{role}} · DP {{dp_rank}} / TP {{tp_rank}} · {{stage}} {{cache_type}}"
                   }
                 }
               }
@@ -989,30 +901,12 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/bn-prefill-hicache_backup_duration_seconds-samples"
-              }
-            },
-            {
-              "x": 0,
-              "y": 56,
-              "width": 12,
-              "height": 8,
-              "content": {
                 "$ref": "#/spec/panels/bn-prefill-load_back_duration_seconds"
               }
             },
             {
-              "x": 12,
-              "y": 56,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/bn-prefill-load_back_duration_seconds-samples"
-              }
-            },
-            {
               "x": 0,
-              "y": 64,
+              "y": 56,
               "width": 12,
               "height": 8,
               "content": {

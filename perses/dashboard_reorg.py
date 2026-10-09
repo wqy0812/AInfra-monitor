@@ -189,6 +189,8 @@ def write_resources(resources, root):
             filename = d['metadata']['name'] if category == 'dashboards' else 'project' if category == 'projects' else 'datasource' if d['metadata']['name'] == 'victoriametrics' else d['metadata']['name'] + '-datasource'
             (folder/(filename+'.json')).write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
     retired = copy.deepcopy(RETIRED)
+    from panel_trim import RETIRED_DASHBOARDS
+    retired = {p: names + RETIRED_DASHBOARDS for p, names in retired.items()}
     if any(d['metadata']['project']=='a3-monitoring' and d['metadata']['name']=='backend-prefill' for d in resources['dashboards']):
         retired['a3-monitoring'] += ('backend-diagnostics',)
     for project, names in retired.items():

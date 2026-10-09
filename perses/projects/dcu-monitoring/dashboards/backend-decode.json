@@ -115,50 +115,6 @@
           ]
         }
       },
-      "bn-decode-queue_time_seconds-samples": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "Decode 排队耗时 · 样本数（次）",
-            "description": "指标含义\n对应计时器最近一分钟观测次数估算；阶段可能每请求记录多次，不作为去重请求数。\n\nDCU；按角色、实例和 rank 区分，不累加复制 rank。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(rate(sglang:queue_time_seconds_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) and ((time() - timestamp(sglang:queue_time_seconds_count{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (count_over_time(sglang:queue_time_seconds_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(sglang:queue_time_seconds_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) >= 12) and (resets(sglang:queue_time_seconds_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) == 0) and (resets(sglang:queue_time_seconds_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) >= (1m / 5))))) * 60",
-                    "seriesNameFormat": "{{role}} · DP {{dp_rank}} / TP {{tp_rank}} · {{stage}} {{cache_type}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "bn-decode-per_stage_req_latency_seconds": {
         "kind": "Panel",
         "spec": {
@@ -200,50 +156,6 @@
                       "kind": "PrometheusDatasource",
                       "name": "perses-accelerated"
                     }
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "bn-decode-per_stage_req_latency_seconds-samples": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "Decode 阶段耗时 · 样本数（次）",
-            "description": "指标含义\n对应计时器最近一分钟观测次数估算；阶段可能每请求记录多次，不作为去重请求数。\n\nDCU；按角色、实例和 rank 区分，不累加复制 rank。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(rate(sglang:per_stage_req_latency_seconds_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) and ((time() - timestamp(sglang:per_stage_req_latency_seconds_count{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (count_over_time(sglang:per_stage_req_latency_seconds_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(sglang:per_stage_req_latency_seconds_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) >= 12) and (resets(sglang:per_stage_req_latency_seconds_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) == 0) and (resets(sglang:per_stage_req_latency_seconds_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) >= (1m / 5))))) * 60",
-                    "seriesNameFormat": "{{role}} · DP {{dp_rank}} / TP {{tp_rank}} · {{stage}} {{cache_type}}"
                   }
                 }
               }
@@ -356,50 +268,6 @@
           ]
         }
       },
-      "bn-decode-kv_transfer_bootstrap_ms-samples": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "Decode KV Bootstrap 耗时 · 样本数（次）",
-            "description": "指标含义\n对应计时器最近一分钟观测次数估算；阶段可能每请求记录多次，不作为去重请求数。\n\nDCU；按角色、实例和 rank 区分，不累加复制 rank。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(rate(sglang:kv_transfer_bootstrap_ms_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) and ((time() - timestamp(sglang:kv_transfer_bootstrap_ms_count{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (count_over_time(sglang:kv_transfer_bootstrap_ms_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(sglang:kv_transfer_bootstrap_ms_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) >= 12) and (resets(sglang:kv_transfer_bootstrap_ms_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) == 0) and (resets(sglang:kv_transfer_bootstrap_ms_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) >= (1m / 5))))) * 60",
-                    "seriesNameFormat": "{{role}} · DP {{dp_rank}} / TP {{tp_rank}} · {{stage}} {{cache_type}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "bn-decode-kv_transfer_alloc_ms": {
         "kind": "Panel",
         "spec": {
@@ -441,50 +309,6 @@
                       "kind": "PrometheusDatasource",
                       "name": "perses-accelerated"
                     }
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "bn-decode-kv_transfer_alloc_ms-samples": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "Decode KV 分配等待 · 样本数（次）",
-            "description": "指标含义\n对应计时器最近一分钟观测次数估算；阶段可能每请求记录多次，不作为去重请求数。\n\nDCU；按角色、实例和 rank 区分，不累加复制 rank。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(rate(sglang:kv_transfer_alloc_ms_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) and ((time() - timestamp(sglang:kv_transfer_alloc_ms_count{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (count_over_time(sglang:kv_transfer_alloc_ms_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) >= ($__interval / 5))) and (count_over_time(sglang:kv_transfer_alloc_ms_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) >= 12) and (resets(sglang:kv_transfer_alloc_ms_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) == 0) and (resets(sglang:kv_transfer_alloc_ms_count{environment=\"dcu-pd\",job=\"sglang-decode\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=\"sglang-decode\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=\"sglang-decode\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=\"sglang-decode\"}[1m]) >= (1m / 5))))) * 60",
-                    "seriesNameFormat": "{{role}} · DP {{dp_rank}} / TP {{tp_rank}} · {{stage}} {{cache_type}}"
                   }
                 }
               }
@@ -754,30 +578,12 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/bn-decode-queue_time_seconds-samples"
-              }
-            },
-            {
-              "x": 0,
-              "y": 8,
-              "width": 12,
-              "height": 8,
-              "content": {
                 "$ref": "#/spec/panels/bn-decode-per_stage_req_latency_seconds"
               }
             },
             {
-              "x": 12,
-              "y": 8,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/bn-decode-per_stage_req_latency_seconds-samples"
-              }
-            },
-            {
               "x": 0,
-              "y": 16,
+              "y": 8,
               "width": 12,
               "height": 8,
               "content": {
@@ -786,7 +592,7 @@
             },
             {
               "x": 12,
-              "y": 16,
+              "y": 8,
               "width": 12,
               "height": 8,
               "content": {
@@ -795,16 +601,7 @@
             },
             {
               "x": 0,
-              "y": 24,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/bn-decode-kv_transfer_bootstrap_ms-samples"
-              }
-            },
-            {
-              "x": 12,
-              "y": 24,
+              "y": 16,
               "width": 12,
               "height": 8,
               "content": {
@@ -812,17 +609,8 @@
               }
             },
             {
-              "x": 0,
-              "y": 32,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/bn-decode-kv_transfer_alloc_ms-samples"
-              }
-            },
-            {
               "x": 12,
-              "y": 32,
+              "y": 16,
               "width": 12,
               "height": 8,
               "content": {
@@ -831,7 +619,7 @@
             },
             {
               "x": 0,
-              "y": 40,
+              "y": 24,
               "width": 12,
               "height": 8,
               "content": {

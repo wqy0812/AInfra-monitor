@@ -12,9 +12,9 @@ ROOT=Path(__file__).parent
 
 def test_all_core_catalogs_match_and_a3_mixed_dashboard_is_gone():
     r=read_resources(ROOT/'projects');validate(r)
-    assert len(r['dashboards'])==30
+    assert len(r['dashboards'])==27
     assert all(d['metadata']['name']!='backend-diagnostics' for d in r['dashboards'])
-    for family in ('backend-performance','backend-prefill','backend-decode','accelerator-resources','gateway','gateway-generation','gateway-requests','monitoring-health'):
+    for family in ('backend-performance','backend-prefill','backend-decode','accelerator-resources','gateway-generation','gateway-requests','monitoring-health'):
         sets=[]
         for d in r['dashboards']:
             if d['metadata']['name']!=family:continue

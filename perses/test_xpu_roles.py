@@ -45,7 +45,7 @@ def test_role_targets_and_cache_whitelist_match_live_topology():
 def test_cache_has_real_prefill_queries_and_no_placeholders():
     d = json.loads((ROOT/'projects/xpu-monitoring/dashboards/cache-store.json').read_text())
     for candidate in (d, configure(d)):
-        assert len(candidate['spec']['panels']) == 6
+        assert len(candidate['spec']['panels']) == 4
         for p in candidate['spec']['panels'].values():
             for q in p['spec']['queries']:
                 expr = q['spec']['plugin']['spec']['query']

@@ -161,50 +161,6 @@
           ]
         }
       },
-      "p0": {
-        "kind": "Panel",
-        "spec": {
-          "display": {
-            "name": "实例 KV 缓存占用（%）",
-            "description": "指标含义\nvLLM 实例已分配 KV Cache 的占用比例乘以 100。按实例/角色区分；分母是该实例的 KV Cache 容量，不是整张 NPU 的显存容量。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\nA3 引擎采集范围\nPrefill：4 个引擎（7100–7103）；Decode：16 个引擎（7100–7115）。Decode 为 8 张物理卡、每卡 2 个芯片设备，DP=16 / TP=1。2026-09-28 修复前仅采集 Decode 前 4 个端点；已确认 DP=16 漏采期间的历史保留，但不代表全量，不能乘倍数补算或直接作为完整性能基线。更早拓扑未经核实，不推定漏采。精确修复时间见监控 API 的 collection_coverage.repair_complete_at。 本次完整采集确认时间：2026-09-28T14:19:30+08:00。"
-          },
-          "plugin": {
-            "kind": "TimeSeriesChart",
-            "spec": {
-              "legend": {
-                "mode": "list",
-                "position": "bottom"
-              },
-              "tooltip": {
-                "enablePinning": true
-              },
-              "visual": {
-                "connectNulls": false,
-                "display": "line",
-                "lineWidth": 1
-              },
-              "yAxis": {
-                "min": 0
-              }
-            }
-          },
-          "queries": [
-            {
-              "kind": "TimeSeriesQuery",
-              "spec": {
-                "plugin": {
-                  "kind": "PrometheusTimeSeriesQuery",
-                  "spec": {
-                    "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.resources.kv_usage..*\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.resources.kv_usage..*\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.resources.kv_usage..*\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.resources.kv_usage..*\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes.$role.resources.kv_usage..*\"}) < 15)) * 100",
-                    "seriesNameFormat": "{{path}}"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
       "p1": {
         "kind": "Panel",
         "spec": {
@@ -856,21 +812,12 @@
               "width": 12,
               "height": 8,
               "content": {
-                "$ref": "#/spec/panels/p0"
+                "$ref": "#/spec/panels/extra-prefix_cache_"
               }
             },
             {
               "x": 12,
               "y": 8,
-              "width": 12,
-              "height": 8,
-              "content": {
-                "$ref": "#/spec/panels/extra-prefix_cache_"
-              }
-            },
-            {
-              "x": 0,
-              "y": 16,
               "width": 12,
               "height": 8,
               "content": {

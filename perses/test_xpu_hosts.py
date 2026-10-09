@@ -20,7 +20,10 @@ class XpuHostsTest(unittest.TestCase):
         self.source['spec']['panels'].update({aliases[k.removeprefix('core-')]:v for k,v in hardware['spec']['panels'].items()})
         # The legacy input still had the ratio panels retired on 2026-10-09; stand in with same-source panels.
         panels = self.source['spec']['panels']
-        for legacy, source in (('p2', 'extra-fs-free'), ('extra-memory-ratio', 'p1'), ('extra-vram-ratio', 'extra-vram-total')):
+        used = panels['p6']['spec']
+        used['queries'] = used['queries'][:1]  # drop the card-total reference line added on 2026-10-09
+        used['plugin']['spec'].pop('querySettings', None)
+        for legacy, source in (('p2', 'extra-fs-free'), ('extra-memory-ratio', 'p1'), ('extra-vram-total', 'p6'), ('extra-vram-ratio', 'p6')):
             panels.setdefault(legacy, copy.deepcopy(panels[source]))
         for p in self.source['spec']['panels'].values():
             for q in p['spec']['queries']:
