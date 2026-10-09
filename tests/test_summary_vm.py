@@ -14,7 +14,8 @@ from project_split import read_resources
 
 ENV = {'dcu-monitoring': 'dcu-pd', 'a3-monitoring': 'a3-vllm', 'xpu-monitoring': 'xpu-pd'}
 NODES = {'dcu-monitoring': ('dcu1', 'dcu2'), 'a3-monitoring': ('a3-1', 'a3-2'), 'xpu-monitoring': ('xpu-2', 'xpu-1')}
-CASES = ('normal', 'down')
+CASES = ('normal', 'down', 'missing-prefill', 'missing-decode', 'target-down',
+         'target-removed', 'replacement', 'duplicate', 'recovered', 'zero')
 STEP = 15
 GIB = 2 ** 30
 
@@ -45,18 +46,37 @@ def fixtures(base):
                     emit('up', 1, **labels)
                     for rank, value in enumerate(values):
                         emit('sglang:num_queue_reqs', value, **labels, dp_rank=str(rank), tp_rank=str(rank), moe_ep_rank=str(rank))
-            # A3 vLLM: two engines per node.
+            # Full configured A3 scope: 4 Prefill and 16 Decode endpoints.
             for node, values in (('a3-1', (4, 6)), ('a3-2', (1, 0))):
-                for port, value in zip((7100, 7101), values):
-                    labels = dict(environment='a3-vllm', job='vllm-a3', node=node, instance=f'{node}:{port}')
-                    emit('up', 1, **labels)
-                    emit('vllm:num_requests_waiting', value, **labels, engine='0')
-            # A3 prefix cache counters: 10 and 20 Token/s on a3-1; in 'down' one engine resets.
-            for port, speed in ((7100, 10), (7101, 20)):
-                labels = dict(environment='a3-vllm', job='vllm-a3', node='a3-1', instance=f'a3-1:{port}')
-                reset = case == 'down' and port == 7101 and i >= 58
-                for metric in ('vllm:prefix_cache_queries_total', 'vllm:prefix_cache_hits_total'):
-                    emit(metric, (i - 58 if reset else i + 100) * 5 * speed, **labels, engine='0')
+                address, count = ('122.209.21.24', 4) if node == 'a3-1' else ('122.209.21.25', 16)
+                for engine in range(count):
+                    port = 7100 + engine
+                    labels = dict(environment='a3-vllm', job='vllm-a3', node=node, instance=f'{address}:{port}')
+                    affected = engine == 1 and node == ('a3-2' if case == 'missing-decode' else 'a3-1')
+                    missing = affected and i >= 25 and case in (
+                        'missing-prefill', 'missing-decode', 'target-down', 'target-removed',
+                        'replacement', 'duplicate', 'recovered')
+                    if case == 'recovered' and i >= 43:
+                        missing = False
+                    if missing and case == 'target-removed':
+                        continue
+                    emit('up', 0 if missing and case == 'target-down' else 1, **labels)
+                    emit('vllm:num_requests_waiting', values[engine] if engine < 2 else 0, **labels, engine=str(engine))
+                    if missing:
+                        if case not in ('replacement', 'duplicate'):
+                            continue
+                        # An unexpected port or duplicate series cannot fill the missing endpoint.
+                        labels['instance'] = address + (':7201' if case == 'replacement' else ':7100')
+                        if case == 'replacement':
+                            emit('up', 1, **labels)
+                        else:
+                            labels['model_name'] = 'duplicate'
+                    reset = case == 'down' and affected and i >= 58
+                    speed = 0 if case == 'zero' else (engine + 1) * 10
+                    value = (i - 58 if reset else i + 100) * 5 * speed
+                    for prefix in ('prefix_cache_', 'external_prefix_cache_'):
+                        for suffix in ('queries_total', 'hits_total'):
+                            emit('vllm:' + prefix + suffix, value, **labels, engine=str(engine))
             # DCU host disks: one physical disk and one device-mapper volume repeating its I/O.
             labels = dict(environment='dcu-pd', job='node-prefill', node='dcu1', instance='dcu1:9100')
             emit('up', 1, **labels)
@@ -81,7 +101,7 @@ def summary_vm():
         pytest.skip('Set SUMMARY_TEST_VM_URL to a disposable local VictoriaMetrics')
     assert url.startswith('http://127.0.0.1:'), 'Never inject fixtures into a remote service'
     client = httpx.Client(base_url=url, trust_env=False, timeout=30)
-    lines, ends = fixtures(int(time.time() // 5) * 5 - 6000)
+    lines, ends = fixtures(int(time.time() // 5) * 5 - (len(CASES) + 1) * 600)
     client.post('/api/v1/import/prometheus', content='\n'.join(lines) + '\n').raise_for_status()
     client.get('/internal/force_flush').raise_for_status()
 
@@ -148,10 +168,16 @@ def test_scrape_down_counts_failed_targets_and_shows_zero_when_healthy(summary_v
     assert query(summary(project)['scrape-down'][0]['query'], ends[case]) == {(None, None): expected}
 
 
-@pytest.mark.parametrize('case,expected', [('normal', {('Prefill', 'a3-1'): 30}), ('down', {})])
-def test_a3_prefix_cache_sums_engines_per_node_and_blanks_incomplete_nodes(summary_vm, case, expected):
+@pytest.mark.parametrize('case', CASES)
+@pytest.mark.parametrize('panel', ('extra-prefix_cache_', 'extra-external_prefix_cache_'))
+def test_a3_prefix_cache_sums_engines_per_node_and_blanks_incomplete_nodes(summary_vm, case, panel):
     query, ends = summary_vm
-    for spec in detail('a3-monitoring', 'a3-cache', 'extra-prefix_cache_'):
+    expected = {('Prefill', 'a3-1'): 100, ('Decode', 'a3-2'): 1360}
+    if case == 'zero':
+        expected = dict.fromkeys(expected, 0)
+    elif case not in ('normal', 'recovered'):
+        del expected[('Decode', 'a3-2') if case == 'missing-decode' else ('Prefill', 'a3-1')]
+    for spec in detail('a3-monitoring', 'a3-cache', panel):
         assert query(spec['query'], ends[case]) == pytest.approx(expected)
 
 

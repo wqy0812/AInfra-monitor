@@ -92,19 +92,36 @@ def test_runtime_install_keeps_original_bytes_and_refuses_reused_journal(tmp_pat
     assert (target/'project_split.py').read_text() == 'concurrent'
 
 
-def test_installed_generator_imports_topology_without_source_checkout(tmp_path):
+def test_installed_generator_rebuilds_resources_and_removes_retired_dashboards(tmp_path):
     import reorg_runtime as runtime
     release = tmp_path/'release'
     release.mkdir()
     source_root = Path(__file__).parent
     for name in set(runtime.MODULES) | {'xpu_topology.py'}:
         shutil.copy2(source_root/name, release/name)
+    shutil.copytree(source_root/'projects', release/'projects')
     target = tmp_path/'runtime'
+    retired = []
+    for project in RETIRED:
+        path = target/'projects'/project/'dashboards/gateway.json'
+        path.parent.mkdir(parents=True)
+        path.write_text('retired gateway')
+        retired.append(path)
     runtime.sync(tmp_path, target)
+    assert all(not path.exists() for path in retired)
+    journal = json.loads((tmp_path/'runtime-install.json').read_text())
+    for path in retired:
+        entry = next(e for e in journal if e['path'] == str(path.relative_to(target)))
+        assert entry['before'] is not None and entry['after'] is None
     env = os.environ.copy()
     env.pop('PYTHONPATH', None)
     subprocess.run([sys.executable, '-c',
+        'from pathlib import Path; from project_split import read_resources, build, validate; '
         'from xpu_cache import configure; from align_dashboards import align; '
         'from project_release import snapshot; assert callable(snapshot); '
-        'assert align({"dashboards": []}) == ({"dashboards": []}, [])'],
+        'assert align({"dashboards": []}) == ({"dashboards": []}, []); '
+        'resources = read_resources(Path("projects")); validate(resources); '
+        'rebuilt = build(resources); validate(rebuilt); '
+        'by_id = lambda r: {(d["metadata"]["project"], d["metadata"]["name"]): d for d in r["dashboards"]}; '
+        'assert by_id(rebuilt) == by_id(resources)'],
         cwd=target, env=env, check=True, capture_output=True, text=True, timeout=10)

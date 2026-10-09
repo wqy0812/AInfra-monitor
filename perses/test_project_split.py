@@ -122,6 +122,12 @@ class ProjectSplitTest(unittest.TestCase):
                     for q in d['spec']['panels'][key]['spec']['queries']:
                         self.assertIn('sum by(environment,node)', q['spec']['plugin']['spec']['query'])
 
+    def test_a3_prefix_expected_endpoints_match_api_collection_scope(self):
+        from drilldown_layout import A3_ENGINE_TARGETS
+        from monitoring.a3 import NODES, INSTANCE_COUNTS
+        self.assertEqual(A3_ENGINE_TARGETS, {node: (address, INSTANCE_COUNTS[role])
+                                           for role, (node, address) in NODES.items()})
+
     def test_legacy_two_project_generation_and_retired_panels(self):
         resources = {kind: [d for d in docs if d['metadata'].get('project', d['metadata']['name']) != 'xpu-monitoring']
                      for kind, docs in self.resources.items()}

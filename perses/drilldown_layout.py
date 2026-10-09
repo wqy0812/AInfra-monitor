@@ -4,6 +4,8 @@ Idempotent and applied after the trim. Accelerated panels keep their exact
 expressions; only non-accelerated queries are reshaped here.
 """
 import copy
+import json
+import re
 
 from project_queries import Queries
 from summary_dashboard import node_role
@@ -30,6 +32,8 @@ DEVICES = 'lo|loop.*|ram.*|veth.*|docker.*|br-.*'
 # Also drop LVM/device-mapper volumes (their I/O repeats the physical disk) and container overlay links.
 FEWER_DEVICES = DEVICES + '|dm-.*|cali.*|flannel.*|cni.*|tunl.*|vxlan.*|virbr.*|kube-ipvs.*|nodelocaldns'
 A3_PREFIX = {'extra-prefix_cache_': 'prefix_cache_', 'extra-external_prefix_cache_': 'external_prefix_cache_'}
+# Match the configured collection scope, including endpoints absent from the query window.
+A3_ENGINE_TARGETS = {'a3-1': ('122.209.21.24', 4), 'a3-2': ('122.209.21.25', 16)}
 
 
 def order(d):
@@ -78,8 +82,21 @@ def host_lines(d):
             '排除 dm 逻辑卷等虚拟设备，避免与物理盘重复计数。', 1)
 
 
+def a3_prefix_rate(metric):
+    nodes = []
+    for node, (address, count) in A3_ENGINE_TARGETS.items():
+        ports = '|'.join(str(7100 + engine) for engine in range(count))
+        instances = re.escape(address) + ':(' + ports + ')'
+        q = Queries('a3-vllm', 'vllm-a3', ',node=' + json.dumps(node) + ',instance=~' + json.dumps(instances))
+        # Counting the exact endpoint set also catches engines absent for longer than 1m.
+        # Each endpoint must expose one series; duplicates cannot replace a missing instance.
+        complete = (f'count by(environment,node) (count by(environment,node,instance) '
+                    f'({q.gauge(metric)}) == 1) == {count}')
+        nodes.append(f'({q.rate(metric, group="environment,node")}) and on(environment,node) ({complete})')
+    return ' or '.join('(' + query + ')' for query in nodes)
+
+
 def a3_prefix_lines(d):
-    q = Queries('a3-vllm', 'vllm-a3')
     for key, prefix in A3_PREFIX.items():
         panel = d['spec']['panels'].get(key)
         if not panel:
@@ -87,7 +104,7 @@ def a3_prefix_lines(d):
         for query, (suffix, label) in zip(panel['spec']['queries'], (('queries_total', '查询'), ('hits_total', '命中'))):
             spec = query['spec']['plugin']['spec']
             # Sum engines per node; a node with any incomplete engine stays blank rather than partial.
-            spec['query'] = node_role(q.rate('vllm:' + prefix + suffix, group='environment,node'), 'a3-monitoring')
+            spec['query'] = node_role(a3_prefix_rate('vllm:' + prefix + suffix), 'a3-monitoring')
             spec['seriesNameFormat'] = '{{role}} · {{node}} · ' + label
         display = panel['spec']['display']
         display['description'] = display['description'].replace(
