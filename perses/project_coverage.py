@@ -70,7 +70,8 @@ def main():
     parser.add_argument("--before", type=Path)
     parser.add_argument("--docs-only", action="store_true", help="Regenerate descriptions using current projects and the saved historical coverage catalog.")
     args = parser.parse_args()
-    resources = read_resources(ROOT / "projects")
+    from dashboard_columns import apply as columns
+    resources = columns(read_resources(ROOT / "projects"))
     if args.docs_only:
         if args.inventory or args.before:
             parser.error("--docs-only cannot be combined with --inventory/--before")

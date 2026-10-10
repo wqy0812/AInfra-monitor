@@ -3,10 +3,13 @@ import base64
 import copy
 import hashlib
 import json
+import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'perses'))
+from dashboard_columns import source_change, source_identity
 
 RUNTIME = Path('/data2/monitoring/perses/release')
-MODULES = ('query_acceleration.py', 'query_slimming.py', 'acceleration_catalog.py', 'acceleration_publication.py', 'dashboard_reorg.py')
+MODULES = ('dashboard_columns.py', 'query_acceleration.py', 'query_slimming.py', 'acceleration_catalog.py', 'acceleration_publication.py', 'dashboard_reorg.py')
 DOCUMENTS = ('perses-query-acceleration.md', 'query-slimming.md')
 BASE_HASH = '38b62a8cc6378aecc7837bdfc144f9300d282cf35e0b22bf67bddc4e4f54aba0'
 
@@ -30,6 +33,10 @@ def save(path, content):
 def plan(evidence, changes, group=None, datasources=(), *, rewrites=(), replace_revision=False):
     assert not (evidence / 'generator-journal.json').exists()
     assert RUNTIME.is_dir()
+    # Live candidates keep public IDs; installed generators keep editable sources.
+    changes = [source_change(c) for c in changes]
+    assert all(len(e) == 4 for e in rewrites), 'Invalid rewrite entry'
+    rewrites = [list(source_identity(*e[:3])) + [e[3]] for e in rewrites]
     source = Path(__file__).resolve().parents[2] / 'perses'
     audited_sources = json.loads((evidence / 'query-meta.json').read_text())['tool_sha256'] if rewrites else None
 

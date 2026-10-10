@@ -17,6 +17,8 @@ generation 的总量表达式保持不变。三个结果类别合并后，求和
 
 当前清单增加可选 `rewrites`：每项为 `[project,dashboard,panel,kind]`，`kind` 为 `generation-results` 或 `histogram-monotonic`；省略视为空。未知目标、重复项、未知模板、结果类别渲染覆盖均拒绝处理。再生成仅应用已准入项。
 
+看板合并后，上表及 catalog、`acceleration_state.json` 仍使用逻辑分区身份。维护工具通过 `dashboard_columns.py` 定位公开看板及带分区前缀的面板键：候选、整页性能检查、浏览器证明和 API 写回使用公开资源；生成器事务映射回 `projects/` 的分区源文件和逻辑清单。保留整张公开看板的并发编辑检查，不重建物化 query ID 或历史水位。旧证据不能跨本次工具更新继续使用。
+
 ## 审计与发布
 
 远程操作先检查 SSH MCP 目标目录。每批使用独立的新证据目录，新增服务器目录须告知用户；四批串行，后续批次要求前面的目标已记入正式清单。

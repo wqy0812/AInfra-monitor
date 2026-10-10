@@ -8,6 +8,19 @@ import time
 import sys
 import urllib.request
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'perses'))
+from acceleration_catalog import targets
+from dashboard_columns import panel_index
+
+
+def browser_targets(resources):
+    indexed = panel_index(resources)
+    result = []
+    for project, dashboard, panel, _ in targets():
+        document, key = indexed[(project, dashboard, panel)]
+        result.append({'id': '/'.join((project, dashboard, panel)), 'project': project,
+                       'dashboard': document['metadata']['name'], 'panel': key})
+    return result
 
 
 def main():
@@ -44,18 +57,19 @@ def main():
             raise RuntimeError('Local server did not start')
         resources = json.loads((root / filename).read_text())
         if version == 'candidate' and args.accelerated:
-            sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'perses'))
             from acceleration_publication import published
-            from acceleration_catalog import targets
             original = resources
             resources = published(resources, {'schema': 1, 'merges': [], 'groups': ['cpu', 'dcu', 'a3']})
             changes = []
+            old_panels, new_panels = panel_index(original), panel_index(resources)
             for project, dashboard, panel, group in targets():
-                old = next(d for d in original['dashboards'] if (d['metadata']['project'], d['metadata']['name']) == (project, dashboard))
-                new = next(d for d in resources['dashboards'] if (d['metadata']['project'], d['metadata']['name']) == (project, dashboard))
-                changes.append({'project': project, 'dashboard': dashboard, 'panel': panel,
-                    'before': old['spec']['panels'][panel], 'after': new['spec']['panels'][panel]})
+                old, key = old_panels[(project, dashboard, panel)]
+                new, new_key = new_panels[(project, dashboard, panel)]
+                changes.append({'project': project, 'dashboard': new['metadata']['name'], 'panel': new_key,
+                    'before': old['spec']['panels'][key], 'after': new['spec']['panels'][new_key]})
             (root / 'materialized-changes.json').write_text(json.dumps(changes, ensure_ascii=False))
+        if version == 'candidate':
+            (root / 'browser-targets.json').write_text(json.dumps(browser_targets(resources)))
         for category in ('projects', 'datasources', 'dashboards'):
             for original in resources[category]:
                 document = copy.deepcopy(original)

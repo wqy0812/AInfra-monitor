@@ -5,6 +5,7 @@ import json
 import re
 
 from acceleration_catalog import targets
+from dashboard_columns import panel_index, source_identity
 
 PROJECTS = ('a3-monitoring', 'dcu-monitoring', 'xpu-monitoring')
 RESULTS = (('client_cancelled', '客户端取消'), ('client_disconnected', '客户端断开'), ('unknown', '未知结果'))
@@ -27,6 +28,7 @@ def batch_targets(batch):
 
 
 def kind_for(identity):
+    identity = source_identity(*identity)
     for batch in BATCHES:
         if tuple(identity) in batch_targets(batch):
             return 'generation-results' if batch == 'generation-results' else 'histogram-monotonic'
@@ -157,28 +159,27 @@ def apply(resources, entries):
     result = copy.deepcopy(resources)
     selected = {}
     for entry in entries:
-        identity = tuple(entry[:3])
+        identity = source_identity(*entry[:3]) if len(entry) == 4 else tuple(entry[:3])
         if len(entry) != 4 or kind_for(identity) != entry[3] or identity in selected:
             raise ValueError('Invalid or duplicate rewrite entry')
         selected[identity] = entry[3]
     changes = []
     for d in result['dashboards']:
         for key, before in list(d['spec']['panels'].items()):
-            identity = (d['metadata']['project'], d['metadata']['name'], key)
+            identity = source_identity(d['metadata']['project'], d['metadata']['name'], key)
             if identity not in selected:
                 continue
             after = rewrite(before, selected[identity])
             if after != before:
                 d['spec']['panels'][key] = after
-                changes.append(dict(project=identity[0], dashboard=identity[1], panel=key,
+                changes.append(dict(project=identity[0], dashboard=d['metadata']['name'], panel=key,
                                     kind=selected[identity], before=before, after=after))
     return result, changes
 
 
 def prepare(resources, batch):
     targets_ = batch_targets(batch)
-    present = {(d['metadata']['project'], d['metadata']['name'], k)
-               for d in resources['dashboards'] for k in d['spec']['panels']}
+    present = panel_index(resources).keys()
     if not targets_ <= present:
         raise ValueError('Missing batch panels: ' + repr(targets_ - present))
     return apply(resources, [list(t) + [kind_for(t)] for t in sorted(targets_)])
@@ -187,7 +188,7 @@ def prepare(resources, batch):
 def replace_catalog(previous, resources):
     """Replace only the eight A3 expressions; keep every unrelated entry byte-equivalent."""
     candidate, changes = prepare(resources, 'a3-histograms')
-    by_id = {'/'.join((c['project'], c['dashboard'], c['panel'])): c for c in changes}
+    by_id = {'/'.join(source_identity(c['project'], c['dashboard'], c['panel'])): c for c in changes}
     if len(by_id) != 8:
         raise ValueError('Expected eight original A3 histogram panels')
     result = copy.deepcopy(previous)

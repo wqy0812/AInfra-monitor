@@ -11,7 +11,7 @@ monitoring 采集 DCU、A3、XPU 的模型、主机、加速卡、网关和缓�
 | VictoriaMetrics / vmagent | test4 中央存储与采集；固定版本见 `vendor/releases.json`，当前采集目标以 `deploy/scrape.yml` 为准 |
 | monitoring-api | `monitoring/`；来源 IP 白名单、三环境查询、派生计算与预计算；配置见 `deploy/start_test4.py` |
 | 节点采集 | node/DCU exporter 及平台原生 HTTP 指标；采集配置保留各平台真实 job 与标签 |
-| Perses | `perses/projects/` 保存 3 个项目、30 张看板、249 个面板；默认 VM 数据源及专用加速数据源分开 |
+| Perses | `perses/projects/` 保存分区源定义；发布为 3 个项目、21 张看板、249 个面板，网关与模型推理各一个入口；默认 VM 数据源及专用加速数据源分开 |
 | 查询加速 | `monitoring/perses_acceleration_catalog.json` 固定 18 个目标表达式；`perses/acceleration_state.json` 记录 14 个合并面板及 CPU/DCU/A3 三组准入 |
 
 test4 配置的接口为 VM `127.0.0.1:18428`、vmagent `127.0.0.1:18429`、API `:18430`、Perses `:18431`。实际监听、代理和访问控制以目标机配置为准。API 拒绝空白、通配符和网段白名单；默认只允许 IPv4/IPv6 回环，显式调用方通过 `ALLOWED_CLIENTS` 指定。

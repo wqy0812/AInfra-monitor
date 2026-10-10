@@ -2,6 +2,8 @@ const fs = require('node:fs'), path = require('node:path'), assert = require('no
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const root = path.resolve(process.argv[2]);
 const catalog = JSON.parse(fs.readFileSync(path.resolve('monitoring/perses_acceleration_catalog.json')));
+const bindings = JSON.parse(fs.readFileSync(path.join(root, 'browser-targets.json')));
+assert.deepEqual(bindings.map(p=>p.id).sort(), catalog.panels.map(p=>p.id).sort());
 (async () => {
   const browser = await chromium.launch({headless:true, executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
   const rows = [], errors = [];
@@ -15,7 +17,7 @@ const catalog = JSON.parse(fs.readFileSync(path.resolve('monitoring/perses_accel
       if (url.pathname.endsWith('/query_range')) rows.push({...current, step:params.get('step'), query:params.get('query')});
       await route.fulfill({json:{status:'success',data:{resultType:'matrix',result:[]}}});
     });
-    const targets = [...new Set(catalog.panels.map(p => p.project + '/' + p.dashboard))];
+    const targets = [...new Set(bindings.map(p => p.project + '/' + p.dashboard))];
     const end = Math.floor(Date.now() / 3600000) * 3600000 - 3600000;
     for (const target of targets) for (const hours of [1,6,24,168,720]) {
       const [project,dashboard] = target.split('/'); current = {project,dashboard,hours};

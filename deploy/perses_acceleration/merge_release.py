@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'perses'))
 from query_acceleration import prepare, SERIES_LABEL, ORDER_LABEL
 from release_support import save, record_failure, snapshot as resource_snapshot, readback
 from connection import BASE, opener
+from dashboard_columns import source_change
 
 
 def snapshot():
@@ -133,7 +134,7 @@ def equivalent(left, right):
 
 def check_change(change, end, hours, step):
     old = []
-    tagged = change['panel'] not in ('core-ttft', 'core-itl', 'core-e2e')
+    tagged = source_change(change)['panel'] not in ('core-ttft', 'core-itl', 'core-e2e')
     for i, q in enumerate(change['before']['spec']['queries']):
         spec = q['spec']['plugin']['spec']
         rows = query(spec['query'], end, hours, step, True)

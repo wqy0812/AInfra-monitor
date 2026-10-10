@@ -9,6 +9,7 @@ import urllib.request
 from pathlib import Path
 
 from merge_release import query, snapshot, normalized, fingerprint, sha, save
+from dashboard_columns import section_panels
 
 
 def main(root):
@@ -30,10 +31,10 @@ def main(root):
     for project in sorted({c['project'] for c in selected}):
         probes = []
         for dashboard in ('backend-performance', 'accelerator-resources', 'monitoring-health'):
-            doc = next(d for d in before['dashboards'] if (d['metadata']['project'], d['metadata']['name']) == (project, dashboard))
-            key, panel = next((key, panel) for key, panel in doc['spec']['panels'].items()
-                if not any(c['project'] == project and c['dashboard'] == dashboard and c['panel'] == key for c in changes))
-            probes.append((dashboard + '/' + key, panel['spec']['queries'][0]['spec']['plugin']['spec']['query']))
+            doc, key = next((doc, key) for doc, key in section_panels(before, project, dashboard)
+                if not any(c['project'] == project and c['dashboard'] == doc['metadata']['name'] and c['panel'] == key for c in changes))
+            panel = doc['spec']['panels'][key]
+            probes.append((doc['metadata']['name'] + '/' + key, panel['spec']['queries'][0]['spec']['plugin']['spec']['query']))
         groups = [[q['spec']['plugin']['spec']['query'] for c in selected if c['project'] == project
                    for q in c[version]['spec']['queries']] for version in ('before', 'after')]
         for hours, step in ((1, 5), (24, 60)):

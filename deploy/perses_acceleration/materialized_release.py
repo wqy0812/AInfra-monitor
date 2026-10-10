@@ -24,6 +24,7 @@ from merge_release import api, equivalent, fingerprint, normalized, path, record
 from generator_transaction import plan as generator_plan, install as generator_install
 from release_support import readback
 from acceleration_publication import published, NAME
+from dashboard_columns import panel_index, section_panels
 
 ROOT = Path(__file__).resolve().parents[2]
 STATE = Path('/data2/monitoring/state')
@@ -202,6 +203,7 @@ def _prepare(root, group, previous_catalog=None):
     require_serial_preparation(root)
     catalog = json.loads(CATALOG.read_text())
     before = snapshot()
+    original_panels = panel_index(before)
     after = published(before, {'schema': 1, 'merges': [], 'groups': [group]})
     replacing = previous_catalog is not None
     if replacing:
@@ -213,8 +215,8 @@ def _prepare(root, group, previous_catalog=None):
         for entry in catalog['panels']:
             if entry['group'] != group:
                 continue
-            document = next(d for d in before['dashboards'] if (d['metadata']['project'], d['metadata']['name']) == (entry['project'], entry['dashboard']))
-            spec = document['spec']['panels'][entry['panel']]['spec']['queries'][0]['spec']['plugin']['spec']
+            document, key = original_panels[(entry['project'], entry['dashboard'], entry['panel'])]
+            spec = document['spec']['panels'][key]['spec']['queries'][0]['spec']['plugin']['spec']
             assert spec.get('datasource', {}).get('name') == NAME, 'Replacement requires an already accelerated panel'
             assert spec['query'] == old_entries[entry['id']]['expression'], 'Previous catalog differs from live panel'
         after, _ = rewrite_prepare(after, 'a3-histograms')
@@ -223,15 +225,19 @@ def _prepare(root, group, previous_catalog=None):
             assert not source['spec']['default']
             assert source['spec']['plugin']['spec']['proxy']['spec']['url'] == 'http://127.0.0.1:18430/internal/perses', 'Unexpected accelerated source URL'
     changes = []
+    candidate_panels = panel_index(after)
     for panel in catalog['panels']:
         if panel['group'] != group: continue
-        documents = [next(d for d in resource['dashboards'] if (d['metadata']['project'], d['metadata']['name']) == (panel['project'], panel['dashboard'])) for resource in (before, after)]
-        old, new = [d['spec']['panels'][panel['panel']] for d in documents]
+        identity = (panel['project'], panel['dashboard'], panel['panel'])
+        document, key = original_panels[identity]
+        candidate, candidate_key = candidate_panels[identity]
+        assert (document['metadata']['name'], key) == (candidate['metadata']['name'], candidate_key)
+        old, new = document['spec']['panels'][key], candidate['spec']['panels'][candidate_key]
         assert old != new, 'Already switched'
         expected = old_entries[panel['id']]['expression'] if replacing else panel['expression']
         assert old['spec']['queries'][0]['spec']['plugin']['spec']['query'] == expected, 'Target expression edited'
         assert new['spec']['queries'][0]['spec']['plugin']['spec']['query'] == panel['expression'], 'Candidate differs from new catalog'
-        changes.append({'project': panel['project'], 'dashboard': panel['dashboard'], 'panel': panel['panel'], 'before': old, 'after': new})
+        changes.append({'project': panel['project'], 'dashboard': document['metadata']['name'], 'panel': key, 'before': old, 'after': new})
     save(root, 'batch-before.json', before); save(root, 'batch-candidate.json', after)
     save(root, 'batch-changes.json', changes); save(root, 'batch-services.json', fingerprint())
     meta = {'group': group, 'catalog_sha256': hashlib.sha256(CATALOG.read_bytes()).hexdigest(), 'candidate_sha256': sha(after)}
@@ -359,9 +365,9 @@ def impact(root, group):
     for project in sorted({p['project'] for p in panels}):
         probes = []
         for dashboard in ('accelerator-resources', 'monitoring-health'):
-            doc = next(d for d in before['dashboards'] if (d['metadata']['project'], d['metadata']['name']) == (project, dashboard))
-            key, panel = next(iter(doc['spec']['panels'].items()))
-            probes.append((dashboard + '/' + key, panel['spec']['queries'][0]['spec']['plugin']['spec']['query']))
+            doc, key = section_panels(before, project, dashboard)[0]
+            panel = doc['spec']['panels'][key]
+            probes.append((doc['metadata']['name'] + '/' + key, panel['spec']['queries'][0]['spec']['plugin']['spec']['query']))
         for step in (60, 120):
             end = min(ranges[p['id'] + ':' + p['revision'] + ':' + str(step)][1] for p in panels)
             start = end - WINDOW_SECONDS

@@ -49,7 +49,7 @@ DCU 原式可能在 12h/5s 整窗遇到明确的 VM 内存限制。正确性比�
 | `backfill_recovery.py` | 有界补算监督与恢复正常调度；它不代表性能通过 |
 | `merge_recheck.py` / `viewport_audit.py` / `non_target_audit.py` | 实际首屏、目标与非目标复验，保留固定版本与完整样本要求 |
 | `environment_probe.py` / `backfill_probe.py` / `probe_memory_window.py` | 只读覆盖、旧历史、筛选和内存窗口诊断；报告不代替性能准入 |
-| `browser_*.cjs` / `local_browser.py` / `local_proxy.py` / `synthetic.py` | 1080p 浏览器、有限本地代理与合成测试；合成结果不冒充生产性能 |
+| `browser_*.cjs` / `local_browser.py` / `local_proxy.py` / `synthetic.py` | 1080p 浏览器、有限本地代理与合成测试；合成结果不冒充生产性能。`local_browser.py` 生成 `browser-targets.json`，供步长验收定位实际公开看板 |
 | `generator_transaction.py` | 生成器字节日志、并发编辑检查和同步；共用的查询说明来自 `docs/perses-query-acceleration.md` |
 
 自动准入/续办仍可读取旧 `shadow-started.json` / `shadow-observation.json`，新流程使用通用容器发布结果及 `api-readiness.json`。为补算监督准备目录时另保存匹配的 catalog。使用 `--observation PRIOR_DIR` 时只允许相同镜像的已通过就绪报告，且仍核验当前健康。等待时长是上限，不是稳定性验收时长。

@@ -10,6 +10,7 @@ import pytest
 
 import project_coverage
 import project_split
+from dashboard_columns import apply as columns
 from metric_scope import request_description
 
 ROOT = Path(__file__).resolve().parent
@@ -32,7 +33,7 @@ def test_docs_only_is_complete_stable_and_preserves_historical_inventory(tmp_pat
     assert all((ROOT / name).read_bytes() == content for name, content in first.items())
     descriptions = json.loads(first['panel_descriptions.json'])
     count = 0
-    for d in project_split.read_resources(ROOT / 'projects')['dashboards']:
+    for d in columns(project_split.read_resources(ROOT / 'projects'))['dashboards']:
         for key, panel in d['spec']['panels'].items():
             assert descriptions[d['metadata']['project']][d['metadata']['name']][key] == panel['spec']['display']['description']
             count += 1

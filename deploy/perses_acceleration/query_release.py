@@ -17,6 +17,7 @@ from release_support import readback
 from generator_transaction import plan as generator_plan, install as generator_install
 import generator_transaction as transaction
 from query_slimming import BATCHES, batch_targets, prepare, plugin
+from dashboard_columns import source_change
 
 SAMPLES = 41
 WINDOWS = ((1, 5), (24, 60))
@@ -44,7 +45,7 @@ def load(root, name):
 
 def runtime_snapshot(changes):
     names = set(transaction.MODULES) | set(transaction.DOCUMENTS) | {'acceleration_state.json', 'METRICS_GUIDE.md', 'README.md'}
-    names.update('projects/{project}/dashboards/{dashboard}.json'.format(**c) for c in changes)
+    names.update('projects/{project}/dashboards/{dashboard}.json'.format(**source_change(c)) for c in changes)
     return {n: transaction.encoded(transaction.RUNTIME / n) for n in sorted(names)}
 
 

@@ -4,7 +4,7 @@ import base64
 import json
 from pathlib import Path
 
-MODULES = ('connection.py', 'align_dashboards.py', 'dashboard_reorg.py', 'project_split.py', 'project_release.py', 'release_support.py', 'generate_xpu.py',
+MODULES = ('connection.py', 'align_dashboards.py', 'dashboard_reorg.py', 'dashboard_columns.py', 'project_split.py', 'project_release.py', 'project_seed.py', 'release_support.py', 'generate_xpu.py',
            'metric_scope.py', 'generate.py', 'project_queries.py', 'dcu_bottlenecks.py',
            'remove_idle_thresholds.py', 'host_cpu_panel.py', 'npu_panels.py', 'xpu_hosts.py',
            'xpu_hardware.py', 'xpu_cache.py', 'xpu_topology.py', 'query_acceleration.py', 'acceleration_catalog.py',

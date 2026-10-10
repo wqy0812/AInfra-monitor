@@ -6,6 +6,8 @@
 
 | 范围 | 记录 |
 | --- | --- |
+| 网关与模型推理栏目 | [10-10 看板收敛](dashboard-columns-20261010.md) |
+| 合并看板的查询维护 | [10-10 维护兼容修复](columns-maintenance-20261010.md) |
 | 初始迁移、采集与旧口径 | [Monitoring 历史](monitoring-history.md)、[Perses 历史](perses-history.md) |
 | Perses 性能与时间导航 | [09-16 性能发布](perses-performance-20260916.md)、[09-25 发布](time-navigation-20260925-deployment.md)、[时间导航设计](time-navigation-cache-20260924.md) |
 | 看板分类与平台接入 | [重组](perses-dashboard-reorg-20260923.md)、[对齐与 Mooncake](perses-alignment-mooncake-20260923.md)、[XPU 环境](xpu-environment-2026-09-21.md)、[角色修复](xpu-role-fix-20260929.md) |

@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
+from dashboard_columns import panel_index
 
 
 def targets():
@@ -26,10 +27,10 @@ def targets():
 
 def build(resources, steps=(5, 15, 60)):
     panels = []
+    indexed = panel_index(resources)
     for project, dashboard, key, group in targets():
-        document = next(d for d in resources['dashboards']
-                        if (d['metadata']['project'], d['metadata']['name']) == (project, dashboard))
-        panel = document['spec']['panels'][key]['spec']
+        document, public_key = indexed[(project, dashboard, key)]
+        panel = document['spec']['panels'][public_key]['spec']
         assert len(panel['queries']) == 1
         expression = panel['queries'][0]['spec']['plugin']['spec']['query']
         variables = {}

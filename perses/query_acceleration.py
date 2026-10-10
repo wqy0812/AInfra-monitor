@@ -2,6 +2,7 @@
 import copy
 import json
 import re
+from dashboard_columns import source_identity
 
 PROJECTS = ('a3-monitoring', 'dcu-monitoring', 'xpu-monitoring')
 PERCENTILES = ('core-ttft', 'core-itl', 'core-e2e')
@@ -10,6 +11,7 @@ ORDER_LABEL = 'perses_order'
 
 
 def target(project, dashboard, panel):
+    project, dashboard, panel = source_identity(project, dashboard, panel)
     return project in PROJECTS and (
         (dashboard == 'backend-performance' and panel in PERCENTILES)
         or (dashboard == 'gateway-generation' and panel == 'live-stages')
@@ -115,7 +117,8 @@ def optimize(document):
     dashboard = result['metadata']['name']
     for key, panel in result['spec']['panels'].items():
         if target(project, dashboard, key):
-            kind = 'percentiles' if dashboard == 'backend-performance' else 'stages' if key == 'live-stages' else 'operations'
+            _, source, source_key = source_identity(project, dashboard, key)
+            kind = 'percentiles' if source == 'backend-performance' else 'stages' if source_key == 'live-stages' else 'operations'
             result['spec']['panels'][key] = consolidate(panel, kind)
     return result
 

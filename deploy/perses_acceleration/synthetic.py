@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT), str(ROOT / 'perses')]
 from acceleration_catalog import build
 from query_acceleration import prepare, SERIES_LABEL, ORDER_LABEL
+from dashboard_columns import source_change
 from monitoring.perses_acceleration import AccelerationService, metric_identity, digest
 
 CASES = ('normal', 'zero', 'no-flow', 'gap', 'stale', 'down', 'restart', 'reset',
@@ -150,7 +151,7 @@ async def main(args):
             for step in (5, 15, 60):
                 start = end - 60
                 for change in changes:
-                    tagged = change['panel'] not in ('core-ttft', 'core-itl', 'core-e2e')
+                    tagged = source_change(change)['panel'] not in ('core-ttft', 'core-itl', 'core-e2e')
                     old = []
                     for index, q in enumerate(change['before']['spec']['queries']):
                         spec = q['spec']['plugin']['spec']

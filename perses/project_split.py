@@ -324,6 +324,8 @@ def shared_health(project):
 
 
 def build(snapshot):
+    from dashboard_columns import expand
+    snapshot = expand(snapshot, read_resources(ROOT / 'projects'))
     from dashboard_reorg import migrate
     from panel_trim import apply as trim
     from summary_dashboard import apply as summarize
@@ -372,6 +374,7 @@ def build(snapshot):
 
 
 def validate(resources):
+    from dashboard_columns import COLUMNS, origin, retired
     projects = [d['metadata']['name'] for d in resources['projects']]
     assert projects and len(projects) == len(set(projects)) and set(projects) <= PROJECTS.keys(), projects
     counts = collections.Counter()
@@ -382,12 +385,13 @@ def validate(resources):
         assert name.startswith("a3-") is False or project == "a3-monitoring"
         env = "dcu-pd" if name == "monitoring-health" else PROJECTS[project]
         for key, p in d["spec"]["panels"].items():
+            source_name, source_key = origin(name, key)
             env = PROJECTS[project] if name == "monitoring-health" and key.startswith("overview-") else ("dcu-pd" if name == "monitoring-health" else PROJECTS[project])
             for item in p["spec"]["queries"]:
                 query = item["spec"]["plugin"]["spec"]["query"]
                 assert no_request_filter(query) == query, (project, name, key, "request filter")
                 placeholder = (project == 'xpu-monitoring' and
-                               (name == 'hosts-xpu' or (name == 'cache-store' and key in ('p8', 'p9'))) and
+                               (source_name == 'hosts-xpu' or (source_name == 'cache-store' and source_key in ('p8', 'p9'))) and
                                query == 'vector(0) unless on() vector(0)')
                 assert placeholder or set(re.findall(r'environment="([^"]+)"', query)) == {env}, (project, name, key, "environment")
                 assert current_request_schema(query) == query, (project, name, key, "outdated request schema")
@@ -411,6 +415,9 @@ def validate(resources):
         names = {d['metadata']['name'] for d in resources['dashboards'] if d['metadata']['project'] == project}
         required = {'summary', 'backend-performance', 'accelerator-resources', 'gateway-requests', 'gateway-generation', 'monitoring-health'}
         required |= {'backend-prefill', 'backend-decode', 'a3-hosts', 'a3-cache'} if project == 'a3-monitoring' else {'backend-prefill', 'backend-decode', 'cache-store', 'hosts-xpu' if project == 'xpu-monitoring' else 'hosts-dcu'}
+        if names & COLUMNS.keys():
+            assert not names & set(retired(project)), (project, 'mixed column/source state')
+            required = (required - set(retired(project))) | COLUMNS.keys()
         assert required <= names, (project, required - names)
 
 

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from acceleration_catalog import targets
 from query_acceleration import consolidate, target
+from dashboard_columns import source_identity
 
 NAME = 'perses-accelerated'
 STATE = Path(__file__).with_name('acceleration_state.json')
@@ -24,9 +25,9 @@ def published(resources, state=None):
     for d in result['dashboards']:
         project, name = d['metadata']['project'], d['metadata']['name']
         for key, panel in d['spec']['panels'].items():
-            identity = (project, name, key)
+            identity = source_identity(project, name, key)
             if identity in selected:
-                kind = 'percentiles' if name == 'backend-performance' else 'stages' if key == 'live-stages' else 'operations'
+                kind = 'percentiles' if identity[1] == 'backend-performance' else 'stages' if identity[2] == 'live-stages' else 'operations'
                 panel = consolidate(panel, kind)
                 d['spec']['panels'][key] = panel
             if identity in accelerated:

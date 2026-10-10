@@ -19,6 +19,7 @@ from pathlib import Path
 from project_split import PROJECTS, no_request_filter, read_resources, validate
 from release_support import save, record_failure, snapshot as resource_snapshot, readback
 from connection import BASE, urlopen
+from dashboard_columns import apply as columns, retired as column_sources
 
 
 def snapshot():
@@ -206,6 +207,7 @@ def audit(resources, root, published=False, full=False):
 
 
 def apply(resources, root):
+    resources = columns(resources)
     validate(resources)
     before = json.loads((root / "before.json").read_text())
     assert snapshot() == before, "Concurrent resource edit detected before publication"
@@ -250,6 +252,9 @@ def apply(resources, root):
         candidates = flattened(resources)
         from panel_trim import RETIRED_DASHBOARDS
         retired = {p: names + RETIRED_DASHBOARDS for p, names in RETIRED.items()}
+        for project in retired:
+            if ('Dashboard', project, 'model-monitoring') in candidates:
+                retired[project] += column_sources(project)
         if ('Dashboard', 'a3-monitoring', 'backend-prefill') in candidates:
             retired['a3-monitoring'] += ('backend-diagnostics',)
         for project, names in retired.items():
@@ -292,7 +297,7 @@ def main():
         assert not (args.evidence / "before.json").exists(), "Use a fresh evidence directory"
         save(args.evidence, "before.json", snapshot())
         return
-    resources = read_resources(args.resources)
+    resources = columns(read_resources(args.resources))
     validate(resources)
     if args.action.startswith("audit"):
         assert audit(resources, args.evidence, args.action == "audit-published", args.full_audit)["passed"]

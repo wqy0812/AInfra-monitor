@@ -33,6 +33,8 @@ def test_dashboard_write_response_loss_keeps_candidate_and_journal(tmp_path, mon
             raise failure
         return copy.deepcopy(current)
     if module_name == 'project_release':
+        # This unit test isolates uncertain PUT handling from resource projection.
+        monkeypatch.setattr(release, 'columns', lambda resources: resources)
         monkeypatch.setattr(release, 'validate', lambda *a: None)
         reports = {'before.json': before}
         monkeypatch.setattr(release, 'http', api)
