@@ -21,6 +21,7 @@ from monitoring.latency import quantile_buckets
 
 
 def main(output,approved=False):
+    from experiments.native_standard_rules import aggregate, histogram, ratio
     output.mkdir(parents=True, exist_ok=True)
     client = httpx.Client(base_url='http://127.0.0.1:18543', trust_env=False, timeout=30)
     context = subprocess.check_output(['docker', 'context', 'inspect', '--format', '{{.Endpoints.docker.Host}}'], text=True).strip()
@@ -68,7 +69,8 @@ def main(output,approved=False):
         return data['data']['result']
 
     if approved:
-        from monitoring.native_rules import build as approved_build
+        # Exercise the deployed helpers as well as parsing the deployed rules.
+        from monitoring.native_rules import build as approved_build, aggregate, histogram, ratio
         config,audit=approved_build()
         rule_count=audit['rule_count']
     else:

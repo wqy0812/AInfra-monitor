@@ -119,3 +119,42 @@ def test_actual_vm_preserves_all_eight_independent_decode_groups():
                 tested+=1
     assert tested==2
     client.close()
+
+
+@pytest.mark.skipif(not __import__('os').environ.get('NATIVE_RECORDING_TEST_VM'),reason='Disposable VM required')
+def test_actual_vm_fresh_sources_do_not_depend_on_five_second_query_step():
+    """Scrape/ingestion phase can leave a healthy latest sample 7–14s old."""
+    import uuid
+    url=__import__('os').environ['NATIVE_RECORDING_TEST_VM']
+    assert url=='http://127.0.0.1:18543'
+    scope='environment="freshness-'+uuid.uuid4().hex+'",job="fixture"'
+    end=int(time.time()//5)*5-100
+    lines=[]
+    cases={'seven':(7,1),'fourteen':(14,1),'expired':(16,1),'down':(7,0),'metric_expired':(7,1)}
+    for case,(age,up) in cases.items():
+        labels=scope+',instance="'+case+'",node="'+case+'"'
+        metric_age=16 if case=='metric_expired' else age
+        for ago in range(66,metric_age-1,-1):
+            if (ago-metric_age)%5:continue
+            for metric in ('fixture_events_total','fixture_latency_count','fixture_latency_bucket'):
+                tags=labels+(',le="+Inf"' if metric.endswith('_bucket') else '')
+                lines.append(f'{metric}{{{tags}}} {1000-ago*2} {(end-ago)*1000}')
+        # Zero gauges must remain present; presence filters must not reject them.
+        lines.append(f'fixture_gauge{{{labels}}} 0 {(end-metric_age)*1000}')
+        lines.append(f'up{{{labels}}} {up} {(end-age)*1000}')
+    with httpx.Client(base_url=url,trust_env=False) as client:
+        client.post('/api/v1/import/prometheus',content='\n'.join(lines)+'\n').raise_for_status()
+        client.get('/internal/force_flush').raise_for_status()
+        def query(expr):
+            response=client.post('/api/v1/query',data={'query':expr,'time':end,'step':'5s','nocache':1,'latency_offset':'1ms'})
+            response.raise_for_status()
+            return {r['metric']['node']:float(r['value'][1]) for r in response.json()['data']['result']}
+        for counter in (False,True,'increase'):
+            values=query(native_rules.source_value('fixture_events_total',scope,counter=counter))
+            assert set(values)=={'seven','fourteen'}
+        assert query(native_rules.source_value('fixture_gauge',scope))=={'seven':0,'fourteen':0}
+        quality=query(native_rules.histogram_quality('fixture_latency',scope))
+        assert quality['seven']==quality['fourteen']==0
+        assert quality['metric_expired']>0
+        available=query('group by(node) ('+native_rules.fresh('up{'+scope+'}')+' == 1)')
+        assert set(available)=={'seven','fourteen','metric_expired'}

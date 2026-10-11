@@ -22,14 +22,20 @@ def selector(name, scope, extra=''):
     return name + '{' + scope + (',' + extra if extra else '') + '}'
 
 
+def fresh(value):
+    # Explicit lookback is independent of query step, while default_rollup
+    # still honors exporter staleness markers.
+    return f'default_rollup({value}[15s])'
+
+
 def source_value(name, scope, extra='', *, counter=False):
     """Native reset handling and a 15s current-source guard, not window vetoes."""
     s = selector(name, scope, extra)
     u = selector('up', scope)
-    operation = (str(counter) + '(s[1m])') if isinstance(counter, str) else 'rate(s[1m])' if counter else 's'
+    operation = (str(counter) + '(s[1m])') if isinstance(counter, str) else 'rate(s[1m])' if counter else fresh('s')
+    if counter: operation += ' and ' + fresh('s')
     return (f'WITH (s = {s}, u = {u}) '
-            f'({operation} and (time() - timestamp(s) < 15)) '
-            f'and on({SOURCE}) ((u == 1) and (time() - timestamp(u) < 15))')
+            f'({operation}) and on({SOURCE}) ({fresh("u")} == 1)')
 
 
 def aggregate(name, scope, extra='', group='environment,node', *, counter=True):
@@ -93,9 +99,9 @@ def quality_ratio(numerator, denominator):
 
 
 def histogram_quality(name,scope,extra=''):
-    b=selector(name+'_bucket',scope,','.join(x for x in (extra,'le="+Inf"') if x))
-    c=selector(name+'_count',scope,extra)
-    u=selector('up',scope)
+    b=fresh(selector(name+'_bucket',scope,','.join(x for x in (extra,'le="+Inf"') if x)))
+    c=fresh(selector(name+'_count',scope,extra))
+    u=fresh(selector('up',scope))
     return (f'WITH (b={b}, c={c}, u=({u} == 1)) '
             f'(count by(environment,node) ((b != ignoring(le) c) or '
             f'(u unless on({SOURCE}) c) or (u unless on({SOURCE}) b)) '
@@ -103,7 +109,7 @@ def histogram_quality(name,scope,extra=''):
 
 
 def cache_mode_quality(scope,extra):
-    s=selector('sglang:prefill_effective_tokens_total',scope,extra)
+    s=fresh(selector('sglang:prefill_effective_tokens_total',scope,extra))
     return f'count by(environment,node) (count without(mode) ({s}) != 4) or (0 * group by(environment,node) ({s}))'
 
 
@@ -155,8 +161,8 @@ def resource_rules(add):
         scope='environment="dcu-pd",job="dcu-'+role+'"'
         for field,metric in [('utilization','utilization_percent'),('memory_used','memory_used_bytes'),('memory_total','memory_total_bytes'),('temperature','temperature_celsius'),('power','power_watts')]:
             value=source_value('dcu_'+metric,scope)
-            stamp=selector('dcu_sample_timestamp_seconds',scope)
-            success=selector('dcu_sample_success',scope)
+            stamp=fresh(selector('dcu_sample_timestamp_seconds',scope))
+            success=fresh(selector('dcu_sample_success',scope))
             add('device_gauge',f'({value}) and on({SOURCE}) (({success} == 1) and (time()-{stamp} < 15))',field=field,role=role)
         value=ratio(source_value('dcu_memory_used_bytes',scope),source_value('dcu_memory_total_bytes',scope))
         add('device_memory_ratio',f'({value}) and on({SOURCE}) (({success} == 1) and (time()-{stamp} < 15))',role=role)
@@ -209,10 +215,10 @@ def build():
             # Availability is visible independently of values; partial aggregates
             # are explicitly not called complete. Expected topology comes from
             # scrape.yml, not a legacy Python all-or-nothing output contract.
-            up = selector('up', scope)
+            up = fresh(selector('up', scope))
             expected = (4 if role == 'prefill' else 16) if a3 else 1
             node = ('a3-1' if role == 'prefill' else 'a3-2') if a3 else ({'dcu-pd': {'prefill':'dcu1','decode':'dcu2'}, 'xpu-pd': {'prefill':'xpu-2','decode':'xpu-1'}}[env][role])
-            add('backend_available_instances',f'count(({up} == 1) and (time() - timestamp({up}) < 15)) or vector(0)',environment=env,node=node,role=role)
+            add('backend_available_instances',f'count({up} == 1) or vector(0)',environment=env,node=node,role=role)
             add('backend_expected_instances', f'vector({expected})', environment=env, node=node, role=role)
             if a3:
                 for kind, family in [('local', 'prefix_cache_'), ('external', 'external_prefix_cache_')]:
