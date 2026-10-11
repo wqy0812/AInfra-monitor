@@ -39,7 +39,7 @@ def test_repair_keeps_concurrent_invalidations_and_other_panels(tmp_path):
     other = dict(old, panel='q')
     path = tmp_path/'perses-acceleration-admin.json'
     path.write_text(json.dumps({'disabled_groups':['a3'],'invalidated':[old,concurrent,other]}))
-    clear_repaired(tmp_path,[old],0,300,'p')
+    clear_repaired(tmp_path,[old],100,200,'p')
     assert json.loads(path.read_text()) == {'disabled_groups':['a3'],'invalidated':[concurrent,other]}
 
 

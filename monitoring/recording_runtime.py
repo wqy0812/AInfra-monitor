@@ -141,7 +141,7 @@ async def run(args):
                         result['visibility_error'] = str(error)
                         await asyncio.sleep(5)
                 if request.get('repair'):
-                    clear_repaired(state, originals, start, end, result['panel'])
+                    clear_repaired(state, originals, request['start'], request['end'], result['panel'])
                 result.update(state='complete', verified_ticks=count, completed_at=time.time())
                 result.pop('visibility_error', None)
             except asyncio.CancelledError:

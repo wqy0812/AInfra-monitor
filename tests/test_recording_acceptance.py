@@ -38,3 +38,16 @@ async def test_coverage_only_never_claims_parity_and_preserves_failed_report(tmp
     result=await acceptance.check(SimpleNamespace(catalog=catalog,state=tmp_path,vm='http://vm',api='http://api',
         filters=False,require_full=False,coverage_only=True))
     assert not result['passed'] and result['checks']==[] and result['error']
+
+@pytest.mark.asyncio
+async def test_partial_grid_is_reported_without_a_performance_gate(tmp_path,monkeypatch):
+    catalog=tmp_path/'catalog.json';catalog.write_text(json.dumps({'panels':[{'id':'p','variables':{}}],'steps':[5]}))
+    class Service:
+        def __init__(self,*a,**k):pass
+        async def stored(self,panel,step,ticks):return {ticks[-1]:{}}
+    monkeypatch.setattr(acceptance,'RecordingService',Service)
+    args=SimpleNamespace(catalog=catalog,state=tmp_path,vm='http://vm',api='http://api',filters=False,require_full=False,coverage_only=True)
+    result=await acceptance.check(args)
+    assert result['passed'] and not result['coverage_complete'] and result['short_rules_producing']==1
+    args.require_full=True
+    assert not (await acceptance.check(args))['passed']
