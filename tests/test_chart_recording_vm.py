@@ -28,6 +28,9 @@ def test_cpu_expression_matches_existing_replay_acceptance(chart_cpu_vm, field):
         actual = {int(t):float(v) for r in query(field['expression'], end-65, end) for t,v in r['values']}
         want = {t:v for (t,r,m),v in expected.items() if r == role and m == metric}
         assert actual == pytest.approx(want, rel=1e-12, abs=1e-10)
+        vector={int(t):float(v) for row in query(charts.cpu_vector(),end-65,end)
+                if row['metric']['path']==field['path'] for t,v in row['values']}
+        assert vector == pytest.approx(want,rel=1e-12,abs=1e-10)
 
 
 CASES = ('normal','zero','no_capacity','oversized','negative','missing','down','stale','newer_up',

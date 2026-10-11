@@ -8,7 +8,7 @@
 | A3 | Mooncake 内存、SSD 的 used / total / ratio | 6 |
 | DCU | Mooncake 内存、SSD 的 used / total / ratio | 6 |
 
-每个字段有 value、valid 两条规则，共 32 条；加上现有 Perses 126 条，共 158 条。所有新规则直接查询原始采集指标，不读取 Python 派生指标，也不依赖同组其他规则的写入。每 5 秒计算，延迟 3 秒，保留原 `monitoring_chart_value/valid` 名称、path/environment/schema/node 标签与单位，已有 Perses 表达式及其加速目录无需改写。
+CPU、DCU 容量、A3 容量分为三个组；每组通过 value、valid 两条向量规则一次产出多个字段，共 6 条规则、32 条结果序列；加上现有 Perses 126 条，共 132 条。所有新规则直接查询原始采集指标，不读取 Python 派生指标，也不依赖同组其他规则的写入。每 5 秒计算，延迟 3 秒，保留原 `monitoring_chart_value/valid` 名称、path/environment/schema/node 标签与单位，已有 Perses 表达式及其加速目录无需改写。
 
 ## 语义与写入归属
 
@@ -25,7 +25,7 @@
 
 启动时官方 vmalert 单独 replay 最近 12 小时与切换后范围的交集；首次安装尚无可回填区间时报告 not_needed。`chart_replay.finished` 只表示进程完成，不等于存储覆盖完整；失败保留日志和状态，当前版本修复，不回退。超过 12 小时的停机不自动补齐更早记录，也不由 Python 恢复写入。
 
-发布工具仍为 `deploy/release.py api-image / container / acceleration / acceleration-ready`，规则检查要求 158 条。运行验收：
+发布工具仍为 `deploy/release.py api-image / container / acceleration / acceleration-ready`，规则检查要求 132 条。运行验收：
 
 ```bash
 # 在候选 API 镜像内，发布前对比新 MetricsQL 与现有 Python 语义，只读。
@@ -34,7 +34,7 @@ python -m monitoring.chart_acceptance
 python -m monitoring.chart_acceptance --stored
 ```
 
-服务 `/health` 增加 `chart_recording` 字段；原生 runtime 分别报告 perses_rule_count=126、chart_rule_count=32、总规则数、chart_start、chart_replay。就绪检查仍核验实际加载和求值错误。既有 Perses 后台历史 replay 状态单独报告，不与新增业务字段验收混淆。
+服务 `/health` 增加 `chart_recording` 字段；原生 runtime 分别报告 perses_rule_count=126、chart_rule_count=6、总规则数、chart_start、chart_replay。就绪检查仍核验实际加载和求值错误。既有 Perses 后台历史 replay 状态单独报告，不与新增业务字段验收混淆。
 
 ## 剩余计算
 

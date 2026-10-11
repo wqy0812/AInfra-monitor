@@ -1,6 +1,6 @@
 # 原生记录规则运维
 
-CPU 4 项、DCU 6 项、A3 8 项，7 种步长共 126 条规则由官方 vmalert 1.151.0 执行。API 仅负责读取、精确匹配、完整性检查和原始 VM 回源，不读取旧 `monitoring_perses_value/complete`。业务 `monitoring_chart_*` 中 16 个 CPU/容量字段已纳入新增 32 条规则，部署总计 158 条；详见 [业务图表原生记录规则](chart-native-recording.md)。
+CPU 4 项、DCU 6 项、A3 8 项，7 种步长共 126 条规则由官方 vmalert 1.151.0 执行。API 仅负责读取、精确匹配、完整性检查和原始 VM 回源，不读取旧 `monitoring_perses_value/complete`。业务 `monitoring_chart_*` 中 16 个 CPU/容量字段已纳入新增 6 条规则，部署总计 132 条；详见 [业务图表原生记录规则](chart-native-recording.md)。
 
 ## 发布
 

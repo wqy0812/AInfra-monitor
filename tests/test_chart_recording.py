@@ -8,13 +8,13 @@ from monitoring.api import encode
 
 def test_rules_are_raw_only_compatible_and_bounded():
     rules = [r for g in charts.recording_rules(100)['groups'] for r in g['rules']]
-    assert len(rules) == charts.RULE_COUNT == 32
-    assert len({(r['record'], tuple(sorted(r['labels'].items()))) for r in rules}) == 32
+    assert len(rules) == charts.RULE_COUNT == 6
+    assert len({g['name'] for g in charts.recording_rules(100)['groups']}) == 3
     for r in rules:
         assert 'monitoring_chart_' not in r['expr']
         assert 'monitoring_perses_' not in r['expr']
         assert 'vector(time()) >= 100' in r['expr']
-        assert set(r['labels']) <= {'path', 'environment', 'schema', 'node'}
+        assert not r.get('labels')
     for start in (-5, 1, 1.5, True):
         with pytest.raises(ValueError): charts.recording_rules(start)
 

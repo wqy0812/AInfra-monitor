@@ -24,7 +24,7 @@ def startup(tmp_path, monkeypatch):
         env: {'error': None, 'processed_at': 99} for env in ('dcu-pd', 'a3-vllm', 'xpu-pd')},
         'perses_acceleration': {'enabled': True, 'state_error': None, 'disabled_groups': [],
             'backend':'vmalert', 'rule_count':126, 'runtime_fresh':True,
-            'runtime':{'perses_rule_count':126,'chart_rule_count':32,'rule_count':158,'live':{'state':'running','loaded_rules':158,'probe_error':None,'evaluation_errors':0}}}}
+            'runtime':{'perses_rule_count':126,'chart_rule_count':6,'rule_count':132,'live':{'state':'running','loaded_rules':132,'probe_error':None,'evaluation_errors':0}}}}
     import native_recording
     monkeypatch.setattr(native_recording, 'check', lambda: {})
     monkeypatch.setattr(readiness, 'read_health', lambda: copy.deepcopy(state))

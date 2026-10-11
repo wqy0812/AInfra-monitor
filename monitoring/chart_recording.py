@@ -16,45 +16,42 @@ CAPACITY_METRICS = {
 }
 
 
-def store_expressions(environment):
-    """Match replay's latest scrape, single source and per-tier validity rules."""
+def store_parts(environment):
     a3 = environment == 'a3-vllm'
     job, freshness = ('mooncake-a3', 10) if a3 else ('mooncake', 15)
     scope = f'{{environment="{environment}",job="{job}"}}'
-    # Export/replay chooses the newest scrape of the whole job (DCU), or rejects
-    # more than one fresh source (A3). Do not let an old gauge survive a newer up.
-    up = 'up' + scope
     inventory = scope if not a3 else scope[:-1] + ',__name__=~"up|master_(allocated_bytes|total_capacity_bytes|allocated_file_size_bytes|total_file_capacity_bytes)"}'
-    latest = f'max(tlast_over_time({inventory}[{freshness}s]))'
+    up='up'+scope
+    definitions=[f'latest = max(tlast_over_time({inventory}[{freshness}s]))',
+                 f'current_up = last_over_time({up}[{freshness}s]) and (tlast_over_time({up}[{freshness}s]) == scalar(latest))']
+    healthy='((count(current_up) == 1) and (min(current_up) == 1))'
     if a3:
-        sources = f'group by(node,instance) (last_over_time({inventory}[{freshness}s]))'
-        source_guard = f'(count({sources}) == 1)'
-    else:
-        source_guard = 'vector(1)'
-    current_up = f'(last_over_time({up}[{freshness}s]) and (tlast_over_time({up}[{freshness}s]) == scalar({latest})))'
-    healthy = f'((count({current_up}) == 1) and (min({current_up}) == 1))'
-    if not a3:
-        healthy = f'({healthy} or ((count({current_up}) or vector(0)) == 0))'
-    guard = f'({healthy} and on() {source_guard} and on() (time() - {latest} < {freshness}))'
+        definitions.append(f'sources = group by(node,instance) (last_over_time({inventory}[{freshness}s]))')
+        healthy+=' and on() (count(sources) == 1)'
+    else:healthy=f'({healthy} or ((count(current_up) or vector(0)) == 0))'
+    definitions.append(f'healthy = ({healthy}) and on() (time() - latest < {freshness})')
+    expressions={}
+    for tier,metrics in CAPACITY_METRICS.items():
+        for short,metric in zip(('u','t'),metrics):
+            selector=metric+scope; key=tier+'_'+short
+            definitions.append(f'{key}_raw = last_over_time({selector}[{freshness}s]) and (tlast_over_time({selector}[{freshness}s]) == scalar(latest))')
+            rows=key+'_raw'
+            if not a3:
+                # Full-label matching with the projection excludes all unknown
+                # business labels, rather than a hard-coded label denylist.
+                definitions.append(f'{key}_rows = {rows} and (group by(job,instance,environment,node,service,role) ({rows}))')
+                rows=key+'_rows'
+            definitions.append(f'{key} = sum({rows}) and (count({rows}) == 1) and (min({rows}) >= 0) and (max({rows}) < Inf) and on() healthy')
+        u,t=tier+'_u',tier+'_t'
+        for field,expr in [('used',u),('total',t),('ratio',f'({u} / ({t} > 0)) and on() ({u} <= {t})')]:
+            if a3 and field!='ratio':expr=f'({expr}) and on() (({u} <= {t}) and on() {t})'
+            expressions[f'mooncake.{tier}.{field}']=expr
+    return 'WITH ('+', '.join(definitions)+') ',expressions
 
-    def single(metric):
-        selector = metric + scope
-        aligned = f'(last_over_time({selector}[{freshness}s]) and (tlast_over_time({selector}[{freshness}s]) == scalar({latest})))'
-        if not a3:
-            # Default full-label matching against the projection rejects ANY
-            # business label, including labels unknown to this implementation.
-            aligned = f'({aligned} and (group by(job,instance,environment,node,service,role) ({aligned})))'
-        return f'(sum({aligned}) and (count({aligned}) == 1) and (min({aligned}) >= 0) and (max({aligned}) < Inf) and on() {guard})'
 
-    result = {}
-    for tier, (used, total) in CAPACITY_METRICS.items():
-        definitions = f'WITH (u = {single(used)}, t = {single(total)}) '
-        paired = '((u <= t) and on() t)'
-        for field, expression in [('used', 'u'), ('total', 't'), ('ratio', '(u / (t > 0)) and on() (u <= t)')]:
-            if a3 and field != 'ratio':
-                expression = f'({expression}) and on() {paired}'
-            result[f'mooncake.{tier}.{field}'] = definitions + expression
-    return result
+def store_expressions(environment):
+    definitions,expressions=store_parts(environment)
+    return {path:definitions+expr for path,expr in expressions.items()}
 
 
 def fields():
@@ -77,7 +74,7 @@ def fields():
 FIELDS = fields()
 PATHS = {env: frozenset(f['path'] for f in FIELDS if f['environment'] == env)
          for env in ('dcu-pd', 'a3-vllm', 'xpu-pd')}
-RULE_COUNT = len(FIELDS) * 2
+RULE_COUNT = 6
 
 
 def cutover(state):
@@ -91,25 +88,56 @@ def cutover(state):
     return ts
 
 
+def tagged(expression, labels):
+    args = ', '.join(json.dumps(x) for pair in labels.items() for x in pair)
+    return f'label_set(({expression}), {args})'
+
+
+def cpu_vector():
+    """Calculate each full CPU expression once, then label the two known hosts."""
+    hosts = 'union(' + ', '.join(tagged('vector(1)', {'job':'node-a3', 'instance':address+':9100', 'node':node})
+                                for node,address in host_cpu.NODES.values()) + ')'
+    values=[]
+    for field, expression in [('cpu',host_cpu.expression()), ('cpu_iowait',host_cpu.iowait_expression())]:
+        value=f'(({expression}) >= 0) <= 100'
+        if field=='cpu':value=f'({value}) and on(job,instance,node) {hosts}'
+        else:value=f'label_match(({value}), "node", "a3-1|a3-2")'
+        value=f'label_keep(({value}), "node")'
+        value=f'label_copy(({value}), "node", "path")'
+        pairs=', '.join(json.dumps(x) for role,(node,_) in host_cpu.NODES.items()
+                        for x in (node,f'nodes.{role}.{field}'))
+        value=f'label_map(({value}), "path", {pairs})'
+        values.append(tagged(value, {'environment':'a3-vllm','schema':host_cpu.SCHEMA}))
+    return 'union('+', '.join(values)+')'
+
+
 def recording_rules(start):
     if type(start) is not int or start < 0 or start % 5:
         raise ValueError('Aligned chart cutover required')
-    groups = []
-    for environment in ('dcu-pd', 'a3-vllm'):
-        rules = []
-        for field in FIELDS:
-            if field['environment'] != environment:
-                continue
-            labels = {key: value for key, value in field.items() if key != 'expression'}
-            original = field['expression']
-            # An invalid value is absent, never a plausible zero with a stale
-            # validity flag. Valid zeroes remain real zeroes.
-            for kind, expression in [('value', f'({original})'),
-                                     ('valid', f'WITH (v = ({original})) ((count(v) > bool 0) or vector(0))')]:
-                rules.append({'record': 'monitoring_chart_' + kind, 'labels': labels,
-                              'expr': f'({expression}) and on() (vector(time()) >= {start})'})
-        groups.append({'name': 'chart_native_v1_' + environment, 'interval': '5s',
-                       'eval_delay': '3s', 'eval_alignment': True, 'concurrency': 1,
-                       'params': {'step': ['5s'], 'nocache': ['1'], 'latency_offset': ['1ms'],
-                                  'deny_partial_response': ['1']}, 'rules': rules})
-    return {'groups': groups}
+    groups=[]
+    for name, selected in [('cpu', [f for f in FIELDS if f['schema']==host_cpu.SCHEMA]),
+                           *[(env, [f for f in FIELDS if f['environment']==env and f['schema']=='v1'])
+                             for env in ('dcu-pd','a3-vllm')]]:
+        values=[]; zeroes=[]
+        for field in selected:
+            labels={k:v for k,v in field.items() if k!='expression'}
+            values.append(tagged(field['expression'], labels))
+            zeroes.append(tagged('vector(0)', labels))
+        if name=='cpu':value=cpu_vector()
+        else:
+            definitions,expressions=store_parts(name)
+            value=definitions+'union('+', '.join(tagged(expr, {'environment':name,'path':path,'schema':'v1'})
+                                                 for path,expr in expressions.items())+')'
+        zeros='union('+', '.join(zeroes)+')'
+        # Each group evaluates a value vector and a validity vector. No rule
+        # reads the preceding rule, and the expensive CPU scan is shared across
+        # hosts instead of repeated for each field and each validation check.
+        rules=[]
+        for kind, expr in [('value',value), ('valid',f'(({value}) * 0 + 1) or ({zeros})')]:
+            rules.append({'record':'monitoring_chart_'+kind,
+                          'expr':f'({expr}) and on() (vector(time()) >= {start})'})
+        groups.append({'name':'chart_native_v1_'+name, 'interval':'5s',
+                       'eval_delay':'3s', 'eval_alignment':True, 'concurrency':1,
+                       'params':{'step':['5s'],'nocache':['1'],'latency_offset':['1ms'],
+                                 'deny_partial_response':['1']}, 'rules':rules})
+    return {'groups':groups}

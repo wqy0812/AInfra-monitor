@@ -24,6 +24,14 @@ def test_native_replay_preserves_history_cutover_and_gap_flags(tmp_path, monkeyp
             tags=dict(row['metric']);name=tags.pop('__name__')
             labels=','.join(k+'='+json.dumps(v) for k,v in tags.items())
             lines.append(f"{name}{{{labels}}} {row['values'][0]} {row['timestamps'][0]}")
+    from monitoring import host_cpu
+    for node,address in host_cpu.NODES.values():
+        tags=f'environment="a3-vllm",job="node-a3",node="{node}",instance="{address}:9100"'
+        for offset in range(0,81,5):
+            stamp=(start+offset)*1000
+            lines += [f'up{{{tags}}} 1 {stamp}',f'node_boot_time_seconds{{{tags}}} {start-100} {stamp}']
+            for mode,rate in [('idle',.5),('iowait',.1),('user',.4)]:
+                lines.append(f'node_cpu_seconds_total{{{tags},cpu="0",mode="{mode}"}} {100+offset*rate} {stamp}')
     # The pre-cutover sentinel must not be rewritten by native replay.
     labels='environment="a3-vllm",schema="v1",path="mooncake.capacity.used"'
     lines.append(f'monitoring_chart_value{{{labels}}} 999 {(start+5)*1000}')
@@ -72,6 +80,8 @@ def test_native_replay_preserves_history_cutover_and_gap_flags(tmp_path, monkeyp
             assert last['mooncake']['capacity']=={'used':32,'total':128,'ratio':.25}
             assert last['mooncake']['ssd_capacity']=={'used':0,'total':1024,'ratio':0}
             assert 'capacity' not in last['mooncake']['gap_before']
+            assert last['nodes']['prefill']['cpu']==pytest.approx(40)
+            assert last['nodes']['decode']['cpu_iowait']==pytest.approx(10)
         finally:await service.close()
     asyncio.run(history())
     client.close()
