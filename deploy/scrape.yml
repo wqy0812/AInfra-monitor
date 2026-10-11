@@ -4,7 +4,7 @@ global:
 scrape_configs:
 - job_name: sglang-prefill
   static_configs:
-  - targets: ['122.235.251.106:31125']
+  - targets: ['122.235.251.106:31141']
     labels: {environment: dcu-pd, role: prefill, node: dcu1, service: sglang}
   - targets: ['122.209.21.34:8501']
     labels: {environment: xpu-pd, role: prefill, node: xpu-2, service: sglang}
@@ -14,7 +14,7 @@ scrape_configs:
     action: keep
 - job_name: sglang-decode
   static_configs:
-  - targets: ['122.235.251.182:31127']
+  - targets: ['122.235.251.182:31143']
     labels: {environment: dcu-pd, role: decode, node: dcu2, service: sglang}
   - targets: ['122.209.21.33:8501']
     labels: {environment: xpu-pd, role: decode, node: xpu-1, service: sglang}
