@@ -34,6 +34,8 @@ A3 总体、设备和外部 KV 贡献使用明确的共同分母；启用时间�
 
 ## 开发与发布
 
+设计边界与评审检查见 [设计原则](docs/design-principles.md)。
+
 本地使用 pyenv 管理的 Python 3.11+ 和项目 `.venv`，运行前核对版本。测试按改动范围选择，入口见 [测试说明](tests/README.md)。查询、统计、采集/导入或存储逻辑变化才触发相关真实 VM 测试；UI 与性能变化执行各自验收。
 
 首次安装使用 `scripts/download.py` 下载并验证固定依赖，`deploy/start.py` / `deploy/start_test4.py` 创建缺失服务，Perses 使用 `perses/install.py` 和 `perses/seed.py`。初始化镜像默认值不代表线上最新镜像；重建时必须重新核验并显式提供本次验证的镜像。
