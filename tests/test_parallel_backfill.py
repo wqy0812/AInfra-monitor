@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from monitoring.perses_acceleration import AccelerationService, atomic_json
+from tests.legacy_acceleration import AccelerationService, atomic_json
 
 
 def setup(tmp_path):

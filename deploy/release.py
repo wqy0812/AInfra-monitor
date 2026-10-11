@@ -11,7 +11,7 @@ COMMANDS = {
     'dashboards': ('perses/project_release.py', 'Prepare, publish or audit project resources'),
     'image': ('perses/performance/image_release.py', 'Load or publish a pinned Perses image'),
     'runtime': ('perses/reorg_runtime.py', 'Install generator files with a concurrency journal'),
-    'acceleration': ('deploy/perses_acceleration/materialized_release.py', 'Admit and publish materialized-query groups'),
+    'acceleration': ('deploy/native_recording.py', 'Build, publish or inspect native recording rules'),
     'acceleration-ready': ('deploy/perses_acceleration/api_readiness.py', 'Check API acceleration startup after container replacement'),
     'merges': ('deploy/perses_acceleration/merge_release.py', 'Validate and publish query merges'),
     'queries': ('deploy/perses_acceleration/query_release.py', 'Audit and publish scoped query rewrites'),

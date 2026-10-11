@@ -11,7 +11,7 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from monitoring.perses_acceleration import AccelerationService, PublicationPending, digest, install_routes, metric_identity, points_by_time
+from tests.legacy_acceleration import AccelerationService, PublicationPending, digest, install_routes, metric_identity, points_by_time
 
 
 def catalog(panel, steps=(5, 15, 60)):

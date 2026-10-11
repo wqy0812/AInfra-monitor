@@ -1,3 +1,5 @@
+> 2026-10-11：当前实现和维护入口见 [原生记录规则运维](../../docs/native-recording-rules.md)。下文旧预计算与性能准入仅为历史记录；稳定发布入口已改用 vmalert。
+
 # Perses 查询加速运维
 
 当前仓库发布清单见 [STATUS](STATUS.md)，统计与回源规则见 [设计说明](../../docs/perses-query-acceleration.md)。实际服务器健康和配置须重新读取。旧批次状态与根因记录位于 [发布归档](../../docs/releases/README.md)。

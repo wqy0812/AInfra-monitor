@@ -70,16 +70,16 @@
       "variables": {
         "role": [
           ".*",
-          "(prefill|xpu-1)",
-          "(decode|xpu-2)"
+          "(prefill|xpu-2)",
+          "(decode|xpu-1)"
         ],
         "node": [
           ".*",
-          "xpu-1",
-          "xpu-2"
+          "xpu-2",
+          "xpu-1"
         ]
       },
-      "revision": "ef6dc716a211d7327e40652ff81455997220e3373413894c334cc85effa52358"
+      "revision": "719f930bbb6d73f65d2e1dd67e24294b77073d8e331a712d0e0b7d390af42029"
     },
     {
       "id": "xpu-monitoring/hosts-xpu/core-extra-iowait",
@@ -92,16 +92,16 @@
       "variables": {
         "role": [
           ".*",
-          "(prefill|xpu-1)",
-          "(decode|xpu-2)"
+          "(prefill|xpu-2)",
+          "(decode|xpu-1)"
         ],
         "node": [
           ".*",
-          "xpu-1",
-          "xpu-2"
+          "xpu-2",
+          "xpu-1"
         ]
       },
-      "revision": "b2fa16bbef19e83bbdbcbc50d98486ebadd37cb38e9711f70c4268ce3cdb33f7"
+      "revision": "f3db81654a89419991caa32e46f626e70a5be08a56d8aae481e42905b8ca54a5"
     },
     {
       "id": "dcu-monitoring/backend-prefill/bn-prefill-per_stage_req_latency_seconds",

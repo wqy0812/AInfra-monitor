@@ -23,8 +23,10 @@ def startup(tmp_path, monkeypatch):
     state = {'status': 'ok', 'environments': {
         env: {'error': None, 'processed_at': 99} for env in ('dcu-pd', 'a3-vllm', 'xpu-pd')},
         'perses_acceleration': {'enabled': True, 'state_error': None, 'disabled_groups': [],
-            'backfill_priority_active': False, 'parallel_a3_backfill': False,
-            'jobs': [{'job': 'panel:revision:5', 'error': None, 'lag_seconds': 5}]}}
+            'backend':'vmalert', 'rule_count':126, 'runtime_fresh':True,
+            'runtime':{'rule_count':126,'live':{'state':'running','loaded_rules':126,'probe_error':None,'evaluation_errors':0}}}}
+    import native_recording
+    monkeypatch.setattr(native_recording, 'check', lambda: {})
     monkeypatch.setattr(readiness, 'read_health', lambda: copy.deepcopy(state))
     return tmp_path, state, clock
 
@@ -44,8 +46,8 @@ def test_startup_failure_preserves_publication_and_has_no_state_writes(startup, 
     before = (root / 'container-publication.json').read_bytes()
     accelerator = state['perses_acceleration']
     if fault == 'disabled': accelerator['disabled_groups'] = ['cpu']
-    if fault == 'lag': accelerator['jobs'][0]['lag_seconds'] = 601
-    if fault == 'scheduling': accelerator['parallel_a3_backfill'] = True
+    if fault == 'lag': accelerator['runtime_fresh'] = False
+    if fault == 'scheduling': accelerator['runtime']['live']['state'] = 'stopped'
     if fault == 'transport':
         def fail(): raise OSError('connection lost')
         monkeypatch.setattr(readiness, 'read_health', fail)

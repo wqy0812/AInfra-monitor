@@ -61,6 +61,8 @@ class ComponentProbe:
             host, port = option(args, '--host'), option(args, '--port')
             require(host and port, 'Missing API listener arguments')
             address = ('[' + host + ']' if ':' in host and not host.startswith('[') else host) + ':' + port
+        elif name == 'monitoring-vmalert':
+            address = option(args, '--listen', '127.0.0.1:18432')
         elif name in ('monitoring-vm', 'monitoring-vmagent'):
             address = option(args, '-httpListenAddr')
         elif name == 'monitoring-node':
@@ -91,6 +93,9 @@ class ComponentProbe:
                 require(data['environment'] == environment and 0 <= time.time() - data['ts'] < 20, 'API data stale: ' + environment)
                 require(set(data['nodes']) == {'prefill', 'decode'} and
                         all(n['metrics']['status'] == 'ok' for n in data['nodes'].values()), 'API sources incomplete: ' + environment)
+        elif self.name == 'monitoring-vmalert':
+            from native_recording import check
+            check(self.base)
         elif self.name == 'monitoring-vm':
             fetch('/health')
             data = fetch('/api/v1/query?' + urllib.parse.urlencode({'query': 'vector(1)', 'nocache': 1}), True)

@@ -1,3 +1,5 @@
+> 2026-10-11：当前实现和维护入口见 [原生记录规则运维](native-recording-rules.md)。下文旧预计算与性能准入仅为历史记录；稳定发布入口已改用 vmalert。
+
 # 查询加速与原有口径
 
 本页单独维护，`project_coverage.py --docs-only` 只在 [图表指标说明](../perses/METRICS_GUIDE.md) 中生成入口链接，不覆盖本文。

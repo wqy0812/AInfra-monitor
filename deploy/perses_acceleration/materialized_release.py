@@ -512,6 +512,7 @@ def observe(root, group):
 
 
 if __name__ == '__main__':
+    raise SystemExit('Legacy materialized publication is retired. Use deploy/release.py acceleration --help')
     parser = argparse.ArgumentParser(); parser.add_argument('action', choices=('prepare', 'audit', 'impact', 'apply', 'observe'))
     parser.add_argument('--group', choices=GROUPS, required=True); parser.add_argument('--evidence', type=Path, required=True)
     parser.add_argument('--resume', action='store_true', help='Resume interrupted audit with unchanged resources and saved fixed windows')

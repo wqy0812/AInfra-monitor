@@ -46,10 +46,14 @@ def observe(root):
                 accelerator = result['perses_acceleration']
                 assert accelerator['enabled'] and not accelerator['state_error']
                 assert not accelerator['disabled_groups']
-                assert accelerator['backfill_priority_active'] is False and accelerator['parallel_a3_backfill'] is False
-                assert all(not job['error'] and not (job.get('backfill') or {}).get('error')
-                           and job['lag_seconds'] <= max(600, 2 * int(job['job'].rsplit(':', 1)[1]))
-                           for job in accelerator['jobs'])
+                assert accelerator['backend'] == 'vmalert' and accelerator['rule_count'] == 126
+                assert accelerator['runtime_fresh']
+                runtime = accelerator['runtime']
+                assert runtime['rule_count'] == 126 and runtime['live']['state'] == 'running'
+                assert runtime['live']['loaded_rules'] == 126 and not runtime['live']['probe_error']
+                assert runtime['live']['evaluation_errors'] == 0
+                from native_recording import check
+                check()
                 report.update(passed=True, ended_at=time.time())
                 report['records'].append({'at': time.time(), 'health': result})
                 save(root, 'api-readiness.json', report)

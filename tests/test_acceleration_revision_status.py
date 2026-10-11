@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from monitoring.perses_acceleration import AccelerationService, digest
+from tests.legacy_acceleration import AccelerationService, digest
 
 
 STEPS = (5, 15, 20, 60, 120, 600, 3600)

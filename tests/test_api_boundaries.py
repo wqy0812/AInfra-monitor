@@ -67,13 +67,13 @@ async def test_lifespan_initializes_all_sources_and_closes_on_exit(tmp_path, mon
         async def run(self):
             await asyncio.Event().wait()
     class Accelerator:
-        def __init__(self, vm, state, data, source_ready):
-            self.ready, self.close = source_ready, AsyncMock()
+        def __init__(self, vm, state, data):
+            self.close = AsyncMock()
             accelerators.append(self)
         async def run(self):
             await asyncio.Event().wait()
     monkeypatch.setattr(api, 'Service', Service)
-    monkeypatch.setattr(api, 'AccelerationService', Accelerator)
+    monkeypatch.setattr(api, 'RecordingService', Accelerator)
     monkeypatch.setattr(api.time, 'time', lambda: 100)
     if catalog:
         path = tmp_path / 'catalog.json'
@@ -86,9 +86,7 @@ async def test_lifespan_initializes_all_sources_and_closes_on_exit(tmp_path, mon
         assert set(app.state.services) == set(api.ENVIRONMENTS)
         assert app.state.service is app.state.services['dcu-pd']
         if catalog == 'valid':
-            assert accelerators[0].ready()
-            services[0].error = 'offline'
-            assert not accelerators[0].ready()
+            assert app.state.perses_acceleration is accelerators[0]
         elif catalog == 'invalid':
             assert app.state.perses_acceleration is None and 'JSONDecodeError' in app.state.perses_acceleration_error
     for service in services:

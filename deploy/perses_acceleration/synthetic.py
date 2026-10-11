@@ -16,7 +16,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / 'perses')]
 from acceleration_catalog import build
 from query_acceleration import prepare, SERIES_LABEL, ORDER_LABEL
 from dashboard_columns import source_change
-from monitoring.perses_acceleration import AccelerationService, metric_identity, digest
+from tests.legacy_acceleration import AccelerationService, metric_identity, digest
 
 CASES = ('normal', 'zero', 'no-flow', 'gap', 'stale', 'down', 'restart', 'reset',
          'missing-bucket', 'inconsistent-buckets', 'disappeared', 'recovered')

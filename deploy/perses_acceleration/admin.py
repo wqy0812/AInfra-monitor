@@ -4,6 +4,7 @@ import fcntl
 import json
 import math
 import time
+import uuid
 from pathlib import Path
 
 
@@ -18,18 +19,22 @@ def update(path, action, group=None, start=None, end=None, panel='*', reason=Non
 def _update(path, action, group=None, start=None, end=None, panel='*', reason=None, backfill_hours=12):
     value = json.loads(path.read_text()) if path.exists() else {'disabled_groups': [], 'invalidated': []}
     assert isinstance(value['disabled_groups'], list) and isinstance(value['invalidated'], list)
-    if action in ('parallel-a3-on', 'parallel-a3-off'):
-        value['parallel_a3_backfill'] = action == 'parallel-a3-on'
-        if action == 'parallel-a3-off': value.pop('backfill_priority_until', None)
-    elif action == 'backfill-priority':
-        # Explicit temporary maintenance window; completion also ends priority.
-        value['backfill_priority_until'] = time.time() + 7200
-    elif action == 'backfill':
-        # One bounded request, resumed idempotently after worker/process restarts.
-        assert backfill_hours == 12, 'Current authorization is 12 hours'
-        value.setdefault('backfill', {'seconds': 43200, 'requested_at': time.time()})
-        assert value['backfill']['seconds'] in (43200, 86400)
-        value['backfill']['seconds'] = 43200
+    if action in ('parallel-a3-on', 'parallel-a3-off', 'backfill-priority'):
+        raise ValueError('Legacy worker scheduling has been retired; use native backfill')
+    elif action in ('backfill', 'repair'):
+        if backfill_hours != 12:
+            raise ValueError('Native replay is bounded to 12 hours per request')
+        if (start is None) != (end is None):
+            raise ValueError('Supply both replay boundaries')
+        if action == 'repair' and start is None:
+            raise ValueError('Repair requires explicit boundaries')
+        if start is not None and (not all(isinstance(x, (int, float)) and math.isfinite(x) for x in (start, end))
+                or start > end or end - start > 43200 or end > time.time() - 60):
+            raise ValueError('Replay must be sealed and bounded to 12 hours')
+        request = {'id': uuid.uuid4().hex, 'requested_at': time.time(), 'panel': panel,
+                   'repair': action == 'repair'}
+        if start is not None: request.update(start=start, end=end)
+        value.setdefault('native_replays', []).append(request)
     elif action == 'invalidate':
         assert all(isinstance(x, (float, int)) and math.isfinite(x) for x in (start, end)) and start <= end
         assert reason and panel
@@ -50,7 +55,7 @@ def _update(path, action, group=None, start=None, end=None, panel='*', reason=No
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=('enable', 'disable', 'invalidate', 'backfill', 'parallel-a3-on', 'parallel-a3-off', 'backfill-priority'))
+    parser.add_argument('action', choices=('enable', 'disable', 'invalidate', 'backfill', 'repair', 'parallel-a3-on', 'parallel-a3-off', 'backfill-priority'))
     parser.add_argument('--state', type=Path, default=Path('/data2/monitoring/state'))
     parser.add_argument('--group', choices=('cpu', 'dcu', 'a3'))
     parser.add_argument('--start', type=float); parser.add_argument('--end', type=float)

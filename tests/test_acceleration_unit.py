@@ -9,7 +9,7 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 
-from monitoring import perses_acceleration as core
+from tests import legacy_acceleration as core
 
 
 @pytest_asyncio.fixture

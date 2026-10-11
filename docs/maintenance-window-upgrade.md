@@ -31,6 +31,6 @@
 
 全量 Python、全看板、全浏览器/性能矩阵和故障注入不作为每次升级的前置条件。`scripts/test_local_vm.sh` 仅在需要真实 VM 语义测试时使用，默认运行三个 VM 测试文件；传入路径可继续缩小范围，全量必须显式传入 `tests perses`。不再依赖 code-eval 退役升级脚本验证“活动任务不能冻结”。
 
-查询加速 API 使用 `deploy/release.py acceleration-ready --evidence DIR`，批次使用 `deploy/release.py acceleration observe`，均为最多 90 秒的就绪验收，补算恢复不再额外等待一分钟。完整覆盖、查询结果与性能准入仍用于加速实现和数据源切换；性能采样期间固定版本是为了确保对照可比，不属于普通升级持续在线要求。详细入口见 [查询加速运维](../deploy/perses_acceleration/README.md)。
+查询加速现采用原生 vmalert：`acceleration build/publish/check`、`acceleration-ready` 及容器内 `monitoring.recording_acceptance`。性能只记录，不作为迁移门槛；原生未覆盖历史直接回源。具体步骤见 [原生记录规则运维](native-recording-rules.md)。
 
 现行入口：[部署说明](../deploy/README.md)、[测试说明](../tests/README.md)、[Perses 维护](../perses/README.md)。已完成批次脚本已退役，追溯方式见 [退役清单](releases/retired-code.md)；历史正文与必要输入保留在归档中。
