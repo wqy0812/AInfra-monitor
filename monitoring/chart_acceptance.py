@@ -29,11 +29,14 @@ async def check(vm=VM, *, stored=False, start=None, end=None):
             parser,runner=(a3.decode_export,a3.replay) if environment=='a3-vllm' else (decode_export,replay)
             snapshots,points=runner(parser(raw),start-80,end)
             if environment=='a3-vllm':
-                cpu,status=await host_cpu.collect(service.client,vm,start,end)
-                if status!='ok':raise ValueError('CPU source query failed')
-                host_cpu.attach(snapshots,points,cpu,status)
+                response=await service.client.get(vm+'/api/v1/query_range',params={
+                    'query':host_cpu.query_expression(),'start':start,'end':end,'step':5,
+                    'nocache':1,'latency_offset':'1ms'},timeout=60)
+                response.raise_for_status()
+                cpu=host_cpu.samples(response.json()['data']['result'],start,end)
+                host_cpu.attach(snapshots,points,cpu,'ok')
             async def query(expr):
-                r=await service.client.get(vm+'/api/v1/query_range',params={'query':expr,'start':start,'end':end,'step':5,'nocache':1,'latency_offset':'1ms'})
+                r=await service.client.get(vm+'/api/v1/query_range',params={'query':expr,'start':start,'end':end,'step':5,'nocache':1,'latency_offset':'1ms'},timeout=60)
                 r.raise_for_status(); rows=r.json()['data']['result']
                 out={}
                 for row in rows:
