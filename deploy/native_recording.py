@@ -95,11 +95,35 @@ def publish(reference, state, evidence):
             time.sleep(2)
 
 
+def audit(evidence, filters=False, coverage_only=False, require_full=False):
+    # Execute the checked-out acceptance code in the installed API Python runtime.
+    # This is read-only: no copied modules or changes to the running container.
+    current = find('monitoring-api')
+    require(current and current['Config'].get('Labels', {}).get('monitoring.owner') == 'independent',
+            'Expected owned API container')
+    code = (ROOT / 'monitoring/recording_acceptance.py').read_text()
+    flags = [name for name, enabled in (('--filters', filters), ('--coverage-only', coverage_only),
+                                      ('--require-full', require_full)) if enabled]
+    result = subprocess.run(['docker', 'exec', '-i', current['Id'], 'python', '-c',
+        "import sys; __package__='monitoring'; exec(compile(sys.stdin.read(), 'recording_acceptance.py', 'exec'))",
+        *flags], input=code, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    (evidence / 'native-audit.json').write_text(result.stdout)
+    (evidence / 'native-audit.stderr').write_text(result.stderr)
+    require(result.returncode == 0, 'Native audit failed; inspect native-audit evidence')
+    report = json.loads(result.stdout)
+    require(report['passed'], 'Native audit did not pass')
+    return {'passed': True, 'checks': len(report['checks']), 'native_jobs': report['native_jobs'],
+            'total_jobs': report['total_jobs'], 'container_id': current['Id']}
+
+
 def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('build', 'publish', 'check'))
+    parser.add_argument('action', choices=('build', 'publish', 'check', 'audit'))
     parser.add_argument('--api-image'); parser.add_argument('--vmalert-image'); parser.add_argument('--image')
+    parser.add_argument('--filters', action='store_true')
+    parser.add_argument('--coverage-only', action='store_true')
+    parser.add_argument('--require-full', action='store_true')
     parser.add_argument('--state', type=Path, default=Path('/data2/monitoring/state'))
     parser.add_argument('--evidence', type=Path, required=True)
     args = parser.parse_args()
@@ -107,6 +131,7 @@ def main():
     try:
         if args.action == 'build': result = build(args.api_image, args.vmalert_image, args.evidence)
         elif args.action == 'publish': result = publish(args.image, args.state, args.evidence)
+        elif args.action == 'audit': result = audit(args.evidence, args.filters, args.coverage_only, args.require_full)
         else:
             result = check(); save(args.evidence, 'native-check.json', result)
         print(json.dumps(result))

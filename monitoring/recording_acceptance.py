@@ -16,7 +16,7 @@ async def check(args):
     checks=[]
     async with httpx.AsyncClient(trust_env=False, timeout=60) as client:
         service=RecordingService(args.vm, args.state, catalog, client=client)
-        for panel in catalog['panels']:
+        for panel in ([] if args.coverage_only else catalog['panels']):
             for step in catalog['steps']:
                 end=int((time.time()-120)//step)*step
                 ticks=[end-step,end]
@@ -36,11 +36,24 @@ async def check(args):
                     expected=points_by_time(raw,ticks); actual=points_by_time(body['data']['result'],ticks)
                     assert all(equal_values(expected[t],actual[t]) for t in ticks),(panel['id'],step,bindings)
                     checks.append({'panel':panel['id'],'step':step,'bindings':bindings,'native_ticks':len(stored),'passed':True})
-        short=[c for c in checks if c['step']==5 and c['bindings'] is None]
-        assert len(short)==len(catalog['panels']) and all(c['native_ticks']==2 for c in short), 'Short-step native coverage incomplete'
-        if args.require_full: assert all(c['native_ticks']==2 for c in checks),'Native coverage incomplete'
-        return {'passed':True,'checks':checks,'native_jobs':sum(c['native_ticks']==2 and c['bindings'] is None for c in checks),
-                'total_jobs':len(catalog['panels'])*len(catalog['steps']), 'at':time.time()}
+        # The parity matrix may take minutes. Measure readiness NOW, rather than
+        # rejecting a successful cold-start migration using its initial coverage.
+        coverage=[]
+        observed_at=time.time()
+        for panel in catalog['panels']:
+            for step in catalog['steps']:
+                end=int((observed_at-120)//step)*step
+                ticks=[end-step,end]
+                stored=await service.stored(panel,step,ticks)
+                coverage.append({'panel':panel['id'],'step':step,'end':end,'native_ticks':len(stored)})
+        short=[c for c in coverage if c['step']==5]
+        passed=len(short)==len(catalog['panels']) and all(c['native_ticks']==2 for c in short)
+        if args.require_full: passed=passed and all(c['native_ticks']==2 for c in coverage)
+        return {'passed':passed,'checks':checks,'coverage':coverage,'coverage_observed_at':observed_at,
+                'native_jobs':sum(c['native_ticks']==2 for c in coverage),
+                'total_jobs':len(catalog['panels'])*len(catalog['steps']), 'at':time.time(),
+                'error':None if passed else 'Native coverage incomplete'}
+
 
 
 def main():
@@ -50,8 +63,11 @@ def main():
     parser.add_argument('--vm',default='http://127.0.0.1:18428')
     parser.add_argument('--api',default='http://127.0.0.1:18430')
     parser.add_argument('--filters',action='store_true')
+    parser.add_argument('--coverage-only',action='store_true',help='Only refresh current native coverage; no parity claims')
     parser.add_argument('--require-full',action='store_true')
-    print(json.dumps(asyncio.run(check(parser.parse_args()))))
+    result=asyncio.run(check(parser.parse_args()))
+    print(json.dumps(result))
+    if not result['passed']:raise SystemExit(1)
 
 
 if __name__=='__main__':main()
