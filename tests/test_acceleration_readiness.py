@@ -21,12 +21,11 @@ def startup(tmp_path, monkeypatch):
     monkeypatch.setattr(readiness.time, 'sleep', lambda seconds: clock.__setitem__(0, clock[0] + seconds))
     monkeypatch.setattr(readiness, 'inspect', lambda _: {'Id': 'new', 'Image': 'locked-image'})
     state = {'status': 'ok', 'environments': {
-        env: {'error': None, 'processed_at': 99} for env in ('dcu-pd', 'a3-vllm', 'xpu-pd')},
-        'perses_acceleration': {'enabled': True, 'state_error': None, 'disabled_groups': [],
-            'backend':'vmalert', 'rule_count':126, 'runtime_fresh':True,
-            'runtime':{'perses_rule_count':126,'chart_rule_count':6,'rule_count':132,'live':{'state':'running','loaded_rules':132,'probe_error':None,'evaluation_errors':0}}}}
+        env: {'status':'ok', 'error': None, 'processed_at': 99} for env in ('dcu-pd', 'a3-vllm', 'xpu-pd')},
+        'metric_writer':False,'perses_proxy':False,'metric_policy':{'schema':'native-1m-v1'},
+        'native_recording':{'rule_count':286}}
     import native_recording
-    monkeypatch.setattr(native_recording, 'check', lambda: {})
+    monkeypatch.setattr(native_recording, 'check', lambda **kwargs: {})
     monkeypatch.setattr(readiness, 'read_health', lambda: copy.deepcopy(state))
     return tmp_path, state, clock
 
@@ -40,14 +39,13 @@ def test_generic_container_release_feeds_startup_acceptance(startup):
     assert clock[0] == 100 and not (root / 'shadow-started.json').exists()
 
 
-@pytest.mark.parametrize('fault', ['disabled', 'lag', 'scheduling', 'transport'])
+@pytest.mark.parametrize('fault', ['writer', 'lag', 'proxy', 'transport'])
 def test_startup_failure_preserves_publication_and_has_no_state_writes(startup, monkeypatch, fault):
     root, state, clock = startup
     before = (root / 'container-publication.json').read_bytes()
-    accelerator = state['perses_acceleration']
-    if fault == 'disabled': accelerator['disabled_groups'] = ['cpu']
-    if fault == 'lag': accelerator['runtime_fresh'] = False
-    if fault == 'scheduling': accelerator['runtime']['live']['state'] = 'stopped'
+    if fault=='writer':state['metric_writer']=True
+    if fault=='lag':state['environments']['dcu-pd']['processed_at']=0
+    if fault=='proxy':state['perses_proxy']=True
     if fault == 'transport':
         def fail(): raise OSError('connection lost')
         monkeypatch.setattr(readiness, 'read_health', fail)

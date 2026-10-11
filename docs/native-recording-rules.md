@@ -1,27 +1,36 @@
-# 原生记录规则运维
+# 原生记录规则
 
-CPU 4 项、DCU 6 项、A3 8 项，7 种步长共 126 条规则由官方 vmalert 1.151.0 执行。API 仅负责读取、精确匹配、完整性检查和原始 VM 回源，不读取旧 `monitoring_perses_value/complete`。业务 `monitoring_chart_*` 中 16 个 CPU/容量字段已纳入新增 6 条规则，部署总计 132 条；详见 [业务图表原生记录规则](chart-native-recording.md)。
+2026-10-11 已批准 D1–D6，现行实现见 [口径评审](native-standard-review-20261011.md)。生产按新系统建设；测试环境迁移不要求复刻旧 Python 的窗口否决、代次发布及自动历史接续。
 
-## 发布
+官方 vmalert 1.151.0 每 5 秒计算固定 1 分钟窗口并写回 VM，指标前缀 `monitoring_native_`。规则来源为 `monitoring/native_rules.py`，286 条规则均直接读取原始指标，不依赖另一条记录规则的写入时序。API 只读记录并转换 code-eval JSON；请求画像及网关查询仍提供原有只读接口。Perses 使用 `victoriametrics` 数据源，已移除 `/internal/perses` 代理和 `perses-accelerated` 数据源。
 
-稳定入口 `python3 deploy/release.py acceleration --help`。先使用 `api-image COMMIT --base-image SHA --evidence DIR` 构建提交中的 API；`acceleration build --api-image SHA --vmalert-image SHA --evidence DIR` 从同架构、不可变本地镜像构建启动器镜像，不下载依赖。官方 vmalert 镜像由单独审核的载入步骤提供。
+## 统计定义
 
-维护窗口停止旧 API，再 `acceleration publish --image SHA --evidence DIR` 启动原生服务，`container monitoring-api SHA --evidence DIR` 替换 API。后续原生镜像替换也使用同一 publish 入口。启动器必须管理每次进程启动，不允许直接复用旧配置运行 vmalert。
+- counter 先按源 `rate`/`increase` 再汇总，固定 1m；重置、启动短窗口和窗口内漏采遵循 VM 原生行为。当前源需 up=1 且指标及 up 在 15 秒内新鲜。原生 gauge 使用最近新鲜值，不伪称为 1m 平均。
+- 可用来源参与计算。采集覆盖单独显示可用/配置实例；这不保证每个指标齐全。直方图和缓存质量检查单独展示，不作为所有数值的否决条件。
+- DCU 请求/完成 Token、TTFT/E2E 采用 true/false 流式分区，ITL 为未分区直方图；XPU 使用未分区 tokenizer 数据。不能把总量与分区重复相加。
+- DCU/XPU Decode 保留全部独立 DP，以当前配置的 DP=TP、PP=0 为每组代表；Prefill 复制视图选择 PP/TP/EP=0。新增拓扑须更新规则与配置来源数量。
+- 比率分母为零、非有限或比例不在 0–1 时留空。Store used/total 分别保留有限非负值，不相加复制容量；API 的单 Store 字段遇多 Store 歧义留空，Perses 按实例展示。
+- 原生直方图 P95 落入 +Inf 桶时可能返回最大有限边界；不再保留旧逐桶完整性遮蔽。质量指标检查缺失、+Inf/count 和缓存计数一致性，不保证逐桶单调或全部指标完整。
+- XPU 整体前缀命中率仍为框架原生 gauge；不同后端缓存指标的人群、分母和单位保持区分。
 
-默认监听 `127.0.0.1:18432`，VM 仍为 18428、API 18430。原生容器 1 CPU、768 MiB，挂载现有 `/data2/monitoring/state:/state`；VM 历史和 vmagent 发送缓冲不变。所有证据目录在运行入口前显式创建。
+## 运维
 
-完成 `acceleration check --evidence DIR`、`acceleration-ready --evidence API_DIR`，以及 `acceleration audit --filters --evidence DIR`。该入口将当前验收源码通过标准输入送入已安装 API 的 Python 环境，只读执行，不替换容器文件。最后一项比较全部表达式与有限筛选，并要求所有短步长规则在最近一分钟产出过完整记录；单个格点缺失允许回源，覆盖比例单独报告；`--require-full` 进一步要求所有 126 项覆盖。`audit --coverage-only` 只刷新覆盖，不宣称执行了数值对照；覆盖在对照结束时重新读取，避免用冷启动初始缺口判失败。长步长首次尚未到期和补算中的历史允许回源，不能宣称已经覆盖。
+在目标机仓库根目录执行，远程入口使用 SSH MCP。用已提交源码构建 API，再用固定的官方 vmalert 镜像构建原生服务：
 
-2026-10-11 用户明确：性能只记录，无论快慢均替换。旧版“严格更快”准入不再适用。发布失败保留当前证据并修复当前版本，不回退。
+```sh
+python3 deploy/release.py api-image COMMIT --base-image sha256:BASE --evidence API_BUILD_DIR
+python3 deploy/release.py acceleration build --api-image sha256:API --vmalert-image sha256:VMALERT --evidence NATIVE_BUILD_DIR
+python3 deploy/release.py acceleration publish --image sha256:NATIVE --evidence NATIVE_RELEASE_DIR
+python3 deploy/release.py container monitoring-api sha256:API --evidence API_RELEASE_DIR
+python3 deploy/release.py acceleration check --evidence CHECK_DIR
+python3 deploy/release.py acceleration audit --evidence AUDIT_DIR
+```
 
-## 重启与补算
+所有证据目录预先显式创建；按停机窗口替换受影响组件，失败留证并修复当前版本。`audit` 在已安装 API 容器中只读比较每条原始表达式和相同时刻的存储记录，分别报告有数据和空结果；空结果不代表真实业务覆盖。
 
-每次启动、每次 replay 都在持久目录加锁分配递增代次和唯一 publication，规则指标名绑定表达式、revision 和 step。最高可见代次必须独立完整；不完整即回源，不跨代次拼凑，不回读旧预计算。数量为零的完整结果保留为空，时间戳守卫防止填充缺样。
+首次安装先准备固定镜像，设置 `MONITOR_VM_IMAGE`、`MONITOR_API_IMAGE`、`MONITOR_NATIVE_IMAGE` 为完整本地 image ID，显式配置 `ALLOWED_CLIENTS`，再执行 `deploy/start.py central`。此入口同时启动 VM、vmagent、vmalert、只读 API；已有容器时拒绝首次安装，改用发布入口。
 
-启动器每次恢复自动 replay 最近 12 小时已封闭区间；左界向前对齐所有步长共同格点，最多额外不足一小时。官方 replay 每次请求 60 点、并发 1，单次最长 1 小时，失败保留日志；查询持续回源。较老历史不自动回填。
+每次重启只开始正常评估，不执行 replay、不写 generation/publication 文件。新指标启用前或记录缺口保留空白，不以旧口径或原始查询自动填补。VM 历史、发送缓冲、旧水位和发布文件保持原样。需要历史时可另行显式运行官方 replay，提供 `monitoring.recording_runtime --replay-start ISO_TIME --replay-end ISO_TIME` 的两个边界；不能把另一个实时 writer 启在相同记录时间范围。
 
-`deploy/perses_acceleration/admin.py backfill` 请求新的最近 12 小时补算；`--start EPOCH --end EPOCH --panel ID` 可指定封闭区间和面板，每个请求最多 12 小时（另含格点对齐）。失败请求不自动反复重试；再次提交分配新身份。中断的人工请求在下次启动后继续处理。旧并行 A3/优先级操作明确报错。
-
-修改原始历史前先 `invalidate --start ... --end ... --panel ... --reason ...`。修改完成后 `repair --start ... --end ... --panel ...`：新代次覆盖全部请求格点并经过读取验证，才解除原始请求边界完整覆盖、且期间未改变的失效记录（格点对齐向前扩展的部分不解除）。更大修复拆成明确的 12 小时请求，跨请求的大失效区间须相应拆分；不能删除全部失效记录。
-
-健康状态 `perses_acceleration` 报告 backend、rule_count、启动器新鲜度、原生求值错误和 replay 状态。完整性在每次读取时验证；进程存活不等于历史完整。代次文件、请求记录和旧状态均不得清空。旧结果仅保留为历史证据并自然过期。
+Perses 发布使用 `dashboards prepare/apply` 和 `runtime apply`，校验并发编辑、真实数据源查询及资源读回。合成回归使用 `experiments/native_standard_probe.py --approved`；历史计算模块保留作离线旧口径对照，不被现行 API 或 vmalert 运行入口导入。原先的 Python 延迟重建写入入口已删除。

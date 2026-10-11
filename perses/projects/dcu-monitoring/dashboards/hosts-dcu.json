@@ -78,7 +78,7 @@
         "spec": {
           "display": {
             "name": "CPU 使用率（%）",
-            "description": "指标含义\n主机 CPU 忙碌时间占总 CPU 时间的比例。当前查询扣除 idle 和 iowait，再按主机汇总；100% 表示接近全部 CPU 时间处于其余状态。iowait 被扣除，所以该图不能单独排除存储等待。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+            "description": "指标含义\n主机 CPU 忙碌时间占总 CPU 时间的比例。当前查询扣除 idle 和 iowait，再按主机汇总；100% 表示接近全部 CPU 时间处于其余状态。iowait 被扣除，所以该图不能单独排除存储等待。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -108,11 +108,11 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(100 * (1 - avg by(job,instance,node) (rate(node_cpu_seconds_total{mode=\"idle\",node=~\"$node\",environment=\"dcu-pd\",node=~\"$role\"}[1m]) + ignoring(mode) rate(node_cpu_seconds_total{mode=\"iowait\",node=~\"$node\",environment=\"dcu-pd\",node=~\"$role\"}[1m])))) and on(job,instance) ((min_over_time(up{environment=\"dcu-pd\",job=~\"node-.*\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"node-.*\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"node-.*\",node=~\"$role\"}) < 15))",
+                    "query": "last_over_time(monitoring_native_host_cpu_busy_percent{environment=\"dcu-pd\",node=~\"$node\",node=~\"$role\"}[5s])",
                     "seriesNameFormat": "{{node}}",
                     "datasource": {
                       "kind": "PrometheusDatasource",
-                      "name": "perses-accelerated"
+                      "name": "victoriametrics"
                     }
                   }
                 }
@@ -341,7 +341,7 @@
         "spec": {
           "display": {
             "name": "CPU I/O 等待（%）",
-            "description": "指标含义\nCPU 处于 iowait 状态的平均比例；结合磁盘延迟判断存储等待。\n\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+            "description": "指标含义\nCPU 处于 iowait 状态的平均比例；结合磁盘延迟判断存储等待。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -371,11 +371,11 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "100 * avg by(environment,node) ((rate(node_cpu_seconds_total{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",mode=\"iowait\",node=~\"$role\"}[1m]) and ((time() - timestamp(node_cpu_seconds_total{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",mode=\"iowait\",node=~\"$role\"}) < 15) and (count_over_time(node_cpu_seconds_total{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",mode=\"iowait\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"} >= $__interval) and (time() - timestamp(node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}) < 15))) and (count_over_time(node_cpu_seconds_total{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",mode=\"iowait\",node=~\"$role\"}[1m]) >= 12) and (resets(node_cpu_seconds_total{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",mode=\"iowait\",node=~\"$role\"}[1m]) == 0) and (resets(node_cpu_seconds_total{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",mode=\"iowait\",node=~\"$role\"}[$__interval]) == 0) and on(job,instance,environment) ((up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"} == 1) and (time() - timestamp(up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}) < 15) and (min_over_time(up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[1m]) == 1) and (count_over_time(up{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[1m]) >= (1m / 5)) and on(job,instance,environment) ((changes(node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[1m]) == 0) and (count_over_time(node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}[1m]) >= (1m / 5)) and (time() - node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"} >= 1m) and (time() - timestamp(node_boot_time_seconds{environment=\"dcu-pd\",job=~\"node-prefill|node-decode\",node=~\"$node\",node=~\"$role\"}) < 15))))))",
+                    "query": "last_over_time(monitoring_native_host_cpu_iowait_percent{environment=\"dcu-pd\",node=~\"$node\",node=~\"$role\"}[5s])",
                     "seriesNameFormat": "{{node}}",
                     "datasource": {
                       "kind": "PrometheusDatasource",
-                      "name": "perses-accelerated"
+                      "name": "victoriametrics"
                     }
                   }
                 }

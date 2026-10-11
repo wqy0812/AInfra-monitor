@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 import pytest
-from monitoring.api import Service, encode
 from monitoring.monitor_series import chart_point
 from monitoring.resource_series import key, resource_values
 from monitoring.calculator import parse_prom
@@ -26,40 +25,6 @@ def test_fresh_projection_units_zero_missing_and_encoded_names():
     assert 'memory' not in chart_point(stale)['nodes']['prefill']['resources']
 
 
-@pytest.mark.asyncio
-async def test_vm_roundtrip_dynamic_series_and_hidden_failure():
-    points = [chart_point(snapshot(ts, failed=ts == 10)) for ts in range(0, 31, 5)]
-    rows = {}
-    for line in encode(points).splitlines():
-        row = parse_prom(line)[0]
-        rows.setdefault((row['name'], row['labels']['path']), []).append((int(line.rsplit(' ', 1)[1])/1000, row['value']))
-    service = Service()
-    async def query(expr, start, end, step):
-        if 'monitoring_chart_' not in expr:
-            return [{'metric': {}, 'values': [[15, str(2**30)]]}]
-        name = 'monitoring_chart_value' if 'chart_value' in expr else 'monitoring_chart_valid'
-        result = []
-        for (metric, path), samples in rows.items():
-            if metric != name:
-                continue
-            values = []
-            for ts, value in samples:
-                if ts % step:
-                    continue
-                if 'min_over_time' in expr:
-                    window = [v for t, v in samples if ts-step < t <= ts]
-                    value = min(window) if len(window) == step//5 else 0
-                values.append([ts, str(value)])
-            result.append({'metric': {'path': path}, 'values': values})
-        return result
-    service.query = query
-    try:
-        result = await service.history(2, start=0, end=7200)
-        node = next(p for p in result['points'] if p['ts'] == 15)['nodes']['prefill']
-        assert node['resources']['gpu_utilization']['card0'] == 0
-        assert 'resources.gpu_utilization.card0' in node['gap_before']
-    finally:
-        await service.client.aclose()
 
 
 if __name__ == '__main__':

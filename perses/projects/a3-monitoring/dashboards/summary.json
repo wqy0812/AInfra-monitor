@@ -194,7 +194,7 @@
         "spec": {
           "display": {
             "name": "首 Token 延迟 TTFT P95（秒）",
-            "description": "后端原生 TTFT 的 P95，按 Prefill / Decode 分线。P50 / P99 与明细见「后端请求性能」。"
+            "description": "后端原生 TTFT 的 P95，按 Prefill / Decode 分线。P50 / P99 与明细见「后端请求性能」。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -223,9 +223,13 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "label_replace(label_replace(sort_by_label((label_replace((label_replace((label_replace((((monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.ttft.p95\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.ttft.p95\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.ttft.p95\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.ttft.p95\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.ttft.p95\"}) < 15)) * 1000) * 0.001), \"perses_order\", \"00\", \"path\", \".*[.]p50\")), \"perses_order\", \"01\", \"path\", \".*[.]p95\")), \"perses_order\", \"02\", \"path\", \".*[.]p99\")), \"perses_order\", \"path\"), \"role\", \"Prefill\", \"path\", \"nodes[.]prefill[.].*\"), \"role\", \"Decode\", \"path\", \"nodes[.]decode[.].*\")",
-                    "seriesNameFormat": "{{role}}",
-                    "minStep": "5s"
+                    "query": "label_map((last_over_time(monitoring_native_backend_latency_seconds{environment=\"a3-vllm\",kind=\"ttft\",quantile=\"0.95\"}[5s])), \"quantile\", \"0.5\", \"P50\", \"0.95\", \"P95\", \"0.99\", \"P99\")",
+                    "seriesNameFormat": "{{role}} · {{quantile}}",
+                    "minStep": "5s",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -238,7 +242,7 @@
         "spec": {
           "display": {
             "name": "端到端延迟 E2E P95（秒）",
-            "description": "后端原生 E2E 的 P95，按 Prefill / Decode 分线。P50 / P99 与明细见「后端请求性能」。"
+            "description": "后端原生 E2E 的 P95，按 Prefill / Decode 分线。P50 / P99 与明细见「后端请求性能」。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -267,9 +271,13 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "label_replace(label_replace(sort_by_label((label_replace((label_replace((label_replace(((monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.e2e.p95\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.e2e.p95\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.e2e.p95\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.e2e.p95\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.percentiles.e2e.p95\"}) < 15)) * 1), \"perses_order\", \"00\", \"path\", \".*[.]p50\")), \"perses_order\", \"01\", \"path\", \".*[.]p95\")), \"perses_order\", \"02\", \"path\", \".*[.]p99\")), \"perses_order\", \"path\"), \"role\", \"Prefill\", \"path\", \"nodes[.]prefill[.].*\"), \"role\", \"Decode\", \"path\", \"nodes[.]decode[.].*\")",
-                    "seriesNameFormat": "{{role}}",
-                    "minStep": "5s"
+                    "query": "label_map((last_over_time(monitoring_native_backend_latency_seconds{environment=\"a3-vllm\",kind=\"e2e\",quantile=\"0.95\"}[5s])), \"quantile\", \"0.5\", \"P50\", \"0.95\", \"P95\", \"0.99\", \"P99\")",
+                    "seriesNameFormat": "{{role}} · {{quantile}}",
+                    "minStep": "5s",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -282,7 +290,7 @@
         "spec": {
           "display": {
             "name": "后端输出 Token 吞吐（Token/秒）",
-            "description": "服务侧输出 Token 速率，按角色分线；P/D 分离时 Prefill 侧通常只有首个 Token。"
+            "description": "服务侧输出 Token 速率，按角色分线；P/D 分离时 Prefill 侧通常只有首个 Token。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -311,9 +319,13 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "label_replace(label_replace((monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.decode_tokens\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.decode_tokens\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.decode_tokens\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.decode_tokens\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"request-metrics-v2\",path=~\"nodes..*.decode_tokens\"}) < 15)) * 1, \"role\", \"Prefill\", \"path\", \"nodes[.]prefill[.].*\"), \"role\", \"Decode\", \"path\", \"nodes[.]decode[.].*\")",
+                    "query": "last_over_time(monitoring_native_backend_decode_tokens_per_second{environment=\"a3-vllm\"}[5s])",
                     "seriesNameFormat": "{{role}}",
-                    "minStep": "5s"
+                    "minStep": "5s",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -440,7 +452,7 @@
         "spec": {
           "display": {
             "name": "前缀缓存命中率（%）",
-            "description": "最近约 60 秒本地与外部 KV 前缀缓存命中率，按角色分线；两者分母不同，不能相加。明细见「缓存与存储」。"
+            "description": "固定 1 分钟本地与外部 KV 前缀缓存命中率，按角色分线；两者分母不同，不能相加。明细见「缓存与存储」。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -469,9 +481,13 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "label_replace(label_replace((monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.ratio\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.ratio\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.ratio\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.ratio\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.ratio\"}) < 15)) * 100, \"role\", \"Prefill\", \"path\", \"nodes[.]prefill[.].*\"), \"role\", \"Decode\", \"path\", \"nodes[.]decode[.].*\")",
-                    "seriesNameFormat": "本地 · {{role}}",
-                    "minStep": "5s"
+                    "query": "(last_over_time(monitoring_native_prefix_query_hit_ratio{environment=\"a3-vllm\",kind=\"local\"}[5s])) * 100",
+                    "seriesNameFormat": "{{role}} · 本地",
+                    "minStep": "5s",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -482,9 +498,13 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "label_replace(label_replace((monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.external_ratio\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.external_ratio\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.external_ratio\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.external_ratio\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"v1\",path=~\"nodes..*.cache_60s.external_ratio\"}) < 15)) * 100, \"role\", \"Prefill\", \"path\", \"nodes[.]prefill[.].*\"), \"role\", \"Decode\", \"path\", \"nodes[.]decode[.].*\")",
-                    "seriesNameFormat": "外部 KV · {{role}}",
-                    "minStep": "5s"
+                    "query": "(last_over_time(monitoring_native_prefix_query_hit_ratio{environment=\"a3-vllm\",kind=\"external\"}[5s])) * 100",
+                    "seriesNameFormat": "{{role}} · 外部 KV",
+                    "minStep": "5s",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -605,7 +625,7 @@
         "spec": {
           "display": {
             "name": "CPU 使用率（%）",
-            "description": "主机 CPU 忙碌比例，按节点分线。负载、I/O 等待与磁盘网络见「主机资源」。"
+            "description": "主机 CPU 忙碌比例，按节点分线。负载、I/O 等待与磁盘网络见「主机资源」。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -634,9 +654,13 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "label_replace(label_replace((monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\".*\",node=~\".*\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\".*\",node=~\".*\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\".*\",node=~\".*\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\".*\",node=~\".*\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\".*\",node=~\".*\"}) >= 0) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\".*\",node=~\".*\"}) < 15)), \"role\", \"Prefill\", \"node\", \"a3-1\"), \"role\", \"Decode\", \"node\", \"a3-2\")",
-                    "seriesNameFormat": "{{role}} · {{node}}",
-                    "minStep": "5s"
+                    "query": "last_over_time(monitoring_native_host_cpu_busy_percent{environment=\"a3-vllm\",node=~\".*\"}[5s])",
+                    "seriesNameFormat": "{{node}}",
+                    "minStep": "5s",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -738,6 +762,130 @@
                     "query": "count((up{environment=\"a3-vllm\"} and (time() - timestamp(up{environment=\"a3-vllm\"}) < 15)) == 0) or (count(up{environment=\"a3-vllm\"} and (time() - timestamp(up{environment=\"a3-vllm\"}) < 15)) * 0)",
                     "seriesNameFormat": "异常目标",
                     "minStep": "5s"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "native-coverage": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "后端采集覆盖（实例）",
+            "description": "可用实例少于配置实例时，吞吐、缓存和延迟为部分来源的统计，不代表全量。up 可用不保证每个指标存在；历史无记录时不显示为零。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "last_over_time(monitoring_native_backend_available_instances{environment=\"a3-vllm\"}[5s])",
+                    "seriesNameFormat": "{{role}} · 可用",
+                    "minStep": "5s",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "last_over_time(monitoring_native_backend_expected_instances{environment=\"a3-vllm\"}[5s])",
+                    "seriesNameFormat": "{{role}} · 配置",
+                    "minStep": "5s",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "native-quality": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "源指标一致性问题（项）",
+            "description": "独立展示直方图缺失、+Inf/count 不一致和缓存计数不一致；不遮蔽原生计算结果。零仅表示这些检查未发现问题，不保证逐桶单调性或全部指标完整。"
+          },
+          "plugin": {
+            "kind": "TimeSeriesChart",
+            "spec": {
+              "legend": {
+                "position": "bottom",
+                "mode": "list"
+              },
+              "yAxis": {
+                "min": 0
+              },
+              "visual": {
+                "display": "line",
+                "lineWidth": 1,
+                "connectNulls": false
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "last_over_time(monitoring_native_histogram_quality_issues{environment=\"a3-vllm\"}[5s])",
+                    "seriesNameFormat": "{{node}} · {{kind}} {{diagnostic}}",
+                    "minStep": "5s",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "kind": "TimeSeriesQuery",
+              "spec": {
+                "plugin": {
+                  "kind": "PrometheusTimeSeriesQuery",
+                  "spec": {
+                    "query": "last_over_time(monitoring_native_cache_quality_issues{environment=\"a3-vllm\"}[5s])",
+                    "seriesNameFormat": "{{role}} · 缓存 {{kind}}",
+                    "minStep": "5s",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -917,6 +1065,24 @@
               "height": 8,
               "content": {
                 "$ref": "#/spec/panels/scrape-down"
+              }
+            },
+            {
+              "x": 0,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/native-coverage"
+              }
+            },
+            {
+              "x": 12,
+              "y": 16,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/native-quality"
               }
             }
           ]

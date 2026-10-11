@@ -326,6 +326,8 @@ def shared_health(project):
 def build(snapshot):
     from dashboard_columns import expand
     snapshot = expand(snapshot, read_resources(ROOT / 'projects'))
+    from native_records import apply as native
+    if 'monitoring_native_' in json.dumps(snapshot):return native(snapshot)
     from dashboard_reorg import migrate
     from panel_trim import apply as trim
     from summary_dashboard import apply as summarize

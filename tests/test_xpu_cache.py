@@ -50,35 +50,6 @@ async def test_history_restores_previously_blank_values_and_keeps_gaps():
     assert 'cache' in points[1]['nodes']['prefill']['gap_before']
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize('failed_query', ['value', 'continuity'])
-@pytest.mark.parametrize('failure', ['timeout', 'http', 'invalid'])
-async def test_optional_cache_failure_preserves_other_history(tmp_path, monkeypatch, failed_query, failure):
-    from monitoring import api
-    monkeypatch.setattr(api, 'STATE', tmp_path)
-    service = api.Service('xpu-pd')
-    async def query(expr, *args):
-        if 'sglang:cache_hit_rate' in expr:
-            kind = 'value' if expr.startswith('default_rollup') else 'continuity'
-            if kind == failed_query:
-                if failure == 'timeout': raise httpx.ReadTimeout('fixture timeout')
-                if failure == 'http': raise httpx.HTTPStatusError('fixture 503', request=httpx.Request('GET', 'http://vm.test'), response=httpx.Response(503))
-                return [{'values': [[100, 'invalid']]}]
-            return [{'values': [[100, '.75' if kind == 'value' else '1']]}]
-        if 'monitoring_chart_' in expr:
-            return [{'metric': {'path': 'nodes.decode.decode_tokens'}, 'values': [[100, '42' if 'chart_value' in expr else '1']]}]
-        return []
-    service.query = query
-    try:
-        result = await service.history(1, 100, 105)
-        point = result['points'][0]
-        assert point['nodes']['decode']['decode_tokens'] == 42
-        assert all(status == 'ok' for status in result['gateway_status'].values())
-        prefill = point['nodes']['prefill']
-        assert prefill['cache_60s']['ratio'] == (None if failed_query == 'value' else .75)
-        assert 'cache' in prefill['gap_before']
-    finally:
-        await service.client.aclose()
 
 
 @pytest.mark.asyncio

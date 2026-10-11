@@ -72,8 +72,8 @@ async def test_history_merges_gateway_timestamps_caches_and_preserves_backend_fi
             return []
         if gateway_only:
             return []
-        return [{'metric': {'path': path}, 'values': [[100, '7' if 'chart_value' in expr else '1']]}
-                for path in ('nodes.decode.requests', 'nodes.decode.percentiles.e2e.p95')]
+        return [row([[100,'7']],__name__='monitoring_native_backend_requests_per_second',node='dcu2',role='decode'),
+                row([[100,'7']],__name__='monitoring_native_backend_latency_seconds',node='dcu2',role='decode',kind='e2e',quantile='0.95')]
     service.query = query
     try:
         result = await service.history(1, 100, 110)
@@ -84,7 +84,7 @@ async def test_history_merges_gateway_timestamps_caches_and_preserves_backend_fi
             node = result['points'][0]['nodes']['decode']
             assert node['requests'] == node['percentiles']['e2e']['p95'] == 7
         assert await service.history(1, 100, 110) is result
-        assert len(calls) == 7
+        assert len(calls) == 5
         assert all(args[1:] == (100, 110, 5) for args in calls)
     finally:
         await service.client.aclose()
@@ -96,7 +96,7 @@ async def test_gateway_failure_leaves_backend_history_available():
     async def query(expr, *args):
         if 'aigate_' in expr:
             raise httpx.ConnectError('fixture offline')
-        return [{'metric': {'path': 'nodes.decode.decode_tokens'}, 'values': [[100, '1']]}]
+        return [row([[100,'1']],__name__='monitoring_native_backend_decode_tokens_per_second',node='dcu2',role='decode')]
     service.query = query
     try:
         result = await service.history(1, 100, 110)
@@ -108,7 +108,7 @@ async def test_gateway_failure_leaves_backend_history_available():
 
 
 @pytest.mark.asyncio
-async def test_latest_backend_sample_is_retained_when_gateway_is_ahead():
+async def test_latest_snapshot_does_not_fill_missing_native_history():
     service = Service()
     service.latest_point = {'ts': 105, 'nodes': {'prefill': {}, 'decode': {'decode_tokens': 42}}, 'mooncake': {}}
     async def query(expr, *args):
@@ -116,9 +116,9 @@ async def test_latest_backend_sample_is_retained_when_gateway_is_ahead():
     service.query = query
     try:
         result = await service.history(1, 100, 110)
-        assert [p['ts'] for p in result['points']] == [105, 110]
-        assert result['points'][0]['nodes']['decode']['decode_tokens'] == 42
-        assert result['points'][1]['gateway'][live.IDLE] == 3
+        assert [p['ts'] for p in result['points']] == [110]
+        assert result['points'][0]['nodes']['decode']['decode_tokens'] is None
+        assert result['points'][0]['gateway'][live.IDLE] == 3
     finally:
         await service.client.aclose()
 

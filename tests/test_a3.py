@@ -3,7 +3,6 @@ import json
 import math
 import pytest
 from monitoring import a3
-from monitoring.api import Service, encode
 
 
 def fixture(drop=None, reset=None, idle=False, streaming=False, end=170):
@@ -167,28 +166,6 @@ def test_decode_keeps_instance_labels_and_environment_boundary():
     assert g[('a3-1','host:7100')][1][100][0]['labels']['instance'] == 'host:7100'
 
 
-@pytest.mark.asyncio
-async def test_environments_have_independent_watermarks_queries_and_history(tmp_path, monkeypatch):
-    import monitoring.api as api
-    monkeypatch.setattr(api, 'STATE', tmp_path)
-    (tmp_path/'watermark.json').write_text('{"ts":100}')
-    dcu, asc = Service(), Service('a3-vllm')
-    assert dcu.watermark == 0 and asc.watermark == 0
-    assert (tmp_path/'watermark.json').read_text() == '{"ts":100}'
-    assert asc.watermark_file != dcu.watermark_file
-    exprs = []
-    async def query(expr, *args):
-        exprs.append(expr);return []
-    asc.query = query
-    history = await asc.history(1, 100, 200)
-    assert history['environment'] == 'a3-vllm'
-    assert history['collection_coverage']['expected_instances'] == {'prefill': 4, 'decode': 16}
-    assert all('environment="a3-vllm"' in x for x in exprs)
-    assert dcu.cache == {}
-    await dcu.client.aclose();await asc.client.aclose()
-    encoded = encode(a3.replay(fixture(), 100, 170)[1][-1:], 'a3-vllm')
-    assert 'environment="dcu-pd"' not in encoded
-    assert 'cache_60s.external_ratio' in encoded
 
 
 @pytest.mark.parametrize('failure', ['normal', 'down', 'missing', 'reset', 'idle'])

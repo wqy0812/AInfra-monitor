@@ -29,7 +29,7 @@ async def test_same_key_runs_one_complete_query_group(service):
     for _ in range(20):
         await asyncio.sleep(0)
     assert len(service.history_tasks) == 1
-    assert sum('monitoring_chart_' in expr for expr in calls) == 3
+    assert sum('monitoring_native_' in expr for expr in calls) == 1
     count = len(calls)
     release.set()
     results = await asyncio.gather(*requests)
@@ -138,7 +138,7 @@ async def test_close_cancels_and_joins_shared_tasks(service):
 async def test_failure_cancels_sibling_vm_queries(service):
     started, stopped = asyncio.Event(), asyncio.Event()
     async def query(expr, *args):
-        if 'chart_value' in expr:
+        if 'monitoring_native_' in expr:
             await started.wait()
             raise ValueError('broken VM response')
         started.set()

@@ -63,15 +63,15 @@ async def test_history_cache_preserves_exact_query_bounds_and_response_metadata(
         calls.append((start, end))
         if 'aigate' in expr:
             return []
-        return [{'metric': {'path': 'nodes.prefill.requests'}, 'values': [[start, '1'], [end, '1']]}]
+        return [{'metric': {'__name__':'monitoring_native_backend_requests_per_second','environment':'dcu-pd','node':'dcu1','role':'prefill'}, 'values': [[start, '1'], [end, '1']]}]
     service.query = query
     try:
         first = await service.history(1, 100, 3700)
         assert await service.history(1, 100, 3700) == first
-        assert len(calls) == 7
+        assert len(calls) == 5
         second = await service.history(1, 105, 3705)
         assert [p['ts'] for p in second['points']] == [105, 3705]
-        assert len(calls) == 14
+        assert len(calls) == 10
         assert (await service.history(2, 105, 3705))['hours'] == 2
     finally:
         await service.client.aclose()

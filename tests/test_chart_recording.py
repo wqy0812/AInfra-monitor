@@ -3,7 +3,6 @@ import json
 
 import pytest
 from monitoring import chart_recording as charts
-from monitoring.api import encode
 
 
 def test_rules_are_raw_only_compatible_and_bounded():
@@ -27,14 +26,3 @@ def test_persistent_cutover_is_validated(tmp_path):
     for stamp in [False, 101, -5, '100']:
         path.write_text(json.dumps({'schema': 1, 'start': stamp}))
         with pytest.raises(ValueError): charts.cutover(tmp_path)
-
-
-def test_api_cannot_publish_native_fields_even_during_old_catchup():
-    points = [{'ts': ts, 'nodes': {'prefill': {'cpu': 25, 'requests': 3}},
-               'mooncake': {'capacity': {'used': 3, 'total': 10, 'ratio': .3}}} for ts in (5,100,105)]
-    for env in ('a3-vllm', 'dcu-pd', 'xpu-pd'):
-        body = encode(points, env, exclude_native=True)
-        for path in charts.PATHS[env]:
-            assert 'path=' + json.dumps(path) + ',' not in body
-        assert 'path="nodes.prefill.requests"' in body
-    assert 'path="nodes.prefill.cpu"' in encode(points, 'dcu-pd', exclude_native=True)

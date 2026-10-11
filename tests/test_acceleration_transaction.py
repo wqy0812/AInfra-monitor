@@ -89,6 +89,7 @@ def test_runtime_guides_survive_migrated_source_docs_and_repeated_publication(tm
     assert 'monitoring_perses_complete' in document.read_text()
     for name in transaction.DOCUMENTS:
         for destination in re.findall(r'\]\(([^)]+)\)', (runtime / name).read_text()):
+            if destination.startswith('https://'):continue
             assert (runtime / destination).is_file(), (name, destination)
         assert '](releases/' not in (runtime / name).read_text()
     first = {name: (runtime / name).read_bytes() for name in (*before, *transaction.DOCUMENTS)}

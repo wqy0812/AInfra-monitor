@@ -37,7 +37,7 @@ def test_docs_only_is_complete_stable_and_preserves_historical_inventory(tmp_pat
         for key, panel in d['spec']['panels'].items():
             assert descriptions[d['metadata']['project']][d['metadata']['name']][key] == panel['spec']['display']['description']
             count += 1
-    assert count == 249  # 2026-10-09: trimmed to 204 detail panels plus three 15-panel summaries.
+    assert count == 261  # 2026-10-09: trimmed to 204 detail panels plus three 15-panel summaries.
     assert '不代表当前在线目标' in first['METRIC_COVERAGE.md'].decode()
     assert '当前沿用线上 v1/latency-v2' not in first['METRIC_COVERAGE.md'].decode()
 

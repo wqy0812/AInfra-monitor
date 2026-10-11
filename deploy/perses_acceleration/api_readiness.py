@@ -9,7 +9,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'perses'))
 from replace import inspect
 from release_support import save, record_failure
-from materialized_release import read_health, validate_health
+from native_recording import fetch
+
+
+def read_health():
+    return fetch('http://127.0.0.1:18430','/health')
+
+
+def validate_health(result):
+    assert result['status']=='ok'
+    assert result['metric_writer'] is False and result['perses_proxy'] is False
+    assert result['metric_policy']['schema']=='native-1m-v1'
+    for environment in ('dcu-pd','a3-vllm','xpu-pd'):
+        item=result['environments'][environment]
+        assert item['status']=='ok' and not item['error'] and 0<=time.time()-item['processed_at']<20
 
 
 def publication(root):
@@ -43,17 +56,8 @@ def observe(root):
             try:
                 result = read_health()
                 validate_health(result)
-                accelerator = result['perses_acceleration']
-                assert accelerator['enabled'] and not accelerator['state_error']
-                assert not accelerator['disabled_groups']
-                assert accelerator['backend'] == 'vmalert' and accelerator['rule_count'] == 126
-                assert accelerator['runtime_fresh']
-                runtime = accelerator['runtime']
-                assert runtime['perses_rule_count'] == 126 and runtime['chart_rule_count'] == 6 and runtime['rule_count'] == 132 and runtime['live']['state'] == 'running'
-                assert runtime['live']['loaded_rules'] == 132 and not runtime['live']['probe_error']
-                assert runtime['live']['evaluation_errors'] == 0
                 from native_recording import check
-                check()
+                check(expected=result['native_recording']['rule_count'])
                 report.update(passed=True, ended_at=time.time())
                 report['records'].append({'at': time.time(), 'health': result})
                 save(root, 'api-readiness.json', report)

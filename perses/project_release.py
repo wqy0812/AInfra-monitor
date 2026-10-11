@@ -269,6 +269,13 @@ def apply(resources, root):
                 mutations.append({'action': 'delete', 'before': old})
                 save(root, 'journal.json', mutations)
                 http(url, 'DELETE')
+        for project in ('a3-monitoring','dcu-monitoring','xpu-monitoring'):
+            identity=('Datasource',project,'perses-accelerated')
+            if identity in existing and identity not in candidates:
+                old=existing[identity];url=endpoint('Datasource',old)+'/perses-accelerated'
+                assert http(url)==old,'Concurrent datasource edit before removal'
+                mutations.append({'action':'delete','before':old});save(root,'journal.json',mutations)
+                http(url,'DELETE')
         after = snapshot()
         expected = flattened(resources)
         actual = flattened(after)

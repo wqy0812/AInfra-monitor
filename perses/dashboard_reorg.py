@@ -180,6 +180,9 @@ def verify(before, after, manifest):
 def write_resources(resources, root):
     from acceleration_publication import published
     resources = published(resources)
+    for project in PROJECTS:
+        obsolete=root/project/'perses-accelerated-datasource.json'
+        if obsolete.exists():obsolete.unlink()
     for category, documents in resources.items():
         for d in documents:
             project = d['metadata'].get('project',d['metadata']['name'])

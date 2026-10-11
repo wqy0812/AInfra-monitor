@@ -69,6 +69,9 @@ def new_dashboard(source,name,title):
 
 
 def align(resources):
+    if 'monitoring_native_' in json.dumps(resources):
+        from native_records import apply as native
+        return native(resources), []
     from xpu_topology import configure as configure_xpu
     from a3_cache import configure as configure_a3_cache
     resources = copy.deepcopy(resources)

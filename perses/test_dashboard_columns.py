@@ -23,7 +23,7 @@ def test_every_panel_query_renderer_and_datasource_survives_consolidation():
     assert before == original
     validate(after)
     assert len(after['dashboards']) == 21
-    assert sum(len(d['spec']['panels']) for d in after['dashboards']) == 249
+    assert sum(len(d['spec']['panels']) for d in after['dashboards']) == 261
     sources = flattened(before)
     accounted = set()
     for d in after['dashboards']:
@@ -47,7 +47,7 @@ def test_every_panel_query_renderer_and_datasource_survives_consolidation():
                 rows = [row for row in d['spec']['layouts'] if row['spec']['display']['title'].startswith(label)]
                 assert len(rows) == len(original_rows)
                 assert [row['spec'].get('display', {}).get('collapse') for row in rows] == [row['spec'].get('display', {}).get('collapse') for row in original_rows]
-    assert len(accounted) == 249
+    assert len(accounted) == 261
 
 
 def test_repeated_publication_and_live_snapshot_regeneration_stay_consolidated():

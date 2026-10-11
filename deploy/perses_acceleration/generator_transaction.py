@@ -9,8 +9,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'perses'))
 from dashboard_columns import source_change, source_identity
 
 RUNTIME = Path('/data2/monitoring/perses/release')
-MODULES = ('dashboard_columns.py', 'query_acceleration.py', 'query_slimming.py', 'acceleration_catalog.py', 'acceleration_publication.py', 'dashboard_reorg.py')
-DOCUMENTS = ('perses-query-acceleration.md', 'query-slimming.md')
+MODULES = ('dashboard_columns.py', 'query_acceleration.py', 'query_slimming.py', 'acceleration_catalog.py', 'acceleration_publication.py', 'dashboard_reorg.py', 'native_records.py')
+DOCUMENTS = ('perses-query-acceleration.md', 'query-slimming.md', 'native-recording-rules.md', 'native-standard-review-20261011.md')
 BASE_HASH = '38b62a8cc6378aecc7837bdfc144f9300d282cf35e0b22bf67bddc4e4f54aba0'
 
 

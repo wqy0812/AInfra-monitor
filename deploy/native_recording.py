@@ -31,7 +31,10 @@ def fetch(base, path):
         return json.load(response)
 
 
-def check(base='http://127.0.0.1:18432', expected=132):
+def check(base='http://127.0.0.1:18432', expected=None):
+    if expected is None:
+        from monitoring.native_rules import build as rules_build
+        expected=rules_build()[1]['rule_count']
     body = fetch(base, '/api/v1/rules')
     require(body.get('status') == 'success', 'Native rules endpoint unavailable')
     groups = body['data']['groups']
@@ -101,19 +104,17 @@ def audit(evidence, filters=False, coverage_only=False, require_full=False):
     current = find('monitoring-api')
     require(current and current['Config'].get('Labels', {}).get('monitoring.owner') == 'independent',
             'Expected owned API container')
-    code = (ROOT / 'monitoring/recording_acceptance.py').read_text()
-    flags = [name for name, enabled in (('--filters', filters), ('--coverage-only', coverage_only),
-                                      ('--require-full', require_full)) if enabled]
+    code = (ROOT / 'monitoring/native_acceptance.py').read_text()
     result = subprocess.run(['docker', 'exec', '-i', current['Id'], 'python', '-c',
-        "import sys; __package__='monitoring'; exec(compile(sys.stdin.read(), 'recording_acceptance.py', 'exec'))",
-        *flags], input=code, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        "import sys; __package__='monitoring'; exec(compile(sys.stdin.read(), 'native_acceptance.py', 'exec'))"],
+        input=code, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (evidence / 'native-audit.json').write_text(result.stdout)
     (evidence / 'native-audit.stderr').write_text(result.stderr)
     require(result.returncode == 0, 'Native audit failed; inspect native-audit evidence')
     report = json.loads(result.stdout)
     require(report['passed'], 'Native audit did not pass')
-    return {'passed': True, 'checks': len(report['checks']), 'native_jobs': report['native_jobs'],
-            'total_jobs': report['total_jobs'], 'container_id': current['Id']}
+    return {'passed': True, 'checks': len(report['checks']), 'nonempty_rules':report['nonempty_rules'],
+            'total_rules':report['rule_count'], 'container_id': current['Id']}
 
 
 def main():

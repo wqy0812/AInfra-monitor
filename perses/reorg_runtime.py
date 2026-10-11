@@ -9,7 +9,7 @@ MODULES = ('connection.py', 'align_dashboards.py', 'dashboard_reorg.py', 'dashbo
            'remove_idle_thresholds.py', 'host_cpu_panel.py', 'npu_panels.py', 'xpu_hosts.py',
            'xpu_hardware.py', 'xpu_cache.py', 'xpu_topology.py', 'query_acceleration.py', 'acceleration_catalog.py',
            'acceleration_publication.py', 'acceleration_state.json', 'a3_coverage.py', 'a3_cache.py', 'a3_mooncake.py',
-           'panel_trim.py', 'summary_dashboard.py', 'drilldown_layout.py', 'query_slimming.py')
+           'panel_trim.py', 'summary_dashboard.py', 'drilldown_layout.py', 'query_slimming.py', 'native_records.py')
 
 
 def encoded(path):
@@ -24,6 +24,8 @@ def sync(root, runtime):
     from panel_trim import RETIRED_DASHBOARDS
     files = {name:release/name for name in MODULES}
     files.update({str(p.relative_to(release)):p for p in (release/'projects').rglob('*.json')})
+    for project in ('dcu-monitoring','a3-monitoring','xpu-monitoring'):
+        files['projects/'+project+'/perses-accelerated-datasource.json']=None
     for project,names in RETIRED.items():
         for name in names + RETIRED_DASHBOARDS:files['projects/'+project+'/dashboards/'+name+'.json']=None
     if (release/'projects/a3-monitoring/dashboards/backend-prefill.json').exists():

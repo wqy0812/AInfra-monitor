@@ -7,7 +7,6 @@ import httpx
 import pytest
 
 from monitoring import a3, a3_effective as effective
-from monitoring.api import Service, encode
 from tests.test_a3 import fixture
 
 
@@ -105,63 +104,3 @@ def test_activation_is_durable_and_does_not_touch_watermarks(tmp_path):
     assert watermark.read_text() == '{"ts": 10}'
     (tmp_path / effective.STATE_FILE).write_text('{}')
     with pytest.raises(ValueError): effective.load_since(tmp_path)
-
-
-def test_materialization_starts_at_cutover_only():
-    points = a3.replay(groups(), 100, 170, effective_since=150)[1]
-    lines = encode(points, 'a3-vllm').splitlines()
-    new = [line for line in lines if 'cache_60s.effective.' in line]
-    assert new and all(int(line.rsplit(' ', 1)[1]) >= 150000 for line in new)
-    assert all('schema="' + effective.SCHEMA + '"' in line for line in new)
-    assert any('cache_60s.external_ratio' in line and 'schema="v1"' in line for line in lines)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize('view', ['full', 'summary'])
-async def test_history_boundary_and_latest_gap(view):
-    service = Service('a3-vllm')
-    service.cache_effective_since = 150
-    service.latest_point = {'ts': 170, 'nodes': {'prefill': {}, 'decode': {}}, 'mooncake': {}}
-    async def query(expression, start, end, step):
-        if 'monitoring_chart_' not in expression: return []
-        paths = {effective.PREFIX + 'ratio': .95, effective.PREFIX + 'device': .9, effective.PREFIX + 'storage': .05}
-        return [{'metric': {'path': path}, 'values': [[tick, str(value if 'chart_value' in expression else 1)]]} for path, value in paths.items() for tick in (140, 160)]
-    service.query = query
-    try:
-        result = await service._history(1, 100, 170, 5, view)
-        assert result['cache_effective_since'] == 150
-        assert result['points'][0]['nodes']['prefill']['cache_60s']['effective']['ratio'] is None
-        assert result['points'][1]['nodes']['prefill']['cache_60s']['effective']['ratio'] == .95
-        assert 'effective_cache' in result['points'][-1]['nodes']['prefill']['gap_before']
-    finally: await service.close()
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize('step', [15, 60])
-@pytest.mark.parametrize('case', ['valid', 'invalid', 'missing'])
-async def test_effective_history_real_vm(step, case, monkeypatch):
-    url = os.environ.get('MONITORING_TEST_VM_URL')
-    if not url: pytest.skip('Requires disposable local VictoriaMetrics')
-    assert url.startswith('http://127.0.0.1:')
-    monkeypatch.setattr('monitoring.api.VM', url)
-    slot = ['valid', 'invalid', 'missing'].index(case) * 2 + (step == 60)
-    end = int(time.time() // 60) * 60 - 600 - slot * 300
-    lines = []
-    for tick in range(end - 120, end + 1, 5):
-        for field, amount in [('ratio', .95), ('device', .9), ('storage', .05), ('input_tokens', 1000)]:
-            if case == 'missing' and tick == end - 5: continue
-            tags = '{environment="a3-vllm",schema="' + effective.SCHEMA + '",path="' + effective.PREFIX + field + '"}'
-            for kind, value in [('value', amount), ('valid', int(not (case == 'invalid' and tick == end - 5)))]:
-                lines.append(f'monitoring_chart_{kind}{tags} {value} {tick * 1000}')
-        # A foreign/legacy schema must never overwrite the new partition.
-        lines.append(f'monitoring_chart_value{{environment="a3-vllm",schema="v1",path="{effective.PREFIX}ratio"}} 42 {tick * 1000}')
-    async with httpx.AsyncClient(base_url=url, trust_env=False) as client:
-        (await client.post('/api/v1/import/prometheus', content='\n'.join(lines) + '\n')).raise_for_status()
-        (await client.get('/internal/force_flush')).raise_for_status()
-    service = Service('a3-vllm'); service.cache_effective_since = end - 120
-    try:
-        result = await service._history(1, end - step, end, step, 'summary')
-        pre = result['points'][-1]['nodes']['prefill']
-        assert pre['cache_60s']['effective']['ratio'] == .95
-        assert 'effective_cache' in pre['gap_before'] if case != 'valid' else 'effective_cache' not in pre['gap_before']
-    finally: await service.close()

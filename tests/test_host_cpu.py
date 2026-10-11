@@ -6,7 +6,6 @@ import httpx
 import pytest
 
 from monitoring import host_cpu
-from monitoring.api import Service, encode, history_expression
 
 
 def row(values, **labels):
@@ -27,19 +26,6 @@ def test_samples_preserve_zero_and_reject_wrong_hosts_bad_values_and_duplicates(
     assert host_cpu.samples(rows, 100, 125) == {(100, 'prefill', 'cpu'): 0, (125, 'prefill', 'cpu'): 8, (100, 'prefill', 'cpu_iowait'): 12}
 
 
-def test_schema_isolated_from_old_a3_and_all_dcu_cpu():
-    point = {'ts': 100, 'nodes': {'prefill': {'cpu': 0}, 'decode': {'cpu': None}}}
-    a3 = encode([point], 'a3-vllm')
-    dcu = encode([point], 'dcu-pd')
-    assert 'schema="host-cpu-v1",node="a3-1"} 0 100000' in a3
-    assert 'monitoring_chart_valid{path="nodes.prefill.cpu",environment="a3-vllm",schema="host-cpu-v1",node="a3-1"} 1' in a3
-    assert 'monitoring_chart_valid{path="nodes.decode.cpu",environment="a3-vllm",schema="host-cpu-v1",node="a3-2"} 0' in a3
-    assert 'host-cpu-v1' not in dcu and 'schema="v1"' in dcu
-    for kind in ('value', 'valid', 'gaps'):
-        expression = history_expression('a3-vllm', kind, 60)
-        assert 'schema="host-cpu-v1"' in expression
-        assert ',path!~' + json.dumps(host_cpu.PATH_REGEX) in expression
-        assert 'host-cpu-v1' not in history_expression('dcu-pd', kind, 60)
 
 
 @pytest.mark.asyncio
@@ -74,70 +60,3 @@ async def test_cpu_failure_is_explicit_and_preserves_other_metrics(failure):
     host_cpu.attach(snapshots, points, values, status)
     assert points[0]['nodes']['prefill'] == {'requests': 42, 'cpu': None, 'cpu_iowait': None}
     assert snapshots[0]['nodes']['prefill']['host_cpu']['query_status'] == 'unavailable'
-
-
-@pytest.mark.asyncio
-async def test_cycle_leaves_cpu_to_native_writer_and_retains_watermark_on_other_write_failure(tmp_path, monkeypatch):
-    import monitoring.api as api
-    monkeypatch.setattr(api, 'STATE', tmp_path)
-    monkeypatch.setattr(api.time, 'time', lambda: 113)
-    service = Service('a3-vllm')
-    await service.client.aclose()
-    service.watermark = 100
-    posts, calls = [], []
-    failing = False
-    async def raw(start, end):
-        return {}
-    async def collect(client, vm, start, end):
-        calls.append((start, end))
-        return {(105, 'prefill', 'cpu'): 0, (110, 'prefill', 'cpu'): 40, (110, 'prefill', 'cpu_iowait'): 10}, 'ok'
-    def handler(request):
-        if request.method == 'POST':
-            posts.append(request.content.decode())
-            return httpx.Response(503 if failing else 204)
-        return httpx.Response(200, json={'data': {'result': []}})
-    service.raw = raw
-    monkeypatch.setattr(host_cpu, 'collect', collect)
-    from monitoring.query_client import QueryClient
-    service.client = QueryClient(transport=httpx.MockTransport(handler))
-    try:
-        await service.cycle()
-        assert calls == [(110, 110)] and service.watermark == 110
-        assert service.latest_point['nodes']['prefill']['cpu'] == 40
-        assert service.latest['nodes']['prefill']['host_cpu']['percent'] == 40
-        assert service.latest['nodes']['prefill']['host_cpu']['iowait_percent'] == 10
-        assert service.latest['nodes']['decode']['host_cpu']['status'] == 'unavailable'
-        assert 'schema="host-cpu-v1"' not in posts[0]
-        assert service.watermark_file.read_text() == '{"ts": 110}'
-        failing = True
-        monkeypatch.setattr(api.time, 'time', lambda: 118)
-        with pytest.raises(httpx.HTTPStatusError):
-            await service.cycle()
-        assert service.watermark == 110
-        assert service.watermark_file.read_text() == '{"ts": 110}'
-    finally:
-        await service.client.aclose()
-
-
-@pytest.mark.asyncio
-async def test_history_reads_aggregates_without_raw_cpu_query():
-    service = Service('a3-vllm')
-    calls = []
-    async def query(expression, *args):
-        calls.append(expression)
-        if 'monitoring_chart_' not in expression:
-            return []
-        value = '42' if 'chart_value' in expression else '1'
-        return [{'metric': {'path': 'nodes.prefill.' + field}, 'values': [[100, value]]} for field in host_cpu.FIELDS]
-    service.query = query
-    try:
-        result = await service.history(1, 100, 105)
-        assert result['points'][0]['nodes']['prefill']['cpu'] == 42
-        assert result['points'][0]['nodes']['prefill']['cpu_iowait'] == 42
-        assert 'cpu' not in result['points'][0]['nodes']['prefill']['gap_before']
-        assert 'cpu_iowait' not in result['points'][0]['nodes']['prefill']['gap_before']
-        assert all('node_cpu_seconds_total' not in q for q in calls)
-        assert await service.history(1, 100, 105) is result
-        assert len(calls) == 7
-    finally:
-        await service.client.aclose()

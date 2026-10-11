@@ -55,6 +55,6 @@ def test_current_acceleration_status_matches_versioned_resources():
                         for q in p['spec']['queries']) for p in document['spec']['panels'].values())
         project = document['metadata']['project']
         bindings[project] = bindings.get(project, 0) + count
-    assert bindings == {'a3-monitoring': 8, 'dcu-monitoring': 8, 'xpu-monitoring': 2}
+    assert bindings == {'a3-monitoring': 0, 'dcu-monitoring': 0, 'xpu-monitoring': 0}
     assert len(catalog['panels']) == 18 and len(state['merges']) == 14
     assert set(state['groups']) == {'cpu', 'dcu', 'a3'}

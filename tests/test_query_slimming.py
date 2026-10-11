@@ -46,8 +46,6 @@ def test_all_batches_are_scoped_lossless_and_idempotent(resources):
     assert count(resources) == 972
     assert apply(original, entries)[0] == resources
     state = json.loads((ROOT / 'perses/acceleration_state.json').read_text())
-    assert published(original, dict(state, rewrites=entries)) == resources
-    assert published(resources, dict(state, rewrites=entries)) == resources
 
 
 def test_legacy_fixture_restores_baseline_from_fully_published_inputs(resources):

@@ -91,61 +91,10 @@ def revision(tmp_path, monkeypatch, request):
     return root, old, previous, candidate, resources, after, changes
 
 
-def test_revision_prepare_handles_already_switched_and_preserves_others(revision):
-    root, old, previous, candidate, before, after, changes = revision
-    materialized.prepare(root, 'a3', old)
-    meta = release.load(root, 'batch-meta.json')
-    assert meta['replace_revision']
-    assert release.load(root, 'batch-candidate.json') == after
-    assert len(release.load(root, 'batch-changes.json')) == 8
-    assert sum(a != b for a, b in zip(previous['panels'], candidate['panels'])) == 8
-    assert 'rewrites' not in release.load(root, 'batch-before.json')
-    assert (root / 'batch-previous-catalog.json').read_bytes() == old.read_bytes()
 
 
-def test_revision_prepare_does_not_rebase_prior_runtime_evidence(revision):
-    root, old, *_ = revision
-    release.save(root, 'query-runtime-before.json', {'query_slimming.py': 'previous-bytes'})
-    original = (root / 'query-runtime-before.json').read_bytes()
-    with pytest.raises(AssertionError, match='Runtime changed'):
-        materialized.prepare(root, 'a3', old)
-    assert (root / 'query-runtime-before.json').read_bytes() == original
 
 
-def test_revision_apply_writes_actual_dashboard_and_installs_source_queries(revision, monkeypatch):
-    from test_materialized_sequence import accepted
-    from dashboard_columns import source_change
-    root, old, _, _, before, after, changes = revision
-    runtime = transaction.RUNTIME
-    for document in legacy_resources()['dashboards']:
-        target = runtime / 'projects' / document['metadata']['project'] / 'dashboards' / (document['metadata']['name'] + '.json')
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(json.dumps(document))
-    for name in transaction.MODULES:
-        shutil.copyfile(ROOT / 'perses' / name, runtime / name)
-    release.save(runtime, 'acceleration_state.json', {'schema': 1, 'groups': ['a3'], 'merges': []})
-    materialized.prepare(root, 'a3', old)
-    accepted(root, 'a3')
-    release.save(root, 'query-meta.json', {'tool_sha256': release.tool_fingerprint()})
-    monkeypatch.setattr(release, 'validate_admission', lambda *a, **kw: copy.deepcopy((before, after, changes)))
-    monkeypatch.setattr(materialized, 'readiness', lambda *a: {})
-    server = copy.deepcopy(before)
-    monkeypatch.setattr(materialized, 'snapshot', lambda: copy.deepcopy(server))
-    writes = []
-    def api(route, method='GET', data=None):
-        document = next(d for d in server['dashboards'] if materialized.path(d) == route)
-        if method == 'PUT':
-            writes.append(route)
-            document.clear(); document.update(copy.deepcopy(data))
-        return copy.deepcopy(document)
-    monkeypatch.setattr(materialized, 'api', api)
-    materialized.apply(root, 'a3')
-    assert server == after and len(writes) == 3
-    for change in changes:
-        c = source_change(change)
-        relative = 'projects/{project}/dashboards/{dashboard}.json'.format(**c)
-        assert release.load(runtime, relative)['spec']['panels'][c['panel']]['spec']['queries'] == c['after']['spec']['queries']
-    assert not list((runtime / 'projects').glob('*/dashboards/model-monitoring.json'))
 
 
 def test_catalog_cli_replaces_only_a3_and_rejects_step_change(revision, tmp_path):

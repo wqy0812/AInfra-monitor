@@ -78,7 +78,7 @@
         "spec": {
           "display": {
             "name": "CPU 使用率（%）",
-            "description": "指标含义\n主机 CPU 忙碌时间占总 CPU 时间的比例。当前查询扣除 idle 和 iowait，再按主机汇总；100% 表示接近全部 CPU 时间处于其余状态。iowait 被扣除，所以该图不能单独排除存储等待。\n\nA3 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。\n\nCPU 数据来源\nmonitoring-api 每 5 秒计算新增时间点并保存主机聚合值；保持最近 1 分钟的 CPU 忙碌比例口径，扣除 idle 和 iowait。缺样、重置、重启、过期或计算失败时留空。聚合历史从发布后开始积累。"
+            "description": "指标含义\n主机 CPU 忙碌时间占总 CPU 时间的比例。当前查询扣除 idle 和 iowait，再按主机汇总；100% 表示接近全部 CPU 时间处于其余状态。iowait 被扣除，所以该图不能单独排除存储等待。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -108,8 +108,12 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\"$node\",node=~\"$role\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\"$node\",node=~\"$role\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\"$node\",node=~\"$role\"}) >= 0) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu\",node=~\"$node\",node=~\"$role\"}) < 15))",
-                    "seriesNameFormat": "{{node}}"
+                    "query": "last_over_time(monitoring_native_host_cpu_busy_percent{environment=\"a3-vllm\",node=~\"$node\",node=~\"$role\"}[5s])",
+                    "seriesNameFormat": "{{node}}",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -337,7 +341,7 @@
         "spec": {
           "display": {
             "name": "CPU I/O 等待（%）",
-            "description": "指标含义\nCPU 处于 iowait 状态的平均比例；结合磁盘延迟判断存储等待。\n\nA3 环境；实例、节点或 rank 分线展示，复制数据不直接相加。\n\nCPU 数据来源\nmonitoring-api 每 5 秒计算新增时间点并保存主机聚合值；保持各逻辑 CPU 最近 1 分钟 iowait 增长率的平均比例；与主机忙碌率分别计算。缺样、重置、重启、过期或计算失败时留空。聚合历史从发布后开始积累。"
+            "description": "指标含义\nCPU 处于 iowait 状态的平均比例；结合磁盘延迟判断存储等待。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -367,8 +371,12 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu_iowait\",node=~\"$node\",node=~\"$role\"} and (monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu_iowait\",node=~\"$node\",node=~\"$role\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu_iowait\",node=~\"$node\",node=~\"$role\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu_iowait\",node=~\"$node\",node=~\"$role\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu_iowait\",node=~\"$node\",node=~\"$role\"}) >= 0) and (time() - timestamp(monitoring_chart_value{environment=\"a3-vllm\",schema=\"host-cpu-v1\",path=~\"nodes\\\\.(prefill|decode)\\\\.cpu_iowait\",node=~\"$node\",node=~\"$role\"}) < 15))",
-                    "seriesNameFormat": "{{node}}"
+                    "query": "last_over_time(monitoring_native_host_cpu_iowait_percent{environment=\"a3-vllm\",node=~\"$node\",node=~\"$role\"}[5s])",
+                    "seriesNameFormat": "{{node}}",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }

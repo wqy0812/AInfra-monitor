@@ -36,17 +36,4 @@ class XpuTest(unittest.TestCase):
    if row['name']=='sglang:realtime_tokens_total':row['value']=0
   self.assertIsNone(replay(groups,100,105)[1][-1]['nodes']['decode']['decode_tokens'])
   self.assertIsNone(replay(groups,125,130)[1][-1]['nodes']['decode']['requests'])
- def test_api_environment_and_no_false_valid(self):
-  from monitoring.api import encode,history_expression,validate_environment
-  from monitoring.request_profile import selector
-  from monitoring.gateway_live import expressions
-  self.assertEqual(validate_environment('xpu-pd'),'xpu-pd')
-  self.assertIn('environment="xpu-pd"',selector('requests_total',environment='xpu-pd'))
-  self.assertTrue(expressions('xpu-pd',15))
-  point=replay(self.fixtures(),100,105)[1][-1]
-  lines=encode([point],'xpu-pd').splitlines()
-  for line in lines:
-   if line.startswith('monitoring_chart_valid') and any(x in line for x in ('.cpu"','.hicache.','.cache_60s.','path="mooncake.')):
-    self.assertEqual(line.split('} ')[1].split()[0],'0')
-  self.assertNotIn('dcu-pd',history_expression('xpu-pd','value',15))
 if __name__=='__main__':unittest.main()

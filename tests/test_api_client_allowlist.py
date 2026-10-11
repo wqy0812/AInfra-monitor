@@ -17,7 +17,8 @@ def test_client_allowlist(allowed, client, expected):
     tree = ast.parse((Path(__file__).parents[1] / 'monitoring/api.py').read_text())
     function = next(n for n in tree.body if isinstance(n, ast.AsyncFunctionDef) and n.name == 'restrict')
     function.decorator_list = []
-    namespace = {'ALLOWED': allowed}
+    from starlette.responses import JSONResponse
+    namespace = {'ALLOWED': allowed, 'JSONResponse':JSONResponse}
     exec(compile(ast.Module(body=[function], type_ignores=[]), 'api.py', 'exec'), namespace)
 
     async def next_handler(request):

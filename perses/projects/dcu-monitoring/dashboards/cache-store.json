@@ -298,7 +298,7 @@
         "spec": {
           "display": {
             "name": "HiCache 各 rank 占用（%）",
-            "description": "指标含义\n使用现有有效性标记的派生值；逐 rank/segment 展示，不累加复制容量。\n\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+            "description": "指标含义\n使用现有有效性标记的派生值；逐 rank/segment 展示，不累加复制容量。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -328,8 +328,12 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.resources.hicache_rank_ratio..*\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.resources.hicache_rank_ratio..*\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.resources.hicache_rank_ratio..*\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.resources.hicache_rank_ratio..*\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.resources.hicache_rank_ratio..*\"}) < 15)) * 1",
-                    "seriesNameFormat": "{{path}}"
+                    "query": "(last_over_time(monitoring_native_hicache_usage_ratio{environment=\"dcu-pd\",role=~\"$role\"}[5s])) * 100",
+                    "seriesNameFormat": "{{role}} · DP{{dp_rank}} TP{{tp_rank}} PP{{pp_rank}}",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -342,7 +346,7 @@
         "spec": {
           "display": {
             "name": "Mooncake 各 segment 容量（GiB）",
-            "description": "指标含义\n使用现有有效性标记的派生值；逐 rank/segment 展示，不累加复制容量。\n\nDCU 环境；实例、节点或 rank 分线展示，复制数据不直接相加。"
+            "description": "指标含义\n使用现有有效性标记的派生值；逐 rank/segment 展示，不累加复制容量。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -372,8 +376,12 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segments..*\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segments..*\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segments..*\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segments..*\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.resources.segments..*\"}) < 15)) * 1",
-                    "seriesNameFormat": "{{path}}"
+                    "query": "(last_over_time(monitoring_native_store_segment_bytes{environment=\"dcu-pd\"}[5s])) * 9.313225746154785e-10",
+                    "seriesNameFormat": "{{instance}} · {{segment}} · {{field}}",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -469,7 +477,7 @@
         "spec": {
           "display": {
             "name": "模型缓存命中率（%）",
-            "description": "指标含义\n最近约 60 秒内模型前缀缓存命中 Token 占查询输入 Token 的比例。按模型节点/角色区分；属于 Token 加权比例，不是命中请求数占比。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+            "description": "指标含义\n固定 1 分钟内模型前缀缓存命中 Token 占查询输入 Token 的比例。按模型节点/角色区分；属于 Token 加权比例，不是命中请求数占比。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -499,8 +507,12 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.ratio\"}) < 15)) * 100",
-                    "seriesNameFormat": "{{path}}"
+                    "query": "((last_over_time(monitoring_native_prefill_cache_hit_ratio{environment=\"dcu-pd\",role=~\"$role\"}[5s])) * 100) or ((last_over_time(monitoring_native_backend_cache_hit_ratio{environment=\"dcu-pd\",role=~\"$role\"}[5s])) * 100)",
+                    "seriesNameFormat": "{{role}}",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -513,7 +525,7 @@
         "spec": {
           "display": {
             "name": "缓存命中分层（%）",
-            "description": "指标含义\n最近约 60 秒内设备、主机内存、存储层的缓存命中 Token 分层比例。分母沿用源监控输入 Token 口径；分层语义以源指标为准，不能直接据此推断物理 SSD 读写或全局缓存收益。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+            "description": "指标含义\n固定 1 分钟内设备、主机内存、存储层的缓存命中 Token 分层比例。分母沿用源监控输入 Token 口径；分层语义以源指标为准，不能直接据此推断物理 SSD 读写或全局缓存收益。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -543,8 +555,12 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.cache_60s.(device|host|storage)\"}) < 15)) * 100",
-                    "seriesNameFormat": "{{path}}"
+                    "query": "(last_over_time(monitoring_native_prefill_cache_tier_ratio{environment=\"dcu-pd\",role=~\"$role\"}[5s])) * 100",
+                    "seriesNameFormat": "{{role}} · {{tier}}",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -557,7 +573,7 @@
         "spec": {
           "display": {
             "name": "HiCache Token 容量（Token）",
-            "description": "指标含义\n代表 rank 的 HiCache 已用及总 Token 容量。单位为可容纳的 Token 数量，不是字节或 Token/秒；不要把复制 rank 的容量相加作为实际可用容量。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+            "description": "指标含义\n代表 rank 的 HiCache 已用及总 Token 容量。单位为可容纳的 Token 数量，不是字节或 Token/秒；不要把复制 rank 的容量相加作为实际可用容量。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -587,8 +603,12 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.(used|total)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.(used|total)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.(used|total)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.(used|total)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"nodes.$role.hicache.representative.(used|total)\"}) < 15)) * 1",
-                    "seriesNameFormat": "{{path}}"
+                    "query": "last_over_time(monitoring_native_hicache_representative_tokens{environment=\"dcu-pd\",role=~\"$role\"}[5s])",
+                    "seriesNameFormat": "{{role}} · {{field}}",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -601,7 +621,7 @@
         "spec": {
           "display": {
             "name": "Mooncake 内存配额（GiB）",
-            "description": "指标含义\nMooncake Store 内存后端已使用量及配置总配额，字节除以 2^30。表示 Store 管理的内存容量，不等于整机物理内存已用量。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+            "description": "指标含义\nMooncake Store 内存后端已使用量及配置总配额，字节除以 2^30。表示 Store 管理的内存容量，不等于整机物理内存已用量。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -631,8 +651,12 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.capacity.(used|total)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.capacity.(used|total)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.capacity.(used|total)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.capacity.(used|total)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.capacity.(used|total)\"}) < 15)) * 9.313225746154785e-10",
-                    "seriesNameFormat": "{{path}}"
+                    "query": "(label_set(((last_over_time(monitoring_native_store_used_bytes{environment=\"dcu-pd\",tier=\"memory\"}[5s])) * 9.313225746154785e-10), \"field\", \"已用\")) or (label_set(((last_over_time(monitoring_native_store_total_bytes{environment=\"dcu-pd\",tier=\"memory\"}[5s])) * 9.313225746154785e-10), \"field\", \"总量\"))",
+                    "seriesNameFormat": "{{instance}} · {{field}}",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -645,7 +669,7 @@
         "spec": {
           "display": {
             "name": "Mooncake SSD 配额（GiB）",
-            "description": "指标含义\nMooncake Store SSD 后端已使用量及配置总配额，字节除以 2^30。表示后端容量配额；单靠该曲线无法证明已经发生物理 SSD I/O 或配置已经通过读写验收。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+            "description": "指标含义\nMooncake Store SSD 后端已使用量及配置总配额，字节除以 2^30。表示后端容量配额；单靠该曲线无法证明已经发生物理 SSD I/O 或配置已经通过读写验收。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -675,8 +699,12 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.ssd_capacity.(used|total)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.ssd_capacity.(used|total)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.ssd_capacity.(used|total)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.ssd_capacity.(used|total)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.ssd_capacity.(used|total)\"}) < 15)) * 9.313225746154785e-10",
-                    "seriesNameFormat": "{{path}}"
+                    "query": "(label_set(((last_over_time(monitoring_native_store_used_bytes{environment=\"dcu-pd\",tier=\"ssd\"}[5s])) * 9.313225746154785e-10), \"field\", \"已用\")) or (label_set(((last_over_time(monitoring_native_store_total_bytes{environment=\"dcu-pd\",tier=\"ssd\"}[5s])) * 9.313225746154785e-10), \"field\", \"总量\"))",
+                    "seriesNameFormat": "{{instance}} · {{field}}",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -689,7 +717,7 @@
         "spec": {
           "display": {
             "name": "Store 查询成功比例（%）",
-            "description": "指标含义\n最近约 60 秒 Store 查询成功计数增量 ÷ 查询计数增量 × 100%。统计的是 Store 查询结果，不等于模型 Token 命中率，也不证明后续数据读取成功。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+            "description": "指标含义\n固定 1 分钟 Store 查询成功计数增量 ÷ 查询计数增量 × 100%。统计的是 Store 查询结果，不等于模型 Token 命中率，也不证明后续数据读取成功。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -719,8 +747,12 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.query_60s.ratio\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.query_60s.ratio\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.query_60s.ratio\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.query_60s.ratio\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.query_60s.ratio\"}) < 15)) * 100",
-                    "seriesNameFormat": "{{path}}"
+                    "query": "(last_over_time(monitoring_native_store_query_hit_ratio{environment=\"dcu-pd\",kind=\"valid\"}[5s])) * 100",
+                    "seriesNameFormat": "{{instance}} · 有效查询",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }
@@ -733,7 +765,7 @@
         "spec": {
           "display": {
             "name": "Store 分层查询命中率（%）",
-            "description": "指标含义\n最近约 60 秒 Store memory/ssd 分层查询命中比例，分母使用对应查询计数。它描述 Store 查询层的结果，不代表模型 Token 命中，也不等于物理 SSD I/O 比例。\n\nDCU 环境。图例区分节点、角色、实例、设备或统计分位数；筛选器仅改变所选序列，不自动生成集群去重汇总。"
+            "description": "指标含义\n固定 1 分钟 Store memory/ssd 分层查询命中比例，分母使用对应查询计数。它描述 Store 查询层的结果，不代表模型 Token 命中，也不等于物理 SSD I/O 比例。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -763,8 +795,12 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.tier_query_60s.(memory|ssd)\"} and (monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.tier_query_60s.(memory|ssd)\"} == 1) and (min_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.tier_query_60s.(memory|ssd)\"}[$__interval]) == 1) and (count_over_time(monitoring_chart_valid{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.tier_query_60s.(memory|ssd)\"}[$__interval]) >= ($__interval / 5)) and (time() - timestamp(monitoring_chart_value{environment=\"dcu-pd\",schema=\"v1\",path=~\"mooncake.tier_query_60s.(memory|ssd)\"}) < 15)) * 100",
-                    "seriesNameFormat": "{{path}}"
+                    "query": "(last_over_time(monitoring_native_store_query_hit_ratio{environment=\"dcu-pd\",kind=~\"memory|ssd\"}[5s])) * 100",
+                    "seriesNameFormat": "{{instance}} · {{kind}}",
+                    "datasource": {
+                      "kind": "PrometheusDatasource",
+                      "name": "victoriametrics"
+                    }
                   }
                 }
               }

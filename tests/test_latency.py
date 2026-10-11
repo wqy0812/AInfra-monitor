@@ -6,8 +6,6 @@ from pathlib import Path
 
 import pytest
 from monitoring.latency import LATENCIES, LatencyWindow, quantile_buckets, snapshot
-from monitoring.latency_rebuild import batch, replay_latency
-from monitoring.api import encode, history_expression
 from monitoring.replay import decode_export, replay
 
 
@@ -103,59 +101,14 @@ def exported(conflict=False, down=False, gap=False):
     return output
 
 
-@pytest.mark.parametrize('failure', ['conflict', 'down', 'gap'])
-def test_export_shuffle_duplicates_failures_and_live_parity(failure):
-    raw = exported(**{failure: True})
-    baseline = None
-    for seed in range(3):
-        random.Random(seed).shuffle(raw)
-        groups = decode_export(raw)
-        points = replay_latency(groups, 0, 135)
-        if baseline is None: baseline = points
-        else: assert points == baseline
-        at65 = next(p for p in points if p['ts'] == 65)['nodes']['decode']
-        assert at65['percentiles']['e2e']['samples'] is None
-        assert points[-1]['nodes']['decode']['percentiles']['e2e']['samples'] > 0
-        live = replay(groups, 0, 135)[1]
-        for a, b in zip(points, live):
-            assert a['nodes']['decode'].get('percentiles', {}) == b['nodes']['decode']['percentiles']
 
 
-def test_schema_isolation_and_no_legacy_fallback():
-    p = {'ts': 60, 'nodes': {'decode': LatencyWindow().add(rows(), 60)}}
-    encoded = encode([p], latency_only=True)
-    assert 'schema="v1"' not in encoded and '.requests' not in encoded
-    assert 'schema="request-metrics-v2"' in encode([p])
-    assert 'schema="request-metrics-v2"' in encode([p], 'a3-vllm')
-    for kind in ('value', 'valid', 'gaps'):
-        expr = history_expression('dcu-pd', kind, 5)
-        assert 'path!~' in expr and 'schema="request-metrics-v2"' in expr
 
 
-def test_rebuild_retry_checkpoint_and_chunk_boundary():
-    raw = exported()
-    class Fake:
-        fail = True
-        outputs = []
-        def raw(self, start, end):
-            return decode_export(r for r in raw if start * 1000 <= r['timestamps'][0] <= end * 1000)
-        def write(self, points):
-            self.outputs.append(encode(points, latency_only=True))
-            if self.fail: raise OSError('lost acknowledgement')
-    vm = Fake()
-    state = {'watermark': -5}
-    with pytest.raises(OSError): batch(vm, state, 65)
-    assert state == {'watermark': -5}
-    vm.fail = False
-    first = batch(vm, state, 65)
-    assert vm.outputs[0] == vm.outputs[1]
-    second = batch(vm, first, 135)
-    assert second['points'] == 28 and second['watermark'] == 135
-    assert vm.outputs[1] + vm.outputs[2] == encode(replay_latency(vm.raw(-85, 135), -85, 135)[17:], latency_only=True)
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('elapsed,failure,expected', [(3,False,2),(7,False,.1),(7,True,5)])
+@pytest.mark.parametrize('elapsed,failure,expected', [(3,False,2),(7,False,.1),(7,True,.1)])
 async def test_slow_cycle_does_not_add_another_five_seconds(monkeypatch,elapsed,failure,expected):
     import asyncio
     import monitoring.api as api

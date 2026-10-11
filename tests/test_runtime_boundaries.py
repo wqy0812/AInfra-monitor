@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, Mock
 import httpx
 import pytest
 
-from monitoring import compat, exporter, latency_rebuild
+from monitoring import compat, exporter
 from monitoring.query_client import QueryClient
 
 
@@ -127,67 +127,3 @@ async def test_query_client_restores_nested_scope_and_closes_on_error():
     with pytest.raises(RuntimeError, match='closed'):
         async with client.scope():
             pytest.fail('closed facade must reject new pools')
-
-
-def test_latency_vm_requests_disable_proxy_and_keep_import_payload(monkeypatch):
-    opener = Mock()
-    response = Mock()
-    response.__enter__ = Mock(return_value=response)
-    response.__exit__ = Mock(return_value=False)
-    response.read.return_value = b'ok'
-    opener.open.return_value = response
-    monkeypatch.setattr(latency_rebuild.urllib.request, 'build_opener', lambda *a: opener)
-    vm = latency_rebuild.VM('http://fixture/')
-    assert vm.request('/query', {'query': 'a+b'}) == 'ok'
-    request = opener.open.call_args.args[0]
-    assert request.full_url == 'http://fixture/query?query=a%2Bb'
-    vm.write([{'ts': 100, 'nodes': {}}])
-    request = opener.open.call_args.args[0]
-    assert request.full_url == 'http://fixture/api/v1/import/prometheus'
-    assert request.data is not None and request.get_header('Content-type') == 'text/plain'
-    opener.open.assert_called_with(request, timeout=20)
-
-
-@pytest.mark.parametrize('rows,expected', [([], None), ([{'value': [0, '107']}], 105),
-                                        ([{'value': [0, '0']}], 100)])
-def test_latency_earliest_is_aligned_and_retention_bounded(rows, expected):
-    end = 30 * 86400 + 100
-    vm = object.__new__(latency_rebuild.VM)
-    vm.request = lambda *a: json.dumps({'data': {'result': rows}})
-    if expected is None:
-        with pytest.raises(ValueError, match='No retained'):
-            vm.earliest(end)
-    else:
-        assert vm.earliest(end) == expected
-
-
-def test_latency_checkpoint_only_advances_after_acknowledged_import(tmp_path):
-    state = {'watermark': 100, 'quality': {}, 'points': 0, 'batches': 0}
-    vm = SimpleNamespace(raw=Mock(return_value={}), write=Mock(side_effect=OSError('lost ack')))
-    with pytest.raises(OSError):
-        latency_rebuild.batch(vm, state, 110)
-    assert state == {'watermark': 100, 'quality': {}, 'points': 0, 'batches': 0}
-    vm.write.side_effect = None
-    result = latency_rebuild.batch(vm, state, 110)
-    assert result['watermark'] == 110 and result['points'] == 2 and result['batches'] == 1
-    assert set(result['quality'].values()) == {2}
-    latency_rebuild.save(tmp_path / 'checkpoints/state.json', result)
-    assert json.loads((tmp_path / 'checkpoints/state.json').read_text()) == result
-    assert not list(tmp_path.rglob('*.tmp'))
-
-
-def test_latency_main_resumes_completed_checkpoint_and_rejects_identity_changes(tmp_path, monkeypatch, capsys):
-    path = tmp_path / 'state.json'
-    monkeypatch.setattr(latency_rebuild, 'VM', lambda _: SimpleNamespace(raw=lambda *a: {}, write=lambda p: None))
-    monkeypatch.setattr('sys.argv', ['rebuild', '--state', str(path), '--vm', 'http://fixture', '--start', '100', '--end', '110'])
-    latency_rebuild.main()
-    state = json.loads(path.read_text())
-    assert state['watermark'] == 110 and state['points'] == 3
-    assert json.loads(capsys.readouterr().out)['complete']
-    latency_rebuild.main()
-    assert json.loads(path.read_text()) == state
-    capsys.readouterr()
-    state['fingerprint'] = 'different source'
-    path.write_text(json.dumps(state))
-    with pytest.raises(AssertionError, match='Code changed'):
-        latency_rebuild.main()

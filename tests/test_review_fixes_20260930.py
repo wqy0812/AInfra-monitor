@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from monitoring import api, gateway_live, host_cpu, xpu_cache
+from monitoring import api, gateway_live
 from monitoring.access import client_allowlist
 from monitoring.query_client import QueryClient
 
@@ -104,25 +104,22 @@ async def test_optional_gateway_and_cache_deadlines_overlap_and_preserve_backend
     monkeypatch.setattr(api, 'HISTORY_TIMEOUT', .3)
     service = api.Service('xpu-pd')
     entered = set()
-    originals = gateway_live.history, xpu_cache.history
-    async def gateway(*args): return await originals[0](*args, timeout=.05)
-    async def cache(*args): return await originals[1](*args, timeout=.05)
+    original = gateway_live.history
+    async def gateway(*args): return await original(*args, timeout=.05)
     monkeypatch.setattr(gateway_live, 'history', gateway)
-    monkeypatch.setattr(xpu_cache, 'history', cache)
     async def query(expression, start, end, step):
-        if 'monitoring_chart_' in expression:
-            return [{'metric': {'path': 'nodes.decode.decode_tokens'},
-                     'values': [[start, '42' if 'chart_value' in expression else '1']]}]
-        entered.add('cache' if 'sglang:cache_hit_rate' in expression else 'gateway')
-        # Serial scheduling would reach this deadline with just one group entered.
+        if 'monitoring_native_' in expression:
+            return [{'metric': {'__name__':'monitoring_native_backend_decode_tokens_per_second',
+                     'environment':'xpu-pd','node':'xpu-1','role':'decode'}, 'values': [[start, '42']]}]
+        entered.add('gateway')
         await asyncio.Event().wait()
     service.query = query
     request = asyncio.create_task(service.history(1, 100, 105))
     try:
         for _ in range(30):
             await asyncio.sleep(0)
-            if entered == {'gateway', 'cache'}: break
-        assert entered == {'gateway', 'cache'}
+            if entered == {'gateway'}: break
+        assert entered == {'gateway'}
         result = await request
         assert result['points'][0]['nodes']['decode']['decode_tokens'] == 42
         assert set(result['gateway_status'].values()) == {'unavailable'}
@@ -131,53 +128,3 @@ async def test_optional_gateway_and_cache_deadlines_overlap_and_preserve_backend
     finally:
         await service.close()
         await asyncio.gather(request, return_exceptions=True)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize('environment', api.ENVIRONMENTS)
-@pytest.mark.parametrize('failure', [None, 'export', 'import'])
-async def test_old_watermark_recovers_with_bounded_queries_and_durable_gap(tmp_path, monkeypatch, environment, failure):
-    end = 4_000_000
-    monkeypatch.setattr(api, 'STATE', tmp_path)
-    monkeypatch.setattr(api, 'time', SimpleNamespace(time=lambda: end+3))
-    service = api.Service(environment)
-    original = end-31*86400
-    service.watermark = original
-    service.watermark_file.write_text(json.dumps({'ts': original}))
-    calls = []
-    async def raw(start, until):
-        calls.append((start, until))
-        if failure == 'export': raise httpx.ConnectError('VM offline')
-        return {}
-    def transport(request):
-        if request.method == 'POST' and failure == 'import': return httpx.Response(503)
-        return httpx.Response(200, json={'data': {'result': []}})
-    async def collect(client, vm, start, until):
-        assert start == max(service.watermark,end-api.RETENTION_SECONDS-5)+5
-        assert until-start == 295
-        return {}, 'ok'
-    service.raw = raw
-    service.client = QueryClient(transport=httpx.MockTransport(transport))
-    monkeypatch.setattr(host_cpu, 'collect', collect)
-    try:
-        if failure:
-            with pytest.raises(httpx.HTTPError): await service.cycle()
-            assert service.watermark == original
-            assert json.loads(service.watermark_file.read_text()) == {'ts': original}
-            assert service.retention_gap is None
-        else:
-            await service.cycle()
-            floor = end-api.RETENTION_SECONDS
-            assert service.watermark == floor+295
-            saved = json.loads(service.watermark_file.read_text())
-            assert saved['retention_gap'] == {'start': original+5, 'end': floor-5,
-                'detected_at': end+3, 'reason': 'outside_raw_retention'}
-            resumed = api.Service(environment)
-            assert resumed.watermark == service.watermark and resumed.retention_gap == saved['retention_gap']
-            await resumed.close()
-            await service.cycle()
-            assert service.watermark == floor+595
-            assert service.retention_gap == saved['retention_gap']
-        assert all(start <= until and until-start <= 380 for start, until in calls)
-    finally:
-        await service.close()

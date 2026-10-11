@@ -58,7 +58,7 @@ async def test_history_translates_upstream_errors_and_preserves_arguments(monkey
 @pytest.mark.asyncio
 @pytest.mark.parametrize('catalog', [None, 'invalid', 'valid'])
 async def test_lifespan_initializes_all_sources_and_closes_on_exit(tmp_path, monkeypatch, catalog):
-    services, accelerators = [], []
+    services = []
     class Service:
         def __init__(self, environment):
             self.environment, self.error, self.watermark = environment, None, 100
@@ -66,14 +66,7 @@ async def test_lifespan_initializes_all_sources_and_closes_on_exit(tmp_path, mon
             services.append(self)
         async def run(self):
             await asyncio.Event().wait()
-    class Accelerator:
-        def __init__(self, vm, state, data):
-            self.close = AsyncMock()
-            accelerators.append(self)
-        async def run(self):
-            await asyncio.Event().wait()
     monkeypatch.setattr(api, 'Service', Service)
-    monkeypatch.setattr(api, 'RecordingService', Accelerator)
     monkeypatch.setattr(api.time, 'time', lambda: 100)
     if catalog:
         path = tmp_path / 'catalog.json'
@@ -85,14 +78,9 @@ async def test_lifespan_initializes_all_sources_and_closes_on_exit(tmp_path, mon
     async with api.lifespan(app):
         assert set(app.state.services) == set(api.ENVIRONMENTS)
         assert app.state.service is app.state.services['dcu-pd']
-        if catalog == 'valid':
-            assert app.state.perses_acceleration is accelerators[0]
-        elif catalog == 'invalid':
-            assert app.state.perses_acceleration is None and 'JSONDecodeError' in app.state.perses_acceleration_error
+        assert not hasattr(app.state, 'perses_acceleration')
     for service in services:
         service.close.assert_awaited_once()
-    if accelerators:
-        accelerators[0].close.assert_awaited_once()
 
 
 @pytest.mark.asyncio
