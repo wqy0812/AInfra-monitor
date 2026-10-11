@@ -5,10 +5,12 @@ code-eval API boundary; Perses builds selectors from these same field meanings.
 """
 import math
 from urllib.parse import quote
-from .native_rules import PREFIX
+from .native_rules import PREFIX, EVAL_DELAY_SECONDS, READ_DELAY_SECONDS, MAX_RECORD_AGE_SECONDS
 
 NODES={'dcu-pd':{'prefill':'dcu1','decode':'dcu2'},'a3-vllm':{'prefill':'a3-1','decode':'a3-2'},'xpu-pd':{'prefill':'xpu-2','decode':'xpu-1'}}
 POLICY={'schema':'native-1m-v1','window_seconds':60,'record_interval_seconds':5,
+        'evaluation_delay_seconds':EVAL_DELAY_SECONDS,'snapshot_delay_seconds':READ_DELAY_SECONDS,
+        'snapshot_max_age_seconds':MAX_RECORD_AGE_SECONDS,
         'partial_aggregates':True,'counter_resets':'native','history_fallback':False,
         'description':'固定 1 分钟窗口；按可用来源汇总，覆盖和质量单独展示；历史缺口不回源。'}
 

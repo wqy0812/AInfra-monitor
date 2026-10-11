@@ -22,7 +22,7 @@ def validate_health(result):
     assert result['metric_policy']['schema']=='native-1m-v1'
     for environment in ('dcu-pd','a3-vllm','xpu-pd'):
         item=result['environments'][environment]
-        assert item['status']=='ok' and not item['error'] and 0<=time.time()-item['processed_at']<20
+        assert item['status']=='ok' and not item['error'] and 0<=time.time()-item['processed_at']<result['metric_policy']['snapshot_max_age_seconds']
 
 
 def publication(root):

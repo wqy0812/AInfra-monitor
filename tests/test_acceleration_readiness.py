@@ -22,7 +22,7 @@ def startup(tmp_path, monkeypatch):
     monkeypatch.setattr(readiness, 'inspect', lambda _: {'Id': 'new', 'Image': 'locked-image'})
     state = {'status': 'ok', 'environments': {
         env: {'status':'ok', 'error': None, 'processed_at': 99} for env in ('dcu-pd', 'a3-vllm', 'xpu-pd')},
-        'metric_writer':False,'perses_proxy':False,'metric_policy':{'schema':'native-1m-v1'},
+        'metric_writer':False,'perses_proxy':False,'metric_policy':{'schema':'native-1m-v1','snapshot_max_age_seconds':30},
         'native_recording':{'rule_count':286}}
     import native_recording
     monkeypatch.setattr(native_recording, 'check', lambda **kwargs: {})

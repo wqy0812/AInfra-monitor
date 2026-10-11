@@ -269,6 +269,7 @@ def test_component_probes_check_real_payloads_and_actual_listener(monkeypatch, n
         if '/latest?' in url:
             env = url.split('environment=')[1]
             payload = {'environment': env, 'ts': now - (100 if bad[0] else 1),
+                       'metric_policy': {'snapshot_max_age_seconds': 30},
                        'nodes': {role: {'metrics': {'status': 'ok'}} for role in ('prefill', 'decode')}}
         elif '/query?' in url:
             payload = {'status': 'success', 'data': {'result': [] if bad[0] else [{'value': [now, '1']}]}}

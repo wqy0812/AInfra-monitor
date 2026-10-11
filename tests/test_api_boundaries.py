@@ -14,11 +14,11 @@ def request_for(service):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('error,stamp', [(None, 100), ('offline', 100), (None, 80), (None, None)])
+@pytest.mark.parametrize('error,stamp', [(None, 100), (None, 75), ('offline', 100), (None, 70), (None, None)])
 async def test_latest_rejects_failed_missing_or_stale_data(monkeypatch, error, stamp):
     monkeypatch.setattr(api.time, 'time', lambda: 100)
     service = SimpleNamespace(error=error, latest={'ts': stamp, 'environment': 'dcu-pd'})
-    if error or stamp is None or stamp == 80:
+    if error or stamp is None or stamp == 70:
         with pytest.raises(HTTPException) as failure:
             await api.latest(request_for(service))
         assert failure.value.status_code == 503

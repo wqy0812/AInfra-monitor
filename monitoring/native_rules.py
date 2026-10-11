@@ -10,6 +10,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PREFIX = 'monitoring_native_'
+EVAL_DELAY_SECONDS = 5
+READ_DELAY_SECONDS = 15
+MAX_RECORD_AGE_SECONDS = 30
 SOURCE = 'environment,job,instance'
 HOSTS = {
     'dcu-pd': 'job=~"node-prefill|node-decode"',
@@ -298,11 +301,12 @@ def build():
     for rule in rules:
         category='quality' if 'quality' in rule['record'] or '_instances' in rule['record'] else 'backend' if 'backend_' in rule['record'] else 'host' if 'host_' in rule['record'] or 'device_' in rule['record'] else 'cache'
         groups.setdefault(category,[]).append(rule)
-    # Match the VM latency_offset. An extra 3s delay plus alignment and
-    # asynchronous writes made otherwise fresh records miss the API read tick.
+    # Leave one scrape interval for delayed ingestion before sealing a tick.
+    # Readers also allow independent group scheduling and remote-write visibility.
+    delay = str(EVAL_DELAY_SECONDS) + 's'
     config = {'groups': [{'name': 'native_'+category, 'interval':'5s',
-                         'eval_delay':'1ms', 'concurrency':1, 'eval_alignment':True,
-                         'params': {'step':['5s'], 'latency_offset':['1ms'], 'deny_partial_response':['1']},
+                         'eval_delay':delay, 'concurrency':1, 'eval_alignment':True,
+                         'params': {'step':['5s'], 'latency_offset':[delay], 'deny_partial_response':['1']},
                          'rules':selected} for category,selected in groups.items()]}
     audit = {'status':'approved_native_v1', 'rule_count':len(rules),
              'candidate_max_expression_chars':max(len(r['expr']) for r in rules),

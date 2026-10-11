@@ -13,7 +13,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from .access import client_allowlist
 from .query_client import QueryClient
 from . import gateway_live, native_schema
-from .native_rules import PREFIX, build
+from .native_rules import PREFIX, build, READ_DELAY_SECONDS, MAX_RECORD_AGE_SECONDS
 
 ENVIRONMENTS=tuple(native_schema.NODES)
 VM=os.environ.get('VM_URL','http://127.0.0.1:18428')
@@ -60,8 +60,8 @@ class Service:
 
     async def cycle(self):
         async with self.client.scope():
-            # Allow one collection interval for independent rule groups to write.
-            end=int((time.time()-8)//5)*5
+            # Wait for source ingestion, independent rule groups and VM writes.
+            end=int((time.time()-READ_DELAY_SECONDS)//5)*5
             rows=await self.query(history_expression(self.environment),end-10,end,5)
             points=native_schema.points(rows,self.environment,end-10,end,5)
             if not points:raise ValueError('Native records unavailable')
@@ -159,7 +159,7 @@ async def restrict(request,call_next):
 async def health(request:Request):
     environments={}
     for env,service in request.app.state.services.items():
-        ready=(not service.error and 0<=time.time()-service.watermark<20 and
+        ready=(not service.error and 0<=time.time()-service.watermark<MAX_RECORD_AGE_SECONDS and
                all(service.latest.get('nodes',{}).get(role,{}).get('metrics',{}).get('status')=='ok'
                    for role in ('prefill','decode')))
         environments[env]={'status':'ok' if ready else 'degraded','error':service.error,'processed_at':service.watermark,
@@ -175,7 +175,7 @@ def selected_service(request,environment):
 @app.get('/api/monitoring/latest')
 async def latest(request:Request,environment:str='dcu-pd'):
  s=selected_service(request,environment)
- if s.error or not s.latest.get('ts') or time.time()-s.latest['ts']>=20:raise HTTPException(503,'监控数据暂不可用或过期')
+ if s.error or not s.latest.get('ts') or time.time()-s.latest['ts']>=MAX_RECORD_AGE_SECONDS:raise HTTPException(503,'监控数据暂不可用或过期')
  return s.latest
 @app.get('/api/monitoring/history')
 async def history(request:Request,hours:float=1,start:float|None=None,end:float|None=None,environment:str='dcu-pd',view:str='full'):

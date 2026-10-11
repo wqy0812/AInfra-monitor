@@ -40,7 +40,7 @@ def test_rules_read_raw_only_and_have_one_fixed_interval():
     assert meta['window_seconds']==60 and meta['rule_count']>87
     for group in config['groups']:
         assert group['interval']=='5s'
-        assert group['eval_delay']==group['params']['latency_offset'][0]=='1ms'
+        assert group['eval_delay']==group['params']['latency_offset'][0]=='5s'
         for rule in group['rules']:
             assert native_rules.PREFIX not in rule['expr']
             assert 'monitoring_chart_' not in rule['expr'] and '$' not in rule['expr']
@@ -57,14 +57,14 @@ async def test_cycle_reads_native_records_without_import_or_export(monkeypatch):
         calls.append((request.method,request.url.path))
         if request.url.path=='/api/v1/query_range':
             assert 'monitoring_native_' in request.content.decode()
-            return httpx.Response(200,json={'status':'success','data':{'result':[row('backend_requests_per_second',2,990),row('backend_available_instances',4,990),row('backend_expected_instances',4,990)]}})
+            return httpx.Response(200,json={'status':'success','data':{'result':[row('backend_requests_per_second',2,985),row('backend_available_instances',4,985),row('backend_expected_instances',4,985)]}})
         return httpx.Response(200,json={'status':'success','data':{'result':[]}})
     service=api.Service('a3-vllm');await service.client.aclose()
     from monitoring.query_client import QueryClient
     service.client=QueryClient(transport=httpx.MockTransport(handler))
     try:
         await service.cycle()
-        assert service.watermark==990 and service.latest['nodes']['prefill']['metrics']['data']['rates']['requests']==2
+        assert service.watermark==985 and service.latest['nodes']['prefill']['metrics']['data']['rates']['requests']==2
         assert all(path in ('/api/v1/query','/api/v1/query_range') for _,path in calls)
         assert not hasattr(service,'raw') and not hasattr(service,'replay')
     finally:await service.close()
@@ -100,8 +100,9 @@ def test_actual_vm_preserves_all_eight_independent_decode_groups():
     end=int(time.time()//5)*5-100
     client=httpx.Client(base_url=url,trust_env=False)
     lines=[]
+    instance='fixture-native-dp-'+__import__('uuid').uuid4().hex
     for env in ('dcu-pd','xpu-pd'):
-        scope='environment="'+env+'",job="sglang-decode",node="'+('dcu2' if env=='dcu-pd' else 'xpu-1')+'",instance="fixture-native-dp"'
+        scope='environment="'+env+'",job="sglang-decode",node="'+('dcu2' if env=='dcu-pd' else 'xpu-1')+'",instance="'+instance+'"'
         for offset in range(-65,1,5):
             lines.append('up{'+scope+'} 1 '+str((end+offset)*1000))
             for dp in range(8):
@@ -113,7 +114,8 @@ def test_actual_vm_preserves_all_eight_independent_decode_groups():
     for group in native_rules.build()[0]['groups']:
         for rule in group['rules']:
             if rule['record'].endswith('backend_decode_tokens_per_second') and 'sglang:' in rule['expr']:
-                result=client.post('/api/v1/query',data={'query':rule['expr'],'time':end,'step':'5s','nocache':1}).json()
+                expression=rule['expr'].replace('{environment=', '{instance="'+instance+'",environment=')
+                result=client.post('/api/v1/query',data={'query':expression,'time':end,'step':'5s','nocache':1}).json()
                 assert result['status']=='success' and len(result['data']['result'])==1
                 assert float(result['data']['result'][0]['value'][1])==80
                 tested+=1

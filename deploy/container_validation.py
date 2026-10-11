@@ -90,7 +90,7 @@ class ComponentProbe:
             require(fetch('/health', True)['status'] == 'ok', 'API health degraded')
             for environment in ('dcu-pd', 'a3-vllm', 'xpu-pd'):
                 data = fetch('/api/monitoring/latest?environment=' + environment, True)
-                require(data['environment'] == environment and 0 <= time.time() - data['ts'] < 20, 'API data stale: ' + environment)
+                require(data['environment'] == environment and 0 <= time.time() - data['ts'] < data['metric_policy']['snapshot_max_age_seconds'], 'API data stale: ' + environment)
                 require(set(data['nodes']) == {'prefill', 'decode'} and
                         all(n['metrics']['status'] == 'ok' for n in data['nodes'].values()), 'API sources incomplete: ' + environment)
         elif self.name == 'monitoring-vmalert':
