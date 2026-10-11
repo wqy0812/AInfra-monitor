@@ -10,7 +10,7 @@ import time
 import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from container_validation import require
+from container_validation import require, metrics, scalar
 from replace import find, replace, save
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,7 +38,13 @@ def check(base='http://127.0.0.1:18432', expected=126):
     rules = [rule for group in groups for rule in group['rules']]
     require(len(rules) == expected and all(rule.get('type') == 'recording' for rule in rules), 'Native rule catalog incomplete')
     require(all(not rule.get('lastError') and rule.get('health') == 'ok' for rule in rules), 'Native rule evaluation error')
-    return {'rule_count': len(rules), 'groups': len(groups), 'rules': rules}
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open(base + '/metrics', timeout=5) as response:
+        counters = metrics(response.read().decode())
+    writes = {name: scalar(counters, 'vmalert_remotewrite_' + name) for name in (
+        'errors_total', 'dropped_rows_total', 'sent_rows_total')}
+    require(writes['dropped_rows_total'] == 0, 'Native remote write dropped rows; inspect and repair coverage')
+    return {'rule_count': len(rules), 'groups': len(groups), 'rules': rules, 'remote_write': writes}
 
 
 def build(api_image, vmalert_image, evidence):
