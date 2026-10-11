@@ -65,4 +65,4 @@ docker compose -f tests/compose.vm.yml down
 
 ## 发布工具清理回归
 
-统一发布入口、禁止回退和失败留证检查位于 `test_release_entrypoints.py`、`test_deployment_tools.py`、`test_forward_repair.py`；Perses 生成器、资源作用域、认证与并发编辑检查继续保留。全量收集可用 `pytest --collect-only` 检查清理后的导入闭包，不代表全量用例已执行。历史脚本专属测试随入口退役，共用下载校验、采集目标身份、网关只读和管理状态并发测试保留。
+统一发布入口、禁止回退和失败留证检查位于 `test_release_entrypoints.py`、`test_deployment_tools.py`、`test_forward_repair.py`；`test_api_image.py` 检查 API 构建只读取提交源码、固定基础和最终镜像身份、拒绝不安全输入并保留失败证据，其 Docker 调用使用替身，不代表真实镜像或线上验收。Perses 生成器、资源作用域、认证与并发编辑检查继续保留。全量收集可用 `pytest --collect-only` 检查清理后的导入闭包，不代表全量用例已执行。历史脚本专属测试随入口退役，共用下载校验、采集目标身份、网关只读和管理状态并发测试保留。

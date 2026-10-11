@@ -1,0 +1,18 @@
+ARG BASE
+FROM ${BASE}
+ARG COMMIT
+ARG SOURCE_SHA256
+ARG BASE_IMAGE_ID
+LABEL org.opencontainers.image.revision="${COMMIT}" \
+      monitoring.component="api" \
+      monitoring.base-image="${BASE_IMAGE_ID}" \
+      monitoring.source-sha256="${SOURCE_SHA256}"
+WORKDIR /monitoring
+# This source-only build reuses an explicitly pinned local Python runtime.
+# Dependency upgrades require a matching runtime image before using this template.
+COPY requirements.txt /tmp/monitoring-requirements.txt
+RUN python -c 'import importlib.metadata as m; import sys; from pathlib import Path; pins = [line.split("==") for line in Path("/tmp/monitoring-requirements.txt").read_text().splitlines() if line.strip() and not line.startswith("#")]; failures = [f"{name}: expected {version}, found {m.version(name)}" for name, version in pins if m.version(name) != version]; failures and sys.exit("Dependency mismatch: " + "; ".join(failures))' \
+    && rm -rf /monitoring/monitoring /tmp/monitoring-requirements.txt
+# COPY alone would leave deleted modules from an older monitoring-api base.
+COPY monitoring/ /monitoring/monitoring/
+HEALTHCHECK NONE
