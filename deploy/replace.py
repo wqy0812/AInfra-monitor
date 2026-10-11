@@ -72,14 +72,21 @@ def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=N
     old = inspect(name)
     require(old['Config'].get('Labels', {}).get('monitoring.owner') == 'independent', 'Container is not independently owned')
     probe = ComponentProbe(name, old)
-    image = json.loads(cmd('docker', 'image', 'inspect', image))[0]['Id']
+    image_info = json.loads(cmd('docker', 'image', 'inspect', image))[0]
+    image = image_info['Id']
     backup = name + '-before-upgrade-' + str(time.time_ns())
     require(find(backup) is None, 'Backup name already exists')
     fields = ('User', 'ExposedPorts', 'Env', 'Cmd', 'Healthcheck', 'Volumes', 'WorkingDir',
               'Entrypoint', 'Labels', 'StopSignal', 'StopTimeout')
     config = copy.deepcopy({k: old['Config'][k] for k in fields if k in old['Config']})
     config.update(Image=image, HostConfig=copy.deepcopy(old['HostConfig']))
-    config.setdefault('Labels', {})['monitoring.transaction'] = backup
+    labels = config.setdefault('Labels', {})
+    image_labels = image_info.get('Config', {}).get('Labels') or {}
+    for key in ('org.opencontainers.image.revision', 'monitoring.component',
+                'monitoring.base-image', 'monitoring.source-sha256', 'monitoring.vmalert-image'):
+        labels.pop(key, None)
+        if key in image_labels: labels[key] = image_labels[key]
+    labels['monitoring.transaction'] = backup
     # The API allowlist checks transport peers, including the local Perses proxy.
     if name == 'monitoring-api' and '--no-proxy-headers' not in config['Cmd']:
         config['Cmd'].append('--no-proxy-headers')

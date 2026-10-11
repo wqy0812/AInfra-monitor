@@ -416,3 +416,22 @@ def test_agent_cannot_accept_only_failed_scrapes(monkeypatch):
     monkeypatch.setattr(cv.urllib.request, 'build_opener', lambda *a: SimpleNamespace(open=fetch))
     with pytest.raises(RuntimeError, match='successful'):
         probe.check(cv.time.monotonic() + 10)
+
+
+def test_replacement_uses_new_image_metadata_without_losing_runtime_labels(monkeypatch):
+    docker = Docker()
+    docker.containers['monitoring-api']['Config']['Labels'].update({
+        'org.opencontainers.image.revision':'old', 'monitoring.source-sha256':'old-sha', 'custom-label':'retain'})
+    command = docker.command
+    def with_metadata(*args, **kwargs):
+        if args[:3] == ('docker','image','inspect'):
+            return json.dumps([{'Id':'candidate','Config':{'Labels':{
+                'org.opencontainers.image.revision':'new','monitoring.source-sha256':'new-sha',
+                'monitoring.component':'api'}}}])
+        return command(*args,**kwargs)
+    docker.command = with_metadata
+    docker.patch(monkeypatch)
+    replacement.replace('monitoring-api','candidate-tag')
+    labels=docker.containers['monitoring-api']['Config']['Labels']
+    assert labels['org.opencontainers.image.revision']=='new' and labels['monitoring.source-sha256']=='new-sha'
+    assert labels['monitoring.owner']=='independent' and labels['custom-label']=='retain'
