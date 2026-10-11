@@ -77,7 +77,7 @@ def build(repo, revision, base_image, evidence):
         # BuildKit treats FROM sha256:... as a registry tag. A content-named local
         # alias bridges that limitation; caller/evidence still pin the image ID.
         # Retain it: removing its last tag could delete an originally untagged base.
-        base_reference = 'monitoring-api-build-base:sha256-' + base_image.removeprefix('sha256:')
+        base_reference = 'monitoring-api-build-base:sha256-' + base_image[len('sha256:'): ]
         subprocess.run(['docker', 'image', 'tag', base_image, base_reference], check=True)
         require(inspect(base_reference)['Id'] == base_image, 'Build base reference changed')
         manifest['build_base_reference'] = base_reference
