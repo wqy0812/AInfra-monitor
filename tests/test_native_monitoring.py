@@ -40,6 +40,7 @@ def test_rules_read_raw_only_and_have_one_fixed_interval():
     assert meta['window_seconds']==60 and meta['rule_count']>87
     for group in config['groups']:
         assert group['interval']=='5s'
+        assert group['eval_delay']==group['params']['latency_offset'][0]=='1ms'
         for rule in group['rules']:
             assert native_rules.PREFIX not in rule['expr']
             assert 'monitoring_chart_' not in rule['expr'] and '$' not in rule['expr']

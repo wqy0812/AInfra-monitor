@@ -292,8 +292,10 @@ def build():
     for rule in rules:
         category='quality' if 'quality' in rule['record'] or '_instances' in rule['record'] else 'backend' if 'backend_' in rule['record'] else 'host' if 'host_' in rule['record'] or 'device_' in rule['record'] else 'cache'
         groups.setdefault(category,[]).append(rule)
+    # Match the VM latency_offset. An extra 3s delay plus alignment and
+    # asynchronous writes made otherwise fresh records miss the API read tick.
     config = {'groups': [{'name': 'native_'+category, 'interval':'5s',
-                         'eval_delay':'3s', 'concurrency':1, 'eval_alignment':True,
+                         'eval_delay':'1ms', 'concurrency':1, 'eval_alignment':True,
                          'params': {'step':['5s'], 'latency_offset':['1ms'], 'deny_partial_response':['1']},
                          'rules':selected} for category,selected in groups.items()]}
     audit = {'status':'approved_native_v1', 'rule_count':len(rules),
