@@ -10,7 +10,7 @@ for directory in ('vm','buffer','state','evidence'):
 start('monitoring-vm','monitoring-vm:1.151.0',[
  '-storageDataPath=/storage','-retentionPeriod=30d','-httpListenAddr=127.0.0.1:18428',
  '-memory.allowedBytes=1536MiB','-storage.minFreeDiskSpaceBytes=20GiB'],
- ['--cpus','2','--memory','2g','-v',str(ROOT/'vm')+':/storage'],'/vm')
+ ['--cpus','4','--memory','2g','-v',str(ROOT/'vm')+':/storage'],'/vm')
 start('monitoring-vmagent','monitoring-vm:1.151.0',[
  '-promscrape.config=/config/scrape.yml','-remoteWrite.url=http://127.0.0.1:18428/api/v1/write',
  '-remoteWrite.tmpDataPath=/buffer','-remoteWrite.maxDiskUsagePerURL=5GiB',

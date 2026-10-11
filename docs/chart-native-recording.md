@@ -8,7 +8,7 @@
 | A3 | Mooncake 内存、SSD 的 used / total / ratio | 6 |
 | DCU | Mooncake 内存、SSD 的 used / total / ratio | 6 |
 
-CPU、DCU 容量、A3 容量分为三个组；每组通过 value、valid 两条向量规则一次产出多个字段，共 6 条规则、32 条结果序列；加上现有 Perses 126 条，共 132 条。所有新规则直接查询原始采集指标，不读取 Python 派生指标，也不依赖同组其他规则的写入。每 5 秒计算，延迟 3 秒，保留原 `monitoring_chart_value/valid` 名称、path/environment/schema/node 标签与单位，已有 Perses 表达式及其加速目录无需改写。
+CPU、DCU 容量、A3 容量分为三个组；每组通过 value、valid 两条向量规则一次产出多个字段，共 6 条规则、最多 32 条结果序列；加上现有 Perses 126 条，共 132 条。所有新规则直接查询原始采集指标，不读取 Python 派生指标，也不依赖同组其他规则的写入。每 5 秒计算，延迟 3 秒，保留原 `monitoring_chart_value/valid` 名称、path/environment/schema/node 标签与单位，已有 Perses 表达式及其加速目录无需改写。
 
 ## 语义与写入归属
 
@@ -24,6 +24,8 @@ CPU、DCU 容量、A3 容量分为三个组；每组通过 value、valid 两条�
 先替换 API，使旧字段写入停止，再替换 vmalert。初次启动在现有持久 state 目录创建 `chart-recording-cutover.json`，start 对齐到下一 5 秒格点；全部规则都有 `time() >= start` 守卫。重启保留相同边界，不能删除或重置该文件。旧历史保留原值，新规则不会改写切换前的时间点。API 与 vmalert 版本、写入归属和切换顺序必须一起核验。
 
 启动时官方 vmalert 单独 replay 最近 12 小时与切换后范围的交集；首次安装尚无可回填区间时报告 not_needed。`chart_replay.finished` 只表示进程完成，不等于存储覆盖完整；失败保留日志和状态，当前版本修复，不回退。超过 12 小时的停机不自动补齐更早记录，也不由 Python 恢复写入。
+
+test4 的 VM CPU 配额为 4 核，内存仍为 2 GiB；原 2 核在原生规则与补算并行时持续饱和，会拖慢记录发布。启动配置同步保留此配额，历史目录和 VM 镜像不因配额调整改变。
 
 发布工具仍为 `deploy/release.py api-image / container / acceleration / acceleration-ready`，规则检查要求 132 条。运行验收：
 
