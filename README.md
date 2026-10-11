@@ -38,7 +38,7 @@ A3 总体、设备和外部 KV 贡献使用明确的共同分母；启用时间�
 
 首次安装使用 `scripts/download.py` 下载并验证固定依赖，`deploy/start.py` / `deploy/start_test4.py` 创建缺失服务，Perses 使用 `perses/install.py` 和 `perses/seed.py`。初始化镜像默认值不代表线上最新镜像；重建时必须重新核验并显式提供本次验证的镜像。
 
-后续升级统一从 `python3 deploy/release.py --help` 进入，支持容器、Perses 镜像、看板、生成器和加速发布。命令在目标主机本地运行，连接与传输遵循工作区 SSH MCP 约束。流程见 [停机窗口升级](docs/maintenance-window-upgrade.md)、[部署工具](deploy/README.md) 和 [Perses 维护](perses/README.md)。新增服务器目录须告知用户。
+后续升级统一从 `python3 deploy/release.py --help` 进入，支持 API 镜像构建、容器、Perses 镜像、看板、生成器和加速发布。API 构建使用 Git commit、固定模板及不可变基础镜像 ID；容器替换命令在目标主机本地运行，连接与传输遵循工作区 SSH MCP 约束。流程见 [停机窗口升级](docs/maintenance-window-upgrade.md)、[部署工具](deploy/README.md) 和 [Perses 维护](perses/README.md)。新增服务器目录须告知用户。
 
 允许停机；保留版本、所有权、访问控制、并发编辑和读回检查。失败停止后续步骤并修复当前版本，现行工具没有可执行回退入口。每次发布使用新的证据目录，不重用旧报告冒充验收。
 
