@@ -9,8 +9,9 @@
 | `image` | `perses/performance/image_release.py`：按 release lock 加载/更新 Perses 镜像，保留 systemd、访问控制和完整资源读回 |
 | `dashboards` | `perses/project_release.py`：快照、并发编辑检查、逐项日志、资源读回和受影响查询验收 |
 | `runtime` | `perses/reorg_runtime.py`：同步生成器和资源，保留原字节日志与并发检查 |
-| `acceleration-ready` | `perses_acceleration/api_readiness.py`：通用 API 容器替换后的预计算启动检查 |
-| `acceleration` / `merges` | 预计算分组/查询合并的专项准入与发布；详见 [加速运维](perses_acceleration/README.md) |
+| `acceleration-ready` | `perses_acceleration/api_readiness.py`：通用 API 容器替换后的原生记录及只读 API 检查 |
+| `acceleration` | 官方 vmalert 构建、发布与逐规则验收；见 [原生规则运维](../docs/native-recording-rules.md) |
+| `merges` | 既有原始查询的合并维护 |
 
 例如 `python3 deploy/release.py dashboards --help` 显示实际子命令参数。分组件实现可独立导入，后续功能改动复用这些实现，不新增按功能或日期命名的发布脚本。Perses 发布共用 `perses/release_support.py` 的完整资源快照、原子证据写入、读回和失败留证。
 
@@ -18,7 +19,7 @@
 
 ## API 镜像构建
 
-固定模板为 [Dockerfile.api](Dockerfile.api)。构建从指定 commit 读取完整 `monitoring/`（包括加速 catalog）、`requirements.txt` 和模板；不打包未提交文件。模板先核对基础镜像已安装的依赖版本，再删除原 API 源码目录并完整复制，避免旧模块在多次覆盖构建后残留。不更新依赖、不联网安装、不替换容器。
+固定模板为 [Dockerfile.api](Dockerfile.api)。构建从指定 commit 读取完整 `monitoring/`、`requirements.txt` 和模板；不打包未提交文件。模板先核对基础镜像已安装的依赖版本，再删除原 API 源码目录并完整复制，避免旧模块在多次覆盖构建后残留。不更新依赖、不联网安装、不替换容器。
 
 ```sh
 # 构建主机：使用新的空目录，显式提供完整本地镜像 ID。

@@ -91,3 +91,15 @@ docker compose -f tests/compose.vm.yml down
 现行 `monitoring/native_rules.py` 共 286 条，最长表达式 827 字符；含动态资源 gauge、每源率、质量和覆盖。当前 286 条均在真实 VM 执行，12 类语义场景及官方 vmalert 写回后的 46 条合成序列比较通过。来源核对进一步确认 DCU ITL 未分区，因此与 TTFT/E2E 分开选择。代码中每条规则只读原始数据，不依赖另一条记录规则。
 
 API 生命周期只启动只读查询，不写旧状态，不读旧历史填补；已删除旧写入 API 专属测试及延迟重建入口，保留原生定义、并发/超时、访问控制、发布安全及旧纯计算对照。
+
+## 测试环境发布结果（2026-10-11）
+
+- API/vmalert 源码 `236c171018e734eb253301375ae2792529602e40`；API 镜像 `sha256:a0009462a66c752ab856ae3277885819b9a7a9a7cf0297b3ae9138ea50b15fd0`，vmalert 镜像 `sha256:192e54730eb8d5c5b25960a42c9c822114a219c9c542595072e9be5d92853efb`。官方二进制仍为 1.151.0。
+- Perses/生成器修正提交 `ee88efb9b60da29ea1417feebde125aa20ba577d`：ITL 和 A3 TPOT 图的秒转毫秒只在显示查询完成；记录保持原始秒单位。浏览器检查捕获了该漏转问题，已现场修复并通过 8 条受影响查询对照，不回退。
+- 286 条规则在密封时刻逐条与 raw 表达式一致；254 条当时有非空结果，32 条原始结果为空。此结果不把无事件、无来源或零分母伪称为业务数据覆盖。三环境 API 新鲜度、覆盖状态正常，代理旧入口 404；旧记录已不再有新鲜样本。
+- 首次发布 170 条受影响查询全部通过；当前 3 项目、21 看板、261 面板。运行生成器 80 项文件内容安装及并发编辑核验通过。
+- Python 全量回归 773 passed、319 skipped；新语义单独执行真实 VM/vmalert，12 场景、46 条合成序列对照通过，独立 DP 的实际规则验证 8×10=80 token/s。最后显示单位修正再跑 19 项相关回归通过。
+- 最终 Perses 浏览器验收：三环境总览及 DCU 模型页、覆盖/质量面板、Decode 角色过滤通过；73 次查询成功，其中 70 次非空，页面脚本错误为零。毫秒显示转换在最后发布后复核。
+- code-eval 配套 Web 使用部署基线上的 `f739ff405e97bd4612cb8345d2cde65e1fd57230`（主分支实现 `afa3e12`），镜像 `sha256:d1ee7dce440e7aa92fab3be9ce140f585fee4376d5dcf63e550044f838ee6cd4`。只更换 Web，原维护状态 false 已恢复。桌面/手机监控页覆盖提示、六图和交互通过；未运行真实模型或判题。
+
+远程证据：test4 `/data2/monitoring/native-standard-20261011/`（含 `dashboards-units`、`runtime-units`）；test1 `/data2/code-eval/releases/native-monitoring-20261011/`。本地原始报告位于忽略的 `evidence/native-standard-20261011/live/`、`output/playwright/native-standard/` 和 code-eval `deploy/evidence/native-monitoring-20261011/`。旧数据和状态目录未清空。

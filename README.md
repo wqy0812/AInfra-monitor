@@ -1,6 +1,6 @@
 # 独立监控
 
-monitoring 采集 DCU、A3、XPU 的模型、主机、加速卡、网关和缓存指标，使用 VictoriaMetrics 保存时序，由 monitoring-api 提供 latest/history 查询、派生计算与 Perses 查询加速。code-eval 负责消费查询结果，不启动采集，也不保存本项目的监控快照。
+monitoring 采集 DCU、A3、XPU 的模型、主机、加速卡、网关和缓存指标，使用 VictoriaMetrics 保存时序，由官方 vmalert 计算记录规则；monitoring-api 只读提供 latest/history，Perses 直接查询 VM。code-eval 负责消费查询结果，不启动采集，也不保存本项目的监控快照。
 
 本文描述仓库当前配置；线上镜像、健康和数据新鲜度须在操作时重新核验。历次部署结论见 [发布归档](docs/releases/README.md)。
 
@@ -9,14 +9,14 @@ monitoring 采集 DCU、A3、XPU 的模型、主机、加速卡、网关和缓�
 | 组件 | 配置与职责 |
 | --- | --- |
 | VictoriaMetrics / vmagent | test4 中央存储与采集；固定版本见 `vendor/releases.json`，当前采集目标以 `deploy/scrape.yml` 为准 |
-| monitoring-api | `monitoring/`；来源 IP 白名单、三环境查询、派生计算与预计算；配置见 `deploy/start_test4.py` |
+| monitoring-api | `monitoring/`；来源 IP 白名单、三环境只读 JSON 查询与请求画像查询；配置见 `deploy/start_test4.py` |
 | 节点采集 | node/DCU exporter 及平台原生 HTTP 指标；采集配置保留各平台真实 job 与标签 |
-| Perses | `perses/projects/` 保存分区源定义；发布为 3 个项目、21 张看板、249 个面板，网关与模型推理各一个入口；默认 VM 数据源及专用加速数据源分开 |
-| 查询加速 | `monitoring/perses_acceleration_catalog.json` 固定 18 个目标表达式；`perses/acceleration_state.json` 记录 14 个合并面板及 CPU/DCU/A3 三组准入 |
+| Perses | `perses/projects/` 保存分区源定义；发布为 3 个项目、21 张看板、261 个面板，网关与模型推理各一个入口；统一直接使用 VM 数据源 |
+| 原生记录规则 | `monitoring/native_rules.py` 定义 286 条 raw-only 规则；固定 1m 统计窗口、5s 记录，原生 gauge 保持当前值 |
 
 test4 配置的接口为 VM `127.0.0.1:18428`、vmagent `127.0.0.1:18429`、API `:18430`、Perses `:18431`。实际监听、代理和访问控制以目标机配置为准。API 拒绝空白、通配符和网段白名单；默认只允许 IPv4/IPv6 回环，显式调用方通过 `ALLOWED_CLIENTS` 指定。
 
-中央数据目录 `/data2/monitoring` 中，`vm/` 保存时序，`buffer/` 保存发送缓冲，`state/` 保存处理水位、待发布批次及管理状态，`release/` 保存程序，`evidence/` 保存执行证据。升级保留历史、缓冲、水位和真实断档。
+中央数据目录 `/data2/monitoring` 中，`vm/` 保存时序，`buffer/` 保存发送缓冲，`state/` 保留旧处理水位和管理状态，现行只读 API 不再写入，`release/` 保存程序，`evidence/` 保存执行证据。升级保留历史、缓冲、水位和真实断档。
 
 ## 查询与统计
 
@@ -24,9 +24,9 @@ test4 配置的接口为 VM `127.0.0.1:18428`、vmagent `127.0.0.1:18429`、API 
 - `/api/monitoring/history`：按环境查询，支持大于 0、最多 720 小时；默认完整数据，`view=summary` 去除逐卡/逐 rank 资源明细，保留聚合数值、空值和断档。返回的是实际已积累历史。
 - `/api/request-profile/metrics`：从 VM 查询网关计数与直方图，按 `environment=dcu-pd|a3-vllm|xpu-pd` 隔离来源，默认 DCU；声明 `counter_method=lifecycle-v2`。
 - `/health`：三环境模型来源、处理进度和错误；缺失必需来源或水位过旧时报告降级。
-- `/internal/perses/`：仅对目录中的精确表达式提供预计算查询；未覆盖、无效或未知表达式回源。见 [查询加速口径](docs/perses-query-acceleration.md)。
+- Perses 直接查询 `monitoring_native_*`，`/internal/perses/` 已移除。定义与维护见 [原生记录规则](docs/native-recording-rules.md)。
 
-保留 DP/TP/PP 去重、分层缓存分母、55–65 秒窗口、计数重置、拓扑变化和无流量留空语义。重放原始抓取时间，不插值原始计数；Mooncake 来源变化后重新积累查询窗口。过旧水位从 VM 保留边界分批推进，成功导入并保存水位后记录真实 `retention_gap`。
+保留统计对象、单位及 DP/TP/PP 来源身份，采用原生计数器重置和直方图语义，允许部分来源聚合；覆盖与质量单独展示。新记录启用前和缺口留空，不自动回源或补算。变更见 [已批准的 D1–D6](docs/native-standard-review-20261011.md)。
 
 A3 总体、设备和外部 KV 贡献使用明确的共同分母；启用时间前保留空白，不反推历史。具体口径与生效点见 [指标口径与历史边界](docs/metrics-and-history.md)、[图表说明](perses/METRICS_GUIDE.md) 和 [指标覆盖清单](perses/METRIC_COVERAGE.md)。覆盖清单是带日期的采集基线，不代表实时健康。
 
