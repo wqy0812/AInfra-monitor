@@ -86,6 +86,10 @@ def test_published_resources_are_direct_vm_and_regeneration_is_idempotent():
                 q=item['spec']['plugin']['spec']
                 if 'monitoring_native_' in q['query']:
                     assert q['datasource']['name']=='victoriametrics'
+                    if any(name in q['query'] for name in ('backend_latency_seconds','backend_diagnostic_quantile')) and '（ms）' in panel['spec']['display']['name']:
+                        assert q['query'].endswith('* 1000')
+                    elif 'backend_latency_seconds' in q['query']:
+                        assert not q['query'].endswith('* 1000')
 
 
 @pytest.mark.skipif(not __import__('os').environ.get('NATIVE_RECORDING_TEST_VM'),reason='Disposable VM required')

@@ -118,6 +118,8 @@ def apply(resources):
                         query['seriesNameFormat']='{{role}} · '+('外部 KV' if 'kind="external"' in query['query'] else '本地')
                     if PREFIX+'backend_diagnostic_quantile' in query['query']:
                         query['seriesNameFormat']='{{node}} · 引擎{{engine}} DP{{dp_rank}} TP{{tp_rank}} PP{{pp_rank}} · {{stage}} {{cache_type}} · {{quantile}}'
+                    if any(PREFIX+name in query['query'] for name in ('backend_latency_seconds','backend_diagnostic_quantile')) and '（ms）' in spec['display']['name'] and not query['query'].endswith('* 1000'):
+                        query['query']='('+query['query']+') * 1000'
                     query['datasource']={'kind':'PrometheusDatasource','name':'victoriametrics'}
                     if 'P{{quantile}}' in query.get('seriesNameFormat',''):
                         query['query']='label_map(('+query['query']+'), "quantile", "0.5", "P50", "0.95", "P95", "0.99", "P99")'

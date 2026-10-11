@@ -130,7 +130,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "label_map((last_over_time(monitoring_native_backend_latency_seconds{environment=\"xpu-pd\",role=~\"$role\",kind=\"itl\"}[5s])), \"quantile\", \"0.5\", \"P50\", \"0.95\", \"P95\", \"0.99\", \"P99\")",
+                    "query": "(label_map((last_over_time(monitoring_native_backend_latency_seconds{environment=\"xpu-pd\",role=~\"$role\",kind=\"itl\"}[5s])), \"quantile\", \"0.5\", \"P50\", \"0.95\", \"P95\", \"0.99\", \"P99\")) * 1000",
                     "seriesNameFormat": "{{role}} · {{quantile}}",
                     "datasource": {
                       "kind": "PrometheusDatasource",

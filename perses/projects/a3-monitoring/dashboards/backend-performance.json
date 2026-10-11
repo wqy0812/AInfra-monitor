@@ -220,7 +220,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "label_map((last_over_time(monitoring_native_backend_latency_seconds{environment=\"a3-vllm\",role=~\"$role\",kind=\"itl\"}[5s])), \"quantile\", \"0.5\", \"P50\", \"0.95\", \"P95\", \"0.99\", \"P99\")",
+                    "query": "(label_map((last_over_time(monitoring_native_backend_latency_seconds{environment=\"a3-vllm\",role=~\"$role\",kind=\"itl\"}[5s])), \"quantile\", \"0.5\", \"P50\", \"0.95\", \"P95\", \"0.99\", \"P99\")) * 1000",
                     "seriesNameFormat": "{{role}} · {{quantile}}",
                     "datasource": {
                       "kind": "PrometheusDatasource",
@@ -364,7 +364,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "label_map((last_over_time(monitoring_native_backend_diagnostic_quantile{environment=\"a3-vllm\",diagnostic=\"extra-request_time_per_output_token_seconds\",node=~\"$role\"}[5s])), \"quantile\", \"0.5\", \"P50\", \"0.95\", \"P95\", \"0.99\", \"P99\")",
+                    "query": "(label_map((last_over_time(monitoring_native_backend_diagnostic_quantile{environment=\"a3-vllm\",diagnostic=\"extra-request_time_per_output_token_seconds\",node=~\"$role\"}[5s])), \"quantile\", \"0.5\", \"P50\", \"0.95\", \"P95\", \"0.99\", \"P99\")) * 1000",
                     "seriesNameFormat": "{{node}} · 引擎{{engine}} DP{{dp_rank}} TP{{tp_rank}} PP{{pp_rank}} · {{stage}} {{cache_type}} · {{quantile}}",
                     "datasource": {
                       "kind": "PrometheusDatasource",
