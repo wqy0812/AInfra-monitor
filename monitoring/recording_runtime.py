@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 
 from .perses_acceleration import atomic_json, digest
 from .perses_recording import RecordingService, recording_rules
+from . import chart_recording
 
 
 def allocate(state):
@@ -95,14 +96,23 @@ async def run(args):
             asyncio.get_running_loop().add_signal_handler(sig, stop.set)
         status = {'backend': 'vmalert', 'catalog_sha256': digest(catalog), 'started_at': time.time(),
                   'rule_count': len(catalog['panels']) * len(catalog['steps']), 'live': None, 'replay': None}
+        chart_start = chart_recording.cutover(state)
+        if chart_start is None:
+            chart_start = math.ceil(time.time() / 5) * 5
+            atomic_json(state / chart_recording.CUTOVER_FILE, {'schema':1, 'start':chart_start})
+        status.update(perses_rule_count=status['rule_count'], chart_rule_count=chart_recording.RULE_COUNT,
+                      chart_start=chart_start, chart_replay=None,
+                      rule_count=status['rule_count'] + chart_recording.RULE_COUNT)
         processes = set()
         service = RecordingService(args.vm, state, catalog)
 
-        async def launch(kind, selected, replay=None):
+        async def launch(kind, selected, replay=None, chart_only=False):
             identity = allocate(state)
             key = str(identity['generation'])
             config = state / ('perses-recording-' + kind + '-' + key + '.json')
-            atomic_json(config, recording_rules(selected, **identity))
+            rules = chart_recording.recording_rules(chart_start) if chart_only else recording_rules(selected, **identity)
+            if kind == 'live':rules['groups'] += chart_recording.recording_rules(chart_start)['groups']
+            atomic_json(config, rules)
             log = state / ('perses-recording-' + kind + '-' + key + '.log')
             with log.open('xb') as output:
                 process = await asyncio.create_subprocess_exec(*command(args.binary, args.vm, config,
@@ -157,10 +167,39 @@ async def run(args):
                 processes.discard(process)
                 atomic_json(state / ('perses-recording-replay-result-' + str(identity['generation']) + '.json'), result)
 
-        live = task = None
+        async def replay_charts():
+            right = math.floor((time.time() - 3) / 5) * 5
+            left = max(chart_start, right - 43200)
+            result = {'start':left, 'end':right, 'state':'not_needed' if left > right else 'running'}
+            status['chart_replay'] = result
+            if left > right:return
+            process = None
+            try:
+                process, identity = await launch('chart-replay', catalog, (left, right), chart_only=True)
+                result.update(identity)
+                code = await asyncio.wait_for(process.wait(), timeout=3600)
+                if code:raise RuntimeError('Chart replay exited ' + str(code))
+                # A successful process is not a claim of complete stored coverage.
+                result.update(state='finished', completed_at=time.time(), coverage='verify valid/value timestamps separately')
+            except asyncio.CancelledError:
+                result.update(state='interrupted')
+                raise
+            except Exception as error:
+                result.update(state='failed', error=type(error).__name__ + ': ' + str(error)[:400])
+            finally:
+                if process:
+                    if process.returncode is None:
+                        process.terminate()
+                        try:await asyncio.wait_for(process.wait(), 10)
+                        except TimeoutError:process.kill();await process.wait()
+                    processes.discard(process)
+                atomic_json(state / 'chart-recording-replay.json', result)
+
+        live = task = chart_task = None
         try:
             live, identity = await launch('live', catalog)
             status['live'] = dict(identity, state='running')
+            chart_task = asyncio.create_task(replay_charts())
             # A new bounded native replay on every supervisor start; older history stays raw.
             task = asyncio.create_task(replay({'id': 'startup-' + identity['publication']}))
             handled_path = state / 'perses-recording-handled.json'
@@ -194,8 +233,9 @@ async def run(args):
                 try: await asyncio.wait_for(stop.wait(), 2)
                 except TimeoutError: pass
         finally:
-            if task:
-                task.cancel(); await asyncio.gather(task, return_exceptions=True)
+            for pending in (task, chart_task):
+                if pending:
+                    pending.cancel(); await asyncio.gather(pending, return_exceptions=True)
             for process in list(processes):
                 if process.returncode is None: process.terminate()
             for process in list(processes):

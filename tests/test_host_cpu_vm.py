@@ -18,9 +18,12 @@ def cpu_vm():
     url = os.environ.get('HOST_CPU_TEST_VM_URL')
     if not url:
         pytest.skip('Set HOST_CPU_TEST_VM_URL to a disposable local VictoriaMetrics')
+    yield from cpu_vm_at(url, int(time.time() // 5) * 5 - 6000)
+
+
+def cpu_vm_at(url, base):
     assert url.startswith('http://127.0.0.1:'), 'Never inject fixtures into a remote service'
     client = httpx.Client(base_url=url, trust_env=False, timeout=20)
-    base = int(time.time() // 5) * 5 - 6000
     ends, lines = {}, []
     for number, case in enumerate(CASES):
         start = base + number * 600

@@ -31,7 +31,7 @@ def fetch(base, path):
         return json.load(response)
 
 
-def check(base='http://127.0.0.1:18432', expected=126):
+def check(base='http://127.0.0.1:18432', expected=158):
     body = fetch(base, '/api/v1/rules')
     require(body.get('status') == 'success', 'Native rules endpoint unavailable')
     groups = body['data']['groups']

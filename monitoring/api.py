@@ -15,6 +15,7 @@ from .latency import PATHS as LATENCY_PATHS
 from .request_scope import PATH_REGEX as REQUEST_PATH_REGEX, SCHEMA as REQUEST_SCHEMA, is_request_path
 from .perses_acceleration import install_routes as install_perses_routes
 from .perses_recording import RecordingService
+from . import chart_recording
 ENVIRONMENTS=("dcu-pd", "a3-vllm", "xpu-pd")
 HISTORY_CACHE_SIZE=8
 HISTORY_CACHE_TTL=5
@@ -45,7 +46,7 @@ def put(obj,path,value):
  for key in keys[:-1]:obj=obj.setdefault(key,{})
  obj[keys[-1]]=value
 
-def encode(points,environment="dcu-pd",latency_only=False):
+def encode(points,environment="dcu-pd",latency_only=False,*,exclude_native=False):
  validate_environment(environment)
  lines=[]
  paths=sorted(set(PATHS+(["nodes."+r+".cache_60s.external_ratio" for r in ("prefill","decode")]+list(host_cpu.PATHS)+list(a3_effective.PATHS) if environment=="a3-vllm" else [])).union(*(resource_paths(p) for p in points)))
@@ -54,6 +55,7 @@ def encode(points,environment="dcu-pd",latency_only=False):
   paths=LATENCY_PATHS
  for p in points:
   for path in paths:
+   if exclude_native and path in chart_recording.PATHS[environment]:continue
    effective=environment=='a3-vllm' and path in a3_effective.PATHS
    if effective and (get(p,'nodes.prefill.cache_60s.effective.since') is None or p['ts']<get(p,'nodes.prefill.cache_60s.effective.since')):continue
    value=get(p,path);valid=isinstance(value,(int,float)) and math.isfinite(value)
@@ -136,13 +138,13 @@ class Service:
   if self.environment=='a3-vllm':replay_options['effective_since']=self.cache_effective_since
   replay_task=asyncio.to_thread(self.replay,groups,start,until,**replay_options)
   if self.environment=='a3-vllm':
-   (snaps,points),(cpu_values,cpu_status)=await asyncio.gather(replay_task,host_cpu.collect(self.client,VM,replay_watermark+5,until))
+   (snaps,points),(cpu_values,cpu_status)=await asyncio.gather(replay_task,host_cpu.collect(self.client,VM,until,until))
    host_cpu.attach(snaps,points,cpu_values,cpu_status)
    self.host_cpu_status=cpu_status
   else:snaps,points=await replay_task
   selected=[p for p in points if p['ts']>replay_watermark]
   if selected:
-   r=await self.client.post(VM+'/api/v1/import/prometheus',content=encode(selected,self.environment));r.raise_for_status()
+   r=await self.client.post(VM+'/api/v1/import/prometheus',content=encode(selected,self.environment,exclude_native=True));r.raise_for_status()
    watermark=selected[-1]['ts'];STATE.mkdir(parents=True,exist_ok=True)
    saved={'ts':watermark}
    if retention_gap is not None:saved['retention_gap']=retention_gap
@@ -327,7 +329,7 @@ async def health(request:Request):
  accelerator=getattr(request.app.state,'perses_acceleration',None)
  acceleration=accelerator.status() if accelerator else {'enabled':False,'error':getattr(request.app.state,'perses_acceleration_error',None)}
  ready=set(environments)==set(ENVIRONMENTS) and all(value['status']=='ok' for value in environments.values())
- return {'status':'ok' if good and ready else 'degraded','error':s.error,'sources':sources,'processed_at':s.watermark,'started_at':s.started,'environments':environments,'perses_acceleration':acceleration}
+ return {'status':'ok' if good and ready else 'degraded','error':s.error,'sources':sources,'processed_at':s.watermark,'started_at':s.started,'environments':environments,'perses_acceleration':acceleration,'chart_recording':{'backend':'vmalert','field_count':len(chart_recording.FIELDS),'rule_count':chart_recording.RULE_COUNT}}
 def selected_service(request,environment):
  validate_environment(environment)
  return request.app.state.services[environment]

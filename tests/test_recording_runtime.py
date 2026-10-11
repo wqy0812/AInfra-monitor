@@ -75,7 +75,7 @@ async def test_supervisor_survives_finished_replay_and_rotates_identity(tmp_path
     class Service(original):
         def __init__(self,*args,**kwargs):
             kwargs['client']=kwargs.get('client') or httpx.AsyncClient(transport=httpx.MockTransport(
-                lambda _:httpx.Response(200,json={'data':{'groups':[{'rules':[{}]*126}]}})))
+                lambda _:httpx.Response(200,json={'data':{'groups':[{'rules':[{}]*158}]}})))
             super().__init__(*args,**kwargs)
     async def verified(*args):return 123
     monkeypatch.setattr(runtime,'RecordingService',Service)
@@ -96,4 +96,8 @@ async def test_supervisor_survives_finished_replay_and_rotates_identity(tmp_path
     second=json.loads((tmp_path/'perses-recording-runtime.json').read_text())
     assert second['live']['generation']>first['replay']['generation']
     assert second['replay']['state']=='failed' and 'Unknown replay panel' in second['replay']['error']
-    assert second['live']['loaded_rules']==126
+    assert second['live']['loaded_rules']==158
+    assert second['chart_start']==first['chart_start']
+    assert second['chart_rule_count']==32 and second['rule_count']==158
+    config=json.loads(Path(second['live']['config']).read_text())
+    assert sum(len(group['rules']) for group in config['groups'])==158

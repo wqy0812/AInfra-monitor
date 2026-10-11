@@ -77,7 +77,7 @@ async def test_cpu_failure_is_explicit_and_preserves_other_metrics(failure):
 
 
 @pytest.mark.asyncio
-async def test_cycle_materializes_once_and_retains_watermark_on_write_failure(tmp_path, monkeypatch):
+async def test_cycle_leaves_cpu_to_native_writer_and_retains_watermark_on_other_write_failure(tmp_path, monkeypatch):
     import monitoring.api as api
     monkeypatch.setattr(api, 'STATE', tmp_path)
     monkeypatch.setattr(api.time, 'time', lambda: 113)
@@ -102,13 +102,12 @@ async def test_cycle_materializes_once_and_retains_watermark_on_write_failure(tm
     service.client = QueryClient(transport=httpx.MockTransport(handler))
     try:
         await service.cycle()
-        assert calls == [(105, 110)] and service.watermark == 110
+        assert calls == [(110, 110)] and service.watermark == 110
         assert service.latest_point['nodes']['prefill']['cpu'] == 40
         assert service.latest['nodes']['prefill']['host_cpu']['percent'] == 40
         assert service.latest['nodes']['prefill']['host_cpu']['iowait_percent'] == 10
         assert service.latest['nodes']['decode']['host_cpu']['status'] == 'unavailable'
-        assert 'schema="host-cpu-v1",node="a3-1"} 0 105000' in posts[0]
-        assert 'schema="host-cpu-v1",node="a3-1"} 40 110000' in posts[0]
+        assert 'schema="host-cpu-v1"' not in posts[0]
         assert service.watermark_file.read_text() == '{"ts": 110}'
         failing = True
         monkeypatch.setattr(api.time, 'time', lambda: 118)

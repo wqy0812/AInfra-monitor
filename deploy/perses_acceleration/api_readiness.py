@@ -49,8 +49,8 @@ def observe(root):
                 assert accelerator['backend'] == 'vmalert' and accelerator['rule_count'] == 126
                 assert accelerator['runtime_fresh']
                 runtime = accelerator['runtime']
-                assert runtime['rule_count'] == 126 and runtime['live']['state'] == 'running'
-                assert runtime['live']['loaded_rules'] == 126 and not runtime['live']['probe_error']
+                assert runtime['perses_rule_count'] == 126 and runtime['chart_rule_count'] == 32 and runtime['rule_count'] == 158 and runtime['live']['state'] == 'running'
+                assert runtime['live']['loaded_rules'] == 158 and not runtime['live']['probe_error']
                 assert runtime['live']['evaluation_errors'] == 0
                 from native_recording import check
                 check()

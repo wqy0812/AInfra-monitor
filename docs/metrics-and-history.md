@@ -37,7 +37,7 @@ Prefill 的 `vllm:prompt_tokens_by_source_total` 分为显存命中 G（`local_c
 
 ## A3 主机 CPU 聚合
 
-`monitoring/host_cpu.py` 复用 VM 的原 CPU 忙碌率和 I/O 等待表达式，由 API 对新增时间点计算并保存 `monitoring_chart_value/valid{schema="host-cpu-v1"}`。`nodes.<role>.cpu`、`cpu_iowait` 带节点标签，history 和 Perses 读取已保存的聚合值。
+`monitoring/host_cpu.py` 保留 VM 的原 CPU 忙碌率和 I/O 等待表达式；持久化由 vmalert 每 5 秒计算并保存 `monitoring_chart_value/valid{schema="host-cpu-v1"}`，API 仅查询最新点供快照使用。切换和容量字段迁移见 [业务图表原生记录规则](chart-native-recording.md)。`nodes.<role>.cpu`、`cpu_iowait` 带节点标签，history 和 Perses 读取已保存的聚合值。
 
 保持一分钟 rate、idle/iowait 扣除、guest/guest_nice 排除、逐序列重置及采样完整性检查。查询失败只令本批 CPU 无效；导入失败不推进批次水位。`host_cpu.computed_at` 是计算时间点，不是原始抓取时间。聚合启用前留空，不读取旧 CPU `v1` 或自动回填；原始 CPU 历史仍保留。
 
