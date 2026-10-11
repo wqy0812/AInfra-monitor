@@ -31,6 +31,8 @@ htmlcov/
 /evidence/
 /work/
 /output/
+/reviews/
+/deployments/
 # Release inputs (manifest/panels/locks) remain tracked; these are execution results.
 /deploy/**/complete.json
 /deploy/**/*-complete.json

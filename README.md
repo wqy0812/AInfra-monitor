@@ -22,12 +22,15 @@ test4 配置的接口为 VM `127.0.0.1:18428`、vmagent `127.0.0.1:18429`、API 
 
 - `/api/monitoring/latest`：当前快照、源观测时间、模型/主机/缓存指标及存储与积压状态。
 - `/api/monitoring/history`：按环境查询，支持大于 0、最多 720 小时；默认完整数据，`view=summary` 去除逐卡/逐 rank 资源明细，保留聚合数值、空值和断档。返回的是实际已积累历史。
+- `/api/request-profile/metrics`：从 VM 查询网关计数与直方图，按 `environment=dcu-pd|a3-vllm|xpu-pd` 隔离来源，默认 DCU；声明 `counter_method=lifecycle-v2`。
 - `/health`：三环境模型来源、处理进度和错误；缺失必需来源或水位过旧时报告降级。
 - `/internal/perses/`：仅对目录中的精确表达式提供预计算查询；未覆盖、无效或未知表达式回源。见 [查询加速口径](docs/perses-query-acceleration.md)。
 
 保留 DP/TP/PP 去重、分层缓存分母、55–65 秒窗口、计数重置、拓扑变化和无流量留空语义。重放原始抓取时间，不插值原始计数；Mooncake 来源变化后重新积累查询窗口。过旧水位从 VM 保留边界分批推进，成功导入并保存水位后记录真实 `retention_gap`。
 
-A3 总体、设备和外部 KV 贡献使用明确的共同分母；启用时间前保留空白，不反推历史。具体口径与生效点见 [A3 贡献口径](docs/releases/a3-effective-cache-20261008.md)、[图表说明](perses/METRICS_GUIDE.md) 和 [指标覆盖清单](perses/METRIC_COVERAGE.md)。覆盖清单是带日期的采集基线，不代表实时健康。
+A3 总体、设备和外部 KV 贡献使用明确的共同分母；启用时间前保留空白，不反推历史。具体口径与生效点见 [指标口径与历史边界](docs/metrics-and-history.md)、[图表说明](perses/METRICS_GUIDE.md) 和 [指标覆盖清单](perses/METRIC_COVERAGE.md)。覆盖清单是带日期的采集基线，不代表实时健康。
+
+请求画像按计数器生命周期分段计算：窗口内新生的生命周期从零累计，已有生命周期需要可信边界基准；缺少边界、计数重置或累计桶矛盾时，受影响统计保留空值。`quality.counter_status` 为 `ok` 或 `incomplete`，原因见 `counter_issues`，矛盾直方图见 `invalid_histograms`。趋势只屏蔽跨生命周期、缺采或异常区间的窗口，保留完整区间的健康曲线；无法定位的异常仍使相关趋势留空。实现见 [生命周期统计](monitoring/profile_counters.py) 和 [画像查询](monitoring/request_profile.py)。
 
 ## 开发与发布
 
@@ -39,8 +42,12 @@ A3 总体、设备和外部 KV 贡献使用明确的共同分母；启用时间�
 
 允许停机；保留版本、所有权、访问控制、并发编辑和读回检查。失败停止后续步骤并修复当前版本，现行工具没有可执行回退入口。每次发布使用新的证据目录，不重用旧报告冒充验收。
 
+DCU 时延重算入口为 `python -m monitoring.latency_rebuild --vm <VM 地址> --state <独立检查点> --start <起点秒> --end <终点秒>`，起止时间须对齐 5 秒。工具会向 VM 写入当前请求口径的时延派生序列，执行前核对目标、范围与源码版本；不修改正常服务水位。检查点使用文件锁和代码指纹，仅在 VM 确认导入后推进；续跑使用相同源码与检查点，代码变化则新建检查点并核对重叠输出，不修改指纹绕过校验。参数与批次逻辑见 [重算工具](monitoring/latency_rebuild.py)。
+
 ## 仓库边界
 
 源码、采集配置、现行看板、版本锁、校验和、必要测试样本与历史构建输入由 Git 管理。历史批次脚本和旧单项目看板基线已退役，原路径与 SHA-256 见 [退役清单](docs/releases/retired-code.md)。仍被生成器导入的辅助模块保留。
 
 镜像归档、二进制、运行数据、凭据、容器快照和执行报告留在忽略的 `evidence/` / `work/`；不能按 JSON 扩展名一概删除。VM 与发送缓冲按实际增长预留容量，恢复数据时使用一致性快照，禁止清空现有存储来解决升级问题。
+
+当前指南、指标边界、关键决策和必要发布身份继续维护；审核、整理及逐次部署过程从 Git 历史查阅。新发布更新 [版本记录](docs/releases/README.md) 的对应组件，原始过程输出放证据目录，不再新增日期流水正文。

@@ -10,4 +10,4 @@
 
 独立存储为 `monitoring_perses_value`、`monitoring_perses_complete`，不写 `monitoring_chart_*`，不改变 latest/history API。原始历史修正前必须通过 [运维说明](../deploy/perses_acceleration/README.md) 作废相应区间；不做近 30 天全量回填。
 
-查询瘦身及分批准入流程见[面板查询瘦身](query-slimming.md)。当前清单保留 15 项网关 `rewrites`；本次依据用户在知悉性能失败后的单独授权发布，未修改常规准入门槛。A3 候选 revision 已撤回，继续使用原物化表达式及 catalog。范围、收益判断和验收证据见[本次记录](releases/query-slimming-20261009.md)。候选生成本身不代表已发布；以后更换 revision 仍需核验覆盖与实际收益。
+查询瘦身及分批准入流程见 [面板查询瘦身](query-slimming.md)。当前清单保留 15 项网关 `rewrites`；原发布依据知悉性能失败后的单独授权，未修改常规准入门槛。A3 保留原物化表达式及 catalog；取舍、未完成性能矩阵和后续比较要求由该说明维护。候选生成本身不代表已发布，更换 revision 仍需核验相等覆盖与实际收益。

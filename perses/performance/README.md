@@ -50,7 +50,7 @@ as the third argument instead of the default historical perf.2 lock.
 
 ## 当前行为与验证
 
-perf.3 补丁提供标签页内的跨看板时间继承、后台页面暂停、固定窗口暂停自动刷新和手动刷新，保留已有图表定义；显式 URL 时间优先。设计与当次证据见 [时间导航说明](../../docs/releases/time-navigation-cache-20260924.md)、[发布记录](../../docs/releases/time-navigation-20260925-deployment.md)。
+perf.3 补丁提供标签页内的跨看板时间继承、后台页面暂停、固定窗口暂停自动刷新和手动刷新，保留已有图表定义；显式 URL 时间优先。当前行为见 [时间导航说明](../../docs/time-navigation.md)，版本身份及原验收从 [发布索引](../../docs/releases/README.md) 查阅。
 
 - `tests/ui.test.cjs`：刷新、定时器、变量、选择性导入与失败重试。
 - `tests/cache_test.go`：内容校验、缓存头、ETag 304 和 HTML 重验证；随上游使用 `go test -mod=vendor ./ui`。
@@ -73,4 +73,4 @@ python3 deploy/release.py image apply --evidence DIR --lock DIR/release-lock.jso
 
 没有候选服务、30 分钟观察或回退选项。失败保留当前状态、原资源快照及原始异常，修复后重新核验。旧容器只作为当前事务证据；存在同名临时容器时停止并要求先核查。相关看板变更通过 `deploy/release.py dashboards` 发布；查询合并专项通过 `deploy/release.py merges`，不再重跑旧 13 面板迁移器。
 
-早期性能发布、旧回退过程和测量数字单独保存在 [历史记录](../../docs/releases/perses-performance-20260916.md)。
+早期性能发布、旧回退过程和测量数字通过 [Git 历史](../../docs/releases/README.md) 查阅，不作为当前操作入口。
