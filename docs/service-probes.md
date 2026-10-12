@@ -12,9 +12,9 @@
 
 `GET /api/monitoring/probes` 固定读取最近 24 小时原始导出，不使用 query_range 的向前填充。返回 observed_at/start/end、interval_seconds=300、stale_after_seconds=600，以及三个 services，各含 environment/name/status/latest/records 和 offset_seconds（与 worker 共用调度定义，分别为 0/100/200）。记录包含 started_at/finished_at/status/reason/duration_seconds/first_output_seconds/http_status。缺失或矛盾的字段显示 unknown；没有记录或最后结果超过 600 秒时当前状态 unknown，旧结果仍保留原时间。VM 不可达返回 503。
 
-平台 Web 代理同路径，前端打开时每 30 秒读取、切走或隐藏时停止。历史每点 10 分钟，通常包含两次探测，首尾允许不足 10 分钟；缺测保留灰色，失败优先显示红色，时间段内已到时间的槽位全部成功才绿色。点击时间点后选择单次探测查看详情。探测频率仍为每 5 分钟一次，页面保留现有 Perses HTTPS 入口。
+平台 Web 代理同路径，前端打开时每 30 秒读取、切走或隐藏时停止。历史每点 5 分钟，对应一次计划探测，最近 24 小时保留首尾部分区间，根据当前时间格是否有记录显示 288 或 289 个时间格；每次结果独立显示，成功为绿色、失败为红色、缺测为灰色。点击时间点后选择该次探测查看详情。点宽和横纵间隔均为原 10 分钟展示的一半，高度保持 30px，随容器宽度自动换行。探测频率仍为每 5 分钟一次，页面保留现有 Perses HTTPS 入口。
 
-槽位是否到期按入口的 offset_seconds 判断；整个时间点尚无到期槽位时显示“尚未到探测时间”。新增字段向后兼容，平台应在 monitoring API 更新后升级，以消费实际调度偏移。
+槽位是否到期按入口的 offset_seconds 判断；各入口当前 5 分钟格在尚未到探测时间或已到时间但没有结果时隐藏，不留占位、不补更早的格子。读取到记录后显示该格，包括成功、失败及不完整记录；该时段结束后仍无记录则显示为灰色历史缺测格，迟到结果仍更新原格。时间范围以最近一次读取的 end 为准，随每 30 秒读取或手动刷新更新。新增字段向后兼容，平台应在 monitoring API 更新后升级，以消费实际调度偏移。
 
 ## 发布
 
