@@ -319,7 +319,7 @@
                 "plugin": {
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
-                    "query": "last_over_time(monitoring_native_backend_decode_tokens_per_second{environment=\"a3-vllm\"}[5s])",
+                    "query": "last_over_time(monitoring_native_backend_output_tokens_per_second{environment=\"a3-vllm\"}[5s])",
                     "seriesNameFormat": "{{role}}",
                     "minStep": "5s",
                     "datasource": {

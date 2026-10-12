@@ -39,6 +39,19 @@ def test_generic_container_release_feeds_startup_acceptance(startup):
     assert clock[0] == 100 and not (root / 'shadow-started.json').exists()
 
 
+def test_startup_retries_until_native_records_are_visible(startup, monkeypatch):
+    import native_recording
+    root, _, clock = startup
+    calls = []
+    def check(**kwargs):
+        calls.append(kwargs)
+        if len(calls) < 3:
+            raise RuntimeError('Fresh native records missing from VM')
+    monkeypatch.setattr(native_recording, 'check', check)
+    readiness.observe(root)
+    assert readiness.accepted(root) and len(calls) == 3 and clock[0] == 110
+
+
 @pytest.mark.parametrize('fault', ['writer', 'lag', 'proxy', 'transport'])
 def test_startup_failure_preserves_publication_and_has_no_state_writes(startup, monkeypatch, fault):
     root, state, clock = startup

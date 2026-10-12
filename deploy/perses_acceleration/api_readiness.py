@@ -62,7 +62,7 @@ def observe(root):
                 report['records'].append({'at': time.time(), 'health': result})
                 save(root, 'api-readiness.json', report)
                 return
-            except (OSError, ValueError, KeyError, AssertionError) as error:
+            except (OSError, ValueError, KeyError, AssertionError, RuntimeError) as error:
                 bad += 1
                 report['records'].append({'at': time.time(), 'error': str(error)[:300]})
                 if bad >= 3:

@@ -126,47 +126,27 @@ def resource_rules(add):
     """Labels retain device/rank/segment identity; no encoded paths in storage."""
     for env in ('dcu-pd','xpu-pd','a3-vllm'):
         scope='environment="'+env+'",'+HOSTS[env]
-        for field,name in [('memory_total','node_memory_MemTotal_bytes'),('memory_available','node_memory_MemAvailable_bytes'),
-                           ('swap_total','node_memory_SwapTotal_bytes'),('swap_free','node_memory_SwapFree_bytes'),
-                           ('load1','node_load1'),('load5','node_load5'),('load15','node_load15')]:
-            add('host_gauge',source_value(name,scope),field=field)
-        for field,name in [('used','node_filesystem_size_bytes'),('available','node_filesystem_avail_bytes')]:
-            add('host_filesystem_bytes',source_value(name,scope),field='total' if field=='used' else field)
         for family,fields in [('network', [('rx','receive_bytes_total'),('tx','transmit_bytes_total')]),
                               ('disk',[('read','read_bytes_total'),('write','written_bytes_total')])]:
             for field,suffix in fields:
                 add('host_'+family+'_bytes_per_second',source_value('node_'+family+'_'+suffix,scope,counter=True),field=field)
         for role in ('prefill','decode'):
-            if env=='a3-vllm':
-                scope='environment="a3-vllm",job="vllm-a3",node="'+('a3-1' if role=='prefill' else 'a3-2')+'"'
-                for field,name in [('running','num_requests_running'),('waiting','num_requests_waiting'),('kv_usage','kv_cache_usage_perc')]:
-                    add('scheduler_gauge',source_value('vllm:'+name,scope),field=field,role=role)
-            else:
+            if env!='a3-vllm':
                 scope='environment="'+env+'",job="sglang-'+role+'"'
-                for field,name in [('running','num_running_reqs'),('waiting','num_queue_reqs'),('kv_usage','token_usage'),
-                                   ('cache_hit','cache_hit_rate'),('hicache_used','hicache_host_used_tokens'),('hicache_total','hicache_host_total_tokens')]:
-                    add('scheduler_gauge',source_value('sglang:'+name,scope),field=field,role=role)
                 u=source_value('sglang:hicache_host_used_tokens',scope)
                 t=source_value('sglang:hicache_host_total_tokens',scope)
                 add('hicache_usage_ratio',ratio(u,t),role=role)
                 if role=='prefill' and env=='dcu-pd':
                     # One configured representative, no sum of copied pools.
                     extra='tp_rank="0",pp_rank="0",moe_ep_rank="0"'
-                    for field,name in [('used','hicache_host_used_tokens'),('total','hicache_host_total_tokens')]:
-                        add('hicache_representative_tokens',source_value('sglang:'+name,scope,extra),field=field,role=role)
                     add('hicache_representative_ratio',ratio(source_value('sglang:hicache_host_used_tokens',scope,extra),source_value('sglang:hicache_host_total_tokens',scope,extra)),role=role)
     for env,job in [('dcu-pd','mooncake'),('a3-vllm','mooncake-a3')]:
         scope='environment="'+env+'",job="'+job+'"'
-        for field,name in [('used','segment_allocated_bytes'),('total','segment_total_capacity_bytes')]:
-            add('store_segment_bytes',source_value(name,scope),field=field)
         add('store_segment_usage_ratio',ratio(source_value('segment_allocated_bytes',scope),source_value('segment_total_capacity_bytes',scope)))
     for role in ('prefill','decode'):
         scope='environment="dcu-pd",job="dcu-'+role+'"'
-        for field,metric in [('utilization','utilization_percent'),('memory_used','memory_used_bytes'),('memory_total','memory_total_bytes'),('temperature','temperature_celsius'),('power','power_watts')]:
-            value=source_value('dcu_'+metric,scope)
-            stamp=fresh(selector('dcu_sample_timestamp_seconds',scope))
-            success=fresh(selector('dcu_sample_success',scope))
-            add('device_gauge',f'({value}) and on({SOURCE}) (({success} == 1) and (time()-{stamp} < 15))',field=field,role=role)
+        stamp=fresh(selector('dcu_sample_timestamp_seconds',scope))
+        success=fresh(selector('dcu_sample_success',scope))
         value=ratio(source_value('dcu_memory_used_bytes',scope),source_value('dcu_memory_total_bytes',scope))
         add('device_memory_ratio',f'({value}) and on({SOURCE}) (({success} == 1) and (time()-{stamp} < 15))',role=role)
 
@@ -198,9 +178,9 @@ def build():
                 add('backend_' + short + '_per_second', aggregate(prefix + metric, scope, extra), role=role)
                 add('backend_'+short+'_total',aggregate(prefix+metric,scope,extra,counter=False),role=role)
             add('backend_input_tokens_total',aggregate(prefix+'prompt_tokens_total',scope,extra,counter=False),role=role)
-            if a3:
-                add('backend_decode_tokens_per_second',aggregate(prefix+'generation_tokens_total',scope),role=role)
-            elif role=='decode':
+            # A3 output/decode throughput is the same population. Keep one
+            # record; readers expose both display fields from that value.
+            if not a3 and role=='decode':
                 # Current DCU and XPU DP-attention inventory: one independent
                 # scheduler per DP, TP index equals DP index, PP=0. Preserve all
                 # eight DP groups; a global TP=0 filter would undercount by 8x.
@@ -264,9 +244,6 @@ def build():
         add('prefill_effective_tokens',aggregate('vllm:prompt_tokens_by_source_total',scope,'source="'+mode+'"',counter='increase'),mode=mode)
     parts=aggregate('vllm:prompt_tokens_by_source_total',scope,'source=~"local_compute|local_cache_hit|external_kv_transfer"')
     add('cache_quality_issues',f'WITH (p=({parts}), t=({den})) abs(p-t) > bool 0.000001',role='prefill',kind='effective')
-    scope = 'environment="xpu-pd",job="sglang-prefill"'
-    value = source_value('sglang:cache_hit_rate', scope, 'tp_rank="0",pp_rank="0"')
-    add('native_prefix_hit_ratio', f'(({value}) >= 0) <= 1')
 
     for env, job in [('dcu-pd','mooncake'), ('a3-vllm','mooncake-a3')]:
         scope = f'environment="{env}",job="{job}"'
@@ -276,8 +253,6 @@ def build():
             # future multi-store installation or summing replicated capacity.
             u = source_value(used, scope)
             t = source_value(total, scope)
-            add('store_used_bytes', f'(({u}) >= 0) < Inf', tier=tier)
-            add('store_total_bytes', f'(({t}) >= 0) < Inf', tier=tier)
             add('store_usage_ratio', ratio(u, t), tier=tier)
         if env == 'dcu-pd':
             for name, kind in [('valid_get_nums_','valid'), ('mem_cache_hit_nums_','memory'), ('file_cache_hit_nums_','ssd')]:

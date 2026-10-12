@@ -6,14 +6,15 @@ import sys
 import time
 import httpx
 import pytest
-from monitoring import api,native_rules,native_schema
+from monitoring import api,native_rules,native_schema,raw_gauges
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'perses'))
 
 
 def row(metric,value,ts=100,**labels):
-    return {'metric':{'__name__':native_rules.PREFIX+metric,'environment':'a3-vllm','node':'a3-1','role':'prefill',**labels},'values':[[ts,str(value)]]}
+    prefix=raw_gauges.PREFIX if metric in raw_gauges.FAMILIES else native_rules.PREFIX
+    return {'metric':{'__name__':prefix+metric,'environment':'a3-vllm','node':'a3-1','role':'prefill',**labels},'values':[[ts,str(value)]]}
 
 
 def test_partial_sources_keep_values_and_report_coverage():
@@ -35,6 +36,33 @@ def test_replicated_stores_are_not_silently_summed_in_single_store_json():
     assert point['mooncake']['capacity']['used'] is None
 
 
+@pytest.mark.parametrize('role,node',[('prefill','a3-1'),('decode','a3-2')])
+@pytest.mark.parametrize('value',[0,12])
+@pytest.mark.parametrize('reverse',[False,True])
+def test_a3_shared_token_record_preserves_both_fields_with_retired_records(role,node,value,reverse):
+    rows=[row('backend_output_tokens_per_second',value,role=role,node=node),
+          row('backend_decode_tokens_per_second',99,role=role,node=node)]
+    point=native_schema.points(rows[::-1] if reverse else rows,'a3-vllm',100,100,5)[0]
+    assert point['nodes'][role]['output_tokens']==point['nodes'][role]['decode_tokens']==value
+    rates=native_schema.snapshot(point)['nodes'][role]['metrics']['data']['rates']
+    assert rates['output_tokens']==rates['decode_tokens']==value
+
+
+def test_a3_missing_shared_record_does_not_fall_back_to_retired_alias():
+    rows=[row('backend_expected_instances',4),row('backend_decode_tokens_per_second',99)]
+    node=native_schema.points(rows,'a3-vllm',100,100,5)[0]['nodes']['prefill']
+    assert node['output_tokens'] is None and node['decode_tokens'] is None
+    assert 'output_tokens' in node['gap_before'] and 'decode_tokens' in node['gap_before']
+
+
+@pytest.mark.parametrize('env,node',[('dcu-pd','dcu2'),('xpu-pd','xpu-1')])
+def test_other_backends_keep_distinct_output_and_decode_rates(env,node):
+    rows=[row('backend_output_tokens_per_second',3,environment=env,node=node,role='decode'),
+          row('backend_decode_tokens_per_second',8,environment=env,node=node,role='decode')]
+    data=native_schema.points(rows,env,100,100,5)[0]['nodes']['decode']
+    assert data['output_tokens']==3 and data['decode_tokens']==8
+
+
 def test_rules_read_raw_only_and_have_one_fixed_interval():
     config,meta=native_rules.build()
     assert meta['window_seconds']==60 and meta['rule_count']>87
@@ -45,6 +73,8 @@ def test_rules_read_raw_only_and_have_one_fixed_interval():
             assert native_rules.PREFIX not in rule['expr']
             assert 'monitoring_chart_' not in rule['expr'] and '$' not in rule['expr']
             assert len(rule['expr'])<1200
+    rules=[rule for group in config['groups'] for rule in group['rules']]
+    assert len({(rule['expr'],json.dumps(rule['labels'],sort_keys=True)) for rule in rules})==len(rules)
     source=(ROOT/'monitoring/recording_runtime.py').read_text()
     assert 'os.execv' in source and 'generation' not in source and 'publication' not in source
 
@@ -91,6 +121,76 @@ def test_published_resources_are_direct_vm_and_regeneration_is_idempotent():
                         assert q['query'].endswith('* 1000')
                     elif 'backend_latency_seconds' in q['query']:
                         assert not q['query'].endswith('* 1000')
+                    if document['metadata']['project']=='a3-monitoring':
+                        assert 'monitoring_native_backend_decode_tokens_per_second' not in q['query']
+
+
+def test_a3_dashboard_migration_and_legacy_generation_use_shared_record():
+    from native_records import apply,derived_query
+    from project_split import read_resources
+    resources=read_resources(ROOT/'perses/projects')
+    migrated=0
+    for document in resources['dashboards']:
+        if document['metadata']['project']!='a3-monitoring':continue
+        for panel in document['spec']['panels'].values():
+            for item in panel['spec']['queries']:
+                q=item['spec']['plugin']['spec']
+                if 'monitoring_native_backend_output_tokens_per_second' in q['query']:
+                    q['query']=q['query'].replace('backend_output_tokens_per_second','backend_decode_tokens_per_second')
+                    migrated+=1
+    assert migrated==2
+    assert apply(resources)==read_resources(ROOT/'perses/projects')
+    query,_=derived_query('nodes.decode.decode_tokens','a3-vllm','')
+    assert query=='last_over_time(monitoring_native_backend_output_tokens_per_second{environment="a3-vllm",role="decode"}[5s])'
+
+
+@pytest.mark.skipif(not __import__('os').environ.get('NATIVE_RECORDING_TEST_VM'),reason='Disposable VM required')
+def test_actual_vm_a3_shared_token_record_preserves_role_queries_and_api():
+    import uuid
+    from native_records import read
+    url=__import__('os').environ['NATIVE_RECORDING_TEST_VM']
+    assert url=='http://127.0.0.1:18543'
+    end=int(time.time()//5)*5-100
+    fixture='a3-shared-'+uuid.uuid4().hex
+    expected={'prefill':5,'decode':18}
+    lines=[]
+    for role,rates in [('prefill',(2,3)),('decode',(7,11))]:
+        node=native_schema.NODES['a3-vllm'][role]
+        for engine,rate in enumerate(rates):
+            tags=f'environment="a3-vllm",job="vllm-a3",node="{node}",instance="{fixture}-{engine}",engine="{engine}"'
+            for offset in range(-65,1,5):
+                stamp=(end+offset)*1000
+                lines.extend([f'up{{{tags}}} 1 {stamp}',f'vllm:generation_tokens_total{{{tags}}} {1000+(offset+65)*rate} {stamp}'])
+    with httpx.Client(base_url=url,trust_env=False) as client:
+        client.post('/api/v1/import/prometheus',content='\n'.join(lines)+'\n').raise_for_status()
+        client.get('/internal/force_flush').raise_for_status()
+        def query(expr):
+            response=client.post('/api/v1/query',data={'query':expr,'time':end,'step':'5s','nocache':1,'latency_offset':'1ms'})
+            response.raise_for_status()
+            data=response.json();assert data['status']=='success'
+            return data['data']['result']
+        records=[];tested=[]
+        for group in native_rules.build()[0]['groups']:
+            for rule in group['rules']:
+                if rule['record']!=native_rules.PREFIX+'backend_output_tokens_per_second' or 'vllm:' not in rule['expr']:continue
+                rows=query(rule['expr'].replace('{environment=',f'{{instance=~"{fixture}-.*",environment='))
+                role=rule['labels']['role'];tested.append(role)
+                assert len(rows)==1 and float(rows[0]['value'][1])==expected[role]
+                tags={**rows[0]['metric'],**rule['labels']};tags.pop('__name__',None)
+                labels=','.join(k+'='+json.dumps(v) for k,v in tags.items())
+                records.append(f'{rule["record"]}{{{labels}}} {rows[0]["value"][1]} {end*1000}')
+        assert sorted(tested)==['decode','prefill']
+        client.post('/api/v1/import/prometheus',content='\n'.join(records)+'\n').raise_for_status()
+        client.get('/internal/force_flush').raise_for_status()
+        for role,value in expected.items():
+            stored=query(read('backend_decode_tokens_per_second','a3-vllm',f'role="{role}"'))
+            assert len(stored)==1 and float(stored[0]['value'][1])==value
+        response=client.post('/api/v1/query_range',data={'query':api.history_expression('a3-vllm'),
+            'start':end,'end':end,'step':'5s','nocache':1,'latency_offset':'1ms'})
+        response.raise_for_status()
+        point=native_schema.points(response.json()['data']['result'],'a3-vllm',end,end,5)[0]
+        for role,value in expected.items():
+            assert point['nodes'][role]['output_tokens']==point['nodes'][role]['decode_tokens']==value
 
 
 @pytest.mark.skipif(not __import__('os').environ.get('NATIVE_RECORDING_TEST_VM'),reason='Disposable VM required')

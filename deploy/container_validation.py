@@ -63,6 +63,7 @@ class ComponentProbe:
             address = ('[' + host + ']' if ':' in host and not host.startswith('[') else host) + ':' + port
         elif name == 'monitoring-vmalert':
             address = option(args, '--listen', '127.0.0.1:18432')
+            self.vm = option(args, '--vm', env.get('VM_URL', 'http://127.0.0.1:18428'))
         elif name in ('monitoring-vm', 'monitoring-vmagent'):
             address = option(args, '-httpListenAddr')
         elif name == 'monitoring-node':
@@ -95,7 +96,7 @@ class ComponentProbe:
                         all(n['metrics']['status'] == 'ok' for n in data['nodes'].values()), 'API sources incomplete: ' + environment)
         elif self.name == 'monitoring-vmalert':
             from native_recording import check
-            check(self.base)
+            check(self.base, vm=self.vm)
         elif self.name == 'monitoring-vm':
             fetch('/health')
             data = fetch('/api/v1/query?' + urllib.parse.urlencode({'query': 'vector(1)', 'nocache': 1}), True)

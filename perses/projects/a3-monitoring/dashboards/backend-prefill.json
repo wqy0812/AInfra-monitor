@@ -16,7 +16,7 @@
         "spec": {
           "display": {
             "name": "Prefill 运行与排队请求（请求）",
-            "description": "指标含义\n当前服务侧运行中与排队中的请求数量，按角色及源状态拆线展示。它是时刻值，不是累计请求量；排队持续增加时需结合请求到达速率和完成速率判断。\n\n速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。"
+            "description": "指标含义\n当前服务侧运行中与排队中的请求数量，按角色及源状态拆线展示。它是时刻值，不是累计请求量；排队持续增加时需结合请求到达速率和完成速率判断。\n\n瞬时值直接读取 VM 原始采样，不重复写入记录；指标及 up 须在查询时刻的 15 秒内新鲜且 up=1，保留来源有效性检查。缺失留空，历史显示仍保留的原始数据。"
           },
           "plugin": {
             "kind": "TimeSeriesChart",
@@ -46,7 +46,7 @@
                   "kind": "PrometheusTimeSeriesQuery",
                   "spec": {
                     "minStep": "5s",
-                    "query": "last_over_time(monitoring_native_scheduler_gauge{environment=\"a3-vllm\",role=\"prefill\",field=~\"running|waiting\"}[5s])",
+                    "query": "(label_match((label_match((label_set((label_map(label_copy((WITH (s = {environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\",__name__=~\"vllm:num_requests_running|vllm:num_requests_waiting\"}, u = up{environment=\"a3-vllm\",job=\"vllm-a3\",node=\"a3-1\"}) (default_rollup(s[15s])) and on(environment,job,instance) (default_rollup(u[15s]) == 1)), \"__name__\", \"field\"), \"field\", \"vllm:num_requests_running\", \"running\", \"vllm:num_requests_waiting\", \"waiting\")), \"role\", \"prefill\", \"__name__\", \"monitoring_direct_scheduler_gauge\")), \"role\", \"^(?:prefill)$\")), \"field\", \"^(?:running|waiting)$\"))",
                     "seriesNameFormat": "{{role}} · {{field}} · 引擎{{engine}} DP{{dp_rank}} TP{{tp_rank}}",
                     "datasource": {
                       "kind": "PrometheusDatasource",

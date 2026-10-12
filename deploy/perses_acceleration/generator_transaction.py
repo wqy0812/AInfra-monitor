@@ -10,12 +10,18 @@ from dashboard_columns import source_change, source_identity
 
 RUNTIME = Path('/data2/monitoring/perses/release')
 MODULES = ('dashboard_columns.py', 'query_acceleration.py', 'query_slimming.py', 'acceleration_catalog.py', 'acceleration_publication.py', 'dashboard_reorg.py', 'native_records.py')
+SHARED_MODULES = ('monitoring/__init__.py', 'monitoring/native_rules.py', 'monitoring/raw_gauges.py')
 DOCUMENTS = ('perses-query-acceleration.md', 'query-slimming.md', 'native-recording-rules.md', 'native-standard-review-20261011.md')
 BASE_HASH = '38b62a8cc6378aecc7837bdfc144f9300d282cf35e0b22bf67bddc4e4f54aba0'
 
 
+def module_sources():
+    return dict([(name, 'perses/' + name) for name in MODULES] +
+                [(name, name) for name in SHARED_MODULES])
+
+
 def source_paths():
-    return tuple('perses/' + name for name in MODULES) + tuple('docs/' + name for name in DOCUMENTS)
+    return tuple(module_sources().values()) + tuple('docs/' + name for name in DOCUMENTS)
 
 
 def encoded(path):
@@ -66,9 +72,9 @@ def plan(evidence, changes, group=None, datasources=(), *, rewrites=(), replace_
         assert group in state['groups'], 'Cannot replace an inactive group'
     writes = {}
     frozen = json.loads((evidence / 'query-runtime-before.json').read_text()) if rewrites else None
-    for name in MODULES:
+    for name, relative in module_sources().items():
         target = RUNTIME / name
-        candidate = candidate_bytes('perses/' + name)
+        candidate = candidate_bytes(relative)
         if frozen is not None:
             assert name in frozen and encoded(target) == frozen[name], 'Concurrent generator edit: ' + name
         elif name == 'dashboard_reorg.py':
@@ -118,17 +124,30 @@ def plan(evidence, changes, group=None, datasources=(), *, rewrites=(), replace_
         for name in writes:
             assert name in frozen and encoded(RUNTIME / name) == frozen[name], 'Concurrent runtime edit: ' + name
     entries = [{'path': name, 'before': encoded(RUNTIME / name), 'after': base64.b64encode(content).decode()} for name, content in writes.items()]
-    save(evidence / 'generator-journal.json', json_bytes({'entries': entries, 'changes': changes, 'group': group}))
+    package = RUNTIME / 'monitoring'
+    assert not package.is_symlink() and (not package.exists() or package.is_dir()), 'Unexpected generator package path'
+    new_directories = [] if package.is_dir() else ['monitoring']
+    save(evidence / 'generator-journal.json', json_bytes({'entries': entries, 'changes': changes,
+                                                       'group': group, 'new_directories': new_directories}))
 
 
 def install(evidence):
-    entries = json.loads((evidence / 'generator-journal.json').read_text())['entries']
+    journal = json.loads((evidence / 'generator-journal.json').read_text())
+    entries = journal['entries']
+    new_directories = journal.get('new_directories', [])
+    assert new_directories in ([], ['monitoring']), 'Unexpected generator directories'
+    for name in new_directories:
+        assert not (RUNTIME / name).exists() and not (RUNTIME / name).is_symlink(), 'Concurrent generator directory edit'
     # Check every entry before the first write, then recheck per write to catch
     # both pre-existing conflicts and edits racing this installation.
     for item in entries:
         path = RUNTIME / item['path']
-        assert path.parent.is_dir(), 'No implicit server directories'
+        assert path.parent.is_dir() or str(path.parent.relative_to(RUNTIME)) in new_directories, 'No implicit server directories'
+        assert not path.parent.is_symlink(), 'Unexpected generator package path'
         assert encoded(path) == item['before'], 'Concurrent generator edit: ' + item['path']
+    for name in new_directories:
+        (RUNTIME / name).mkdir()
+        print(json.dumps({'created_directory': str(RUNTIME / name)}))
     for item in entries:
         path = RUNTIME / item['path']
         assert path.parent.is_dir(), 'No implicit server directories'

@@ -6,16 +6,22 @@ the produced queries contain only ordinary metric names and labels.
 import copy
 import json
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from monitoring import raw_gauges
 
 PREFIX='monitoring_native_'
 ENV={'dcu-monitoring':'dcu-pd','a3-monitoring':'a3-vllm','xpu-monitoring':'xpu-pd'}
 NOTE='速率和分位数采用固定 1 分钟窗口，原生 gauge 保持当前值；每 5 秒记录；计数器重置采用原生处理。按可用来源汇总，缺采或质量异常请同时查看覆盖与质量图表。新记录启用前及记录缺口留空。'
+DIRECT_NOTE='瞬时值直接读取 VM 原始采样，不重复写入记录；指标及 up 须在查询时刻的 15 秒内新鲜且 up=1，保留来源有效性检查。缺失留空，历史显示仍保留的原始数据。'
 
 
 def read(name,env,extra='',scale=1):
+    if env=='a3-vllm' and name=='backend_decode_tokens_per_second':name='backend_output_tokens_per_second'
     selector=PREFIX+name+'{environment="'+env+'"'+(','+extra if extra else '')+'}'
-    value='last_over_time('+selector+'[5s])'
+    value=raw_gauges.query(env,name,extra) if name in raw_gauges.FAMILIES else 'last_over_time('+selector+'[5s])'
     return value if scale==1 else '('+value+') * '+str(scale)
 
 
@@ -111,6 +117,10 @@ def apply(resources):
                 elif 'monitoring_chart_valid' in original:
                     query['query']=read('backend_available_instances',env)
                     query['seriesNameFormat']='{{role}} · 可用实例';changed=True
+                if env=='a3-vllm' and PREFIX+'backend_decode_tokens_per_second' in query['query']:
+                    query['query']=query['query'].replace(PREFIX+'backend_decode_tokens_per_second',PREFIX+'backend_output_tokens_per_second')
+                    changed=True
+                query['query']=raw_gauges.rewrite(query['query'],env)
                 if changed or PREFIX in query['query']:
                     if PREFIX+'host_cpu_' in query['query']:
                         query['query']=re.sub(r',job=~?"[^"]*"', '', query['query'])
@@ -127,6 +137,8 @@ def apply(resources):
             if changed:
                 spec['display']['description']=policy_description(spec['display'].get('description',''))
                 if '有效字段' in spec['display']['name']:spec['display']['name']='后端可用实例'
+            if any(raw_gauges.PREFIX in item['spec']['plugin']['spec']['query'] for item in spec['queries']):
+                spec['display']['description']=spec['display'].get('description','').replace(NOTE,DIRECT_NOTE)
         quality_panels(document,env)
     result['datasources']=[d for d in result['datasources'] if d['metadata']['name']!='perses-accelerated']
     return result

@@ -168,6 +168,36 @@ def test_generator_rewrite_installs_against_frozen_bytes_and_keeps_group_state(r
     assert actual == {'schema': 1, 'merges': [], 'groups': ['a3'], 'rewrites': entry}
     assert release.load(runtime, relative)['spec']['panels'][c['panel']] == c['after']
     assert (runtime / 'query_slimming.py').is_file()
+    journal = release.load(evidence, 'generator-journal.json')
+    assert journal['new_directories'] == ['monitoring']
+    assert set(transaction.SHARED_MODULES) <= {item['path'] for item in journal['entries']}
+    # The isolated interpreter cannot borrow the checkout's monitoring package.
+    subprocess.run([sys.executable, '-I', '-c',
+        'import sys; sys.path.insert(0, sys.argv[1]); '
+        'from native_records import read; '
+        'assert "node_memory_" in read("host_gauge", "dcu-pd")', str(runtime)],
+        cwd=runtime, check=True, capture_output=True, text=True, timeout=10)
+
+
+@pytest.mark.parametrize('name', transaction.SHARED_MODULES)
+def test_shared_runtime_edit_after_audit_blocks_plan(rewrite_transaction, name):
+    runtime, evidence, changes, entry = rewrite_transaction
+    target = runtime / name
+    target.parent.mkdir(exist_ok=True)
+    target.write_text('# Concurrent package edit\n')
+    with pytest.raises(AssertionError, match='Concurrent generator edit'):
+        transaction.plan(evidence, changes, rewrites=entry)
+    assert not (evidence / 'generator-journal.json').exists()
+
+
+def test_shared_directory_created_after_plan_blocks_all_writes(rewrite_transaction):
+    runtime, evidence, changes, entry = rewrite_transaction
+    transaction.plan(evidence, changes, rewrites=entry)
+    before = release.runtime_snapshot(changes)
+    (runtime / 'monitoring').mkdir()
+    with pytest.raises(AssertionError, match='Concurrent generator directory edit'):
+        transaction.install(evidence)
+    assert release.runtime_snapshot(changes) == before
 
 
 @pytest.mark.parametrize('relative', transaction.source_paths())

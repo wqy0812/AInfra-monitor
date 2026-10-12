@@ -44,7 +44,7 @@ def load(root, name):
 
 
 def runtime_snapshot(changes):
-    names = set(transaction.MODULES) | set(transaction.DOCUMENTS) | {'acceleration_state.json', 'METRICS_GUIDE.md', 'README.md'}
+    names = set(transaction.module_sources()) | set(transaction.DOCUMENTS) | {'acceleration_state.json', 'METRICS_GUIDE.md', 'README.md'}
     names.update('projects/{project}/dashboards/{dashboard}.json'.format(**source_change(c)) for c in changes)
     return {n: transaction.encoded(transaction.RUNTIME / n) for n in sorted(names)}
 

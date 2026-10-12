@@ -1,6 +1,6 @@
 # 设计原则
 
-监控是三个仓库中独立的观测面：vmagent 采集，VictoriaMetrics 存储，monitoring-api 查询与派生，Perses 展示。监控管理自己的采集、补算与处理水位；平台（[AInfra](https://github.com/wqy0812/AInfra)）只读消费查询结果。网关（[AInfra-gate](https://github.com/wqy0812/AInfra-gate)）通过观测端口暴露 `aigate_*` 指标。
+监控是三个仓库中独立的观测面：vmagent 采集，VictoriaMetrics 存储，vmalert 计算记录规则，monitoring-api 只读查询，Perses 展示。原始瞬时值直接查询 VM，不重复保存记录；平台（[AInfra](https://github.com/wqy0812/AInfra)）只读消费查询结果。网关（[AInfra-gate](https://github.com/wqy0812/AInfra-gate)）通过观测端口暴露 `aigate_*` 指标。
 
 当前按一套部署管理，不预设其他部署环境；增加部署由用户另行说明。本文区分已实现行为、已决定待实现的目标和待验证方案。
 
@@ -21,7 +21,8 @@
 | --- | --- | --- |
 | 采集 | vmagent（`deploy/scrape.yml`） | 保留各平台真实 job 与标签；网关只抓 `aigate_.*`，密钥用 `bearer_token_file` |
 | 存储 | VictoriaMetrics | 唯一时序存储；升级保留历史、缓冲、水位和真实断档 |
-| 查询与派生 | monitoring-api（`monitoring/`） | latest、history、request-profile；来源 IP 白名单，默认只允许回环 |
+| 计算记录 | vmalert（`monitoring/native_rules.py`） | 固定窗口计算；每条规则只读原始指标 |
+| 查询 | monitoring-api（`monitoring/`） | latest、history、request-profile；读取计算记录和原始瞬时值；来源 IP 白名单，默认只允许回环 |
 | 展示 | Perses | 源定义在 `perses/projects/`，由生成器产出 |
 | 消费 | 平台 Web | 只读调用 monitoring-api |
 
@@ -30,7 +31,7 @@
 1. **口径优先于完整。** 保留 DP/TP/PP 去重、分层缓存分母、计数器生命周期分段；缺数据时留空，并在 `quality` 中说明原因，不插值、不反推历史。
 2. **一个指标一个定义。** 口径写在 [指标口径与历史边界](metrics-and-history.md) 和 [图表说明](../perses/METRICS_GUIDE.md)；看板、API 和平台页面引用同一个表达式。
 3. **看板是生成物。** 修改生成器和 `perses/projects/` 源定义，再经发布工具推送。
-4. **加速层可以随时回源。** 预计算只覆盖 catalog 中的精确表达式，其余回源；关闭加速后数值保持一致。减少面板、VictoriaMetrics 记录规则等替代方案尚待实测，见 [#4](https://github.com/wqy0812/AInfra-monitor/issues/4)；比较保持相同历史覆盖、步长和缺样语义，并计入补算与维护成本。
+4. **按计算价值选择记录。** 速率、分位数、比率与质量/覆盖由原生记录规则提供，记录缺口留空、不自动回源。原始瞬时值始终直接查询，保留来源有效性检查，不为统一显示名称重复落盘；API 和看板共用查询定义。数值比较使用相同时刻、步长和来源，性能评估另计历史覆盖与维护成本。
 5. **脚本按职责收敛。** 优先围绕生成器、发布和语义检查组织，不以文件数量或固定分类限制设计。部分整理模块仍被生成、发布和安装工具调用；先迁移职责和调用关系，再删除无消费者的脚本及专属测试，验证生成资源与独立安装目录。具体收敛为待实现目标，见 [#2](https://github.com/wqy0812/AInfra-monitor/issues/2)。
 6. **发布只有一个入口。** 新功能复用 `deploy/release.py` 的子命令；发布身份只在 [版本记录](releases/README.md) 更新对应组件。
 7. **数据完整优先。** 升级保留现有存储；重算使用独立检查点和代码指纹。

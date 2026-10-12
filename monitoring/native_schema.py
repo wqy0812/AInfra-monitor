@@ -6,13 +6,15 @@ code-eval API boundary; Perses builds selectors from these same field meanings.
 import math
 from urllib.parse import quote
 from .native_rules import PREFIX, EVAL_DELAY_SECONDS, READ_DELAY_SECONDS, MAX_RECORD_AGE_SECONDS
+from . import raw_gauges
 
 NODES={'dcu-pd':{'prefill':'dcu1','decode':'dcu2'},'a3-vllm':{'prefill':'a3-1','decode':'a3-2'},'xpu-pd':{'prefill':'xpu-2','decode':'xpu-1'}}
 POLICY={'schema':'native-1m-v1','window_seconds':60,'record_interval_seconds':5,
         'evaluation_delay_seconds':EVAL_DELAY_SECONDS,'snapshot_delay_seconds':READ_DELAY_SECONDS,
         'snapshot_max_age_seconds':MAX_RECORD_AGE_SECONDS,
         'partial_aggregates':True,'counter_resets':'native','history_fallback':False,
-        'description':'固定 1 分钟窗口；按可用来源汇总，覆盖和质量单独展示；历史缺口不回源。'}
+        'gauge_source':'raw','gauge_freshness_seconds':15,
+        'description':'固定 1 分钟窗口；按可用来源汇总，覆盖和质量单独展示；计算记录缺口不回源，瞬时值始终直读原始采样。'}
 
 
 def key(value):
@@ -38,8 +40,13 @@ def role_of(labels):
 
 def mappings(labels):
     """Map a sample into display fields. Factors only convert display units."""
-    name=labels.get('__name__','').removeprefix(PREFIX)
+    metric=labels.get('__name__','')
+    if metric.startswith(PREFIX) and metric.removeprefix(PREFIX) in raw_gauges.FAMILIES:return []
+    name=metric.removeprefix(PREFIX).removeprefix(raw_gauges.PREFIX)
     env=labels.get('environment');role=role_of(labels)
+    # Old A3 decode records may still exist in VM. The shared output record is
+    # authoritative, including for history; never merge or fall back to its alias.
+    if env=='a3-vllm' and name=='backend_decode_tokens_per_second':return []
     root='nodes.'+role+'.' if role else None
     field=labels.get('field');kind=labels.get('kind');tier=labels.get('tier')
     result=[]
@@ -47,6 +54,7 @@ def mappings(labels):
     if root:
         if name.startswith('backend_') and name.endswith('_per_second'):
             add(root+name[len('backend_'):-len('_per_second')])
+            if env=='a3-vllm' and name=='backend_output_tokens_per_second':add(root+'decode_tokens')
         elif name in ('backend_requests_total','backend_input_tokens_total','backend_output_tokens_total'):
             add(root+'counters.'+name[len('backend_'):-len('_total')])
         elif name=='backend_latency_seconds':

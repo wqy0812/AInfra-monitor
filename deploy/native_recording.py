@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 import time
+import urllib.parse
 import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -31,7 +32,30 @@ def fetch(base, path):
         return json.load(response)
 
 
-def check(base='http://127.0.0.1:18432', expected=None):
+def fresh_records(vm, started_at, now):
+    from monitoring.native_rules import MAX_RECORD_AGE_SECONDS, PREFIX
+    from monitoring.native_schema import NODES
+    # Expected-instance records are unconditional, even when every source is
+    # down. Inspect raw sample timestamps, not the query's evaluation timestamp.
+    query = 'tlast_over_time(' + PREFIX + 'backend_expected_instances[' + str(MAX_RECORD_AGE_SECONDS) + 's])'
+    body = fetch(vm, '/api/v1/query?' + urllib.parse.urlencode({
+        'query': query, 'time': now, 'nocache': 1, 'latency_offset': '1ms'}))
+    require(body.get('status') == 'success' and not body.get('isPartial'), 'Native record read failed')
+    expected = {(env, node, role) for env, nodes in NODES.items() for role, node in nodes.items()}
+    observed = {}
+    for row in body['data']['result']:
+        labels = row['metric']
+        identity = tuple(labels.get(k) for k in ('environment', 'node', 'role'))
+        require(identity in expected and identity not in observed, 'Unexpected native record identity')
+        stamp = float(row['value'][1])
+        require(started_at < stamp <= now and now - stamp < MAX_RECORD_AGE_SECONDS,
+                'Native records stale or predate this process')
+        observed[identity] = stamp
+    require(observed.keys() == expected, 'Fresh native records missing from VM')
+    return {'series': len(observed), 'oldest_sample_at': min(observed.values()), 'process_started_at': started_at}
+
+
+def check(base='http://127.0.0.1:18432', expected=None, vm=None):
     if expected is None:
         from monitoring.native_rules import build as rules_build
         expected=rules_build()[1]['rule_count']
@@ -47,7 +71,15 @@ def check(base='http://127.0.0.1:18432', expected=None):
     writes = {name: scalar(counters, 'vmalert_remotewrite_' + name) for name in (
         'errors_total', 'dropped_rows_total', 'sent_rows_total')}
     require(writes['dropped_rows_total'] == 0, 'Native remote write dropped rows; inspect and repair coverage')
-    return {'rule_count': len(rules), 'groups': len(groups), 'rules': rules, 'remote_write': writes}
+    require(writes['sent_rows_total'] > 0, 'Native remote write has not sent any rows')
+    # Cumulative errors can include a recovered startup failure. Successful
+    # sends plus fresh VM readback establish current progress without replay.
+    now = time.time()
+    started_at = scalar(counters, 'process_start_time_seconds')
+    require(0 < started_at <= now, 'Invalid native process start time')
+    records = fresh_records(vm or os.environ.get('VM_URL', 'http://127.0.0.1:18428'), started_at, now)
+    return {'rule_count': len(rules), 'groups': len(groups), 'rules': rules,
+            'remote_write': writes, 'stored_records': records}
 
 
 def build(api_image, vmalert_image, evidence):
@@ -126,6 +158,7 @@ def main():
     parser.add_argument('--coverage-only', action='store_true')
     parser.add_argument('--require-full', action='store_true')
     parser.add_argument('--state', type=Path, default=Path('/data2/monitoring/state'))
+    parser.add_argument('--vm', default=os.environ.get('VM_URL', 'http://127.0.0.1:18428'), help='VM URL for check readback')
     parser.add_argument('--evidence', type=Path, required=True)
     args = parser.parse_args()
     require(args.evidence.is_dir(), 'Evidence directory must already exist')
@@ -134,7 +167,7 @@ def main():
         elif args.action == 'publish': result = publish(args.image, args.state, args.evidence)
         elif args.action == 'audit': result = audit(args.evidence, args.filters, args.coverage_only, args.require_full)
         else:
-            result = check(); save(args.evidence, 'native-check.json', result)
+            result = check(vm=args.vm); save(args.evidence, 'native-check.json', result)
         print(json.dumps(result))
     except BaseException as error:
         save(args.evidence, 'native-failure.json', {'error': str(error), 'recovery': 'fix_forward', 'automatic_rollback': False})

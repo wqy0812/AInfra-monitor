@@ -1,4 +1,4 @@
-"""Read-only JSON adapter over native VM records and request-profile queries."""
+"""Read-only JSON adapter over VM records, source gauges and request profiles."""
 import asyncio
 from collections import OrderedDict
 from contextlib import asynccontextmanager
@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.gzip import GZipMiddleware
 from .access import client_allowlist
 from .query_client import QueryClient
-from . import gateway_live, native_schema
+from . import gateway_live, native_schema, raw_gauges
 from .native_rules import PREFIX, build, READ_DELAY_SECONDS, MAX_RECORD_AGE_SECONDS
 
 ENVIRONMENTS=tuple(native_schema.NODES)
@@ -38,10 +38,12 @@ def validate_view(view):
 
 def history_expression(environment,view='full'):
     validate_environment(environment);validate_view(view)
-    # Bounded independently of display step; missing records never read raw or
-    # previous-schema results. last_over_time retains the metric name.
-    names=PREFIX+'.*' if view=='full' else PREFIX+'(backend_(requests_per_second|output_tokens_per_second|decode_tokens_per_second|latency_seconds|latency_samples|available_instances|expected_instances)|host_cpu_.*|prefix_.*|prefill_.*|native_prefix_hit_ratio|store_(used_bytes|total_bytes|usage_ratio|query_.*|quality_issues)|histogram_quality_issues|cache_quality_issues)'
-    return 'last_over_time({__name__=~"'+names+'",environment="'+environment+'"}[5s])'
+    # Computed metrics keep their bounded record read, with no raw fallback.
+    # Instantaneous gauges always read sources, excluding all retired copies.
+    names=PREFIX+'.*' if view=='full' else PREFIX+'(backend_(requests_per_second|output_tokens_per_second|decode_tokens_per_second|latency_seconds|latency_samples|cache_hit_ratio|available_instances|expected_instances)|host_cpu_.*|prefix_.*|prefill_.*|native_prefix_hit_ratio|store_(used_bytes|total_bytes|usage_ratio|query_.*|quality_issues)|histogram_quality_issues|cache_quality_issues)'
+    retired=PREFIX+'('+'|'.join(sorted(raw_gauges.FAMILIES))+')'
+    records='last_over_time({__name__=~"'+names+'",__name__!~"'+retired+'",environment="'+environment+'"}[5s])'
+    return 'union('+records+', '+raw_gauges.query(environment,summary=view=='summary')+')'
 
 
 class Service:
@@ -64,7 +66,7 @@ class Service:
             end=int((time.time()-READ_DELAY_SECONDS)//5)*5
             rows=await self.query(history_expression(self.environment),end-10,end,5)
             points=native_schema.points(rows,self.environment,end-10,end,5)
-            if not points:raise ValueError('Native records unavailable')
+            if not points:raise ValueError('Monitoring data unavailable')
             point=points[-1]
             latest=native_schema.snapshot(point)
             try:

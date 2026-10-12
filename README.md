@@ -12,7 +12,7 @@ monitoring 采集 DCU、A3、XPU 的模型、主机、加速卡、网关和缓�
 | monitoring-api | `monitoring/`；来源 IP 白名单、三环境只读 JSON 查询与请求画像查询；配置见 `deploy/start_test4.py` |
 | 节点采集 | node/DCU exporter 及平台原生 HTTP 指标；采集配置保留各平台真实 job 与标签 |
 | Perses | `perses/projects/` 保存分区源定义；发布为 3 个项目、21 张看板、261 个面板，网关与模型推理各一个入口；统一直接使用 VM 数据源 |
-| 原生记录规则 | `monitoring/native_rules.py` 定义 286 条 raw-only 规则；固定 1m 统计窗口、5s 记录，原生 gauge 保持当前值 |
+| 原生记录规则 | `monitoring/native_rules.py` 定义 202 条 raw-only 规则；速率和分位数固定 1m 窗口、5s 记录；82 个瞬时值字段由 `monitoring/raw_gauges.py` 直读原始采样，不重复落盘 |
 
 test4 配置的接口为 VM `127.0.0.1:18428`、vmagent `127.0.0.1:18429`、API `:18430`、Perses `:18431`。实际监听、代理和访问控制以目标机配置为准。API 拒绝空白、通配符和网段白名单；默认只允许 IPv4/IPv6 回环，显式调用方通过 `ALLOWED_CLIENTS` 指定。
 
@@ -24,9 +24,9 @@ test4 配置的接口为 VM `127.0.0.1:18428`、vmagent `127.0.0.1:18429`、API 
 - `/api/monitoring/history`：按环境查询，支持大于 0、最多 720 小时；默认完整数据，`view=summary` 去除逐卡/逐 rank 资源明细，保留聚合数值、空值和断档。返回的是实际已积累历史。
 - `/api/request-profile/metrics`：从 VM 查询网关计数与直方图，按 `environment=dcu-pd|a3-vllm|xpu-pd` 隔离来源，默认 DCU；声明 `counter_method=lifecycle-v2`。
 - `/health`：三环境模型来源、处理进度和错误；缺失必需来源或水位过旧时报告降级。
-- Perses 直接查询 `monitoring_native_*`，`/internal/perses/` 已移除。定义与维护见 [原生记录规则](docs/native-recording-rules.md)。
+- Perses 通过 VM 读取计算记录和原始瞬时值，`/internal/perses/` 已移除。定义与维护见 [原生记录规则](docs/native-recording-rules.md)。
 
-保留统计对象、单位及 DP/TP/PP 来源身份，采用原生计数器重置和直方图语义，允许部分来源聚合；覆盖与质量单独展示。新记录启用前和缺口留空，不自动回源或补算。变更见 [已批准的 D1–D6](docs/native-standard-review-20261011.md)。
+保留统计对象、单位及 DP/TP/PP 来源身份，采用原生计数器重置和直方图语义，允许部分来源聚合；覆盖与质量单独展示。计算记录启用前和缺口留空，不自动回源或补算；瞬时值始终读取原始采样，因此可以显示记录启用前仍保留的真实历史。变更见 [已批准的 D1–D6](docs/native-standard-review-20261011.md) 和[当前读取方式](docs/native-recording-rules.md)。
 
 A3 总体、设备和外部 KV 贡献使用明确的共同分母；启用时间前保留空白，不反推历史。具体口径与生效点见 [指标口径与历史边界](docs/metrics-and-history.md)、[图表说明](perses/METRICS_GUIDE.md) 和 [指标覆盖清单](perses/METRIC_COVERAGE.md)。覆盖清单是带日期的采集基线，不代表实时健康。
 

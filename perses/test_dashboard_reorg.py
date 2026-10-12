@@ -73,6 +73,7 @@ def test_runtime_install_keeps_original_bytes_and_refuses_reused_journal(tmp_pat
     release=evidence/'release';release.mkdir()
     target=tmp_path/'runtime';target.mkdir()
     for name in runtime.MODULES:
+        (release/name).parent.mkdir(parents=True,exist_ok=True)
         (release/name).write_text('new')
     (target/'project_split.py').write_text('old')
     old=target/'projects/dcu-monitoring/dashboards/overview.json'
@@ -98,7 +99,9 @@ def test_installed_generator_rebuilds_resources_and_removes_retired_dashboards(t
     release.mkdir()
     source_root = Path(__file__).parent
     for name in set(runtime.MODULES) | {'xpu_topology.py'}:
-        shutil.copy2(source_root/name, release/name)
+        (release/name).parent.mkdir(parents=True,exist_ok=True)
+        source=(source_root.parent if name.startswith('monitoring/') else source_root)/name
+        shutil.copy2(source, release/name)
     shutil.copytree(source_root/'projects', release/'projects')
     target = tmp_path/'runtime'
     retired = []
@@ -119,9 +122,24 @@ def test_installed_generator_rebuilds_resources_and_removes_retired_dashboards(t
         'from pathlib import Path; from project_split import read_resources, build, validate; '
         'from xpu_cache import configure; from align_dashboards import align; '
         'from project_release import snapshot; assert callable(snapshot); '
+        'from native_records import apply; '
+        'from monitoring.raw_gauges import query; assert "node_memory_" in query("dcu-pd"); '
         'assert align({"dashboards": []}) == ({"dashboards": []}, []); '
         'resources = read_resources(Path("projects")); validate(resources); '
         'rebuilt = build(resources); validate(rebuilt); '
         'by_id = lambda r: {(d["metadata"]["project"], d["metadata"]["name"]): d for d in r["dashboards"]}; '
-        'assert by_id(rebuilt) == by_id(resources)'],
+        'assert by_id(rebuilt) == by_id(resources); assert apply(resources) == resources'],
         cwd=target, env=env, check=True, capture_output=True, text=True, timeout=10)
+
+
+def test_runtime_missing_shared_gauge_module_fails_before_writes(tmp_path):
+    import reorg_runtime as runtime
+    release=tmp_path/'release';release.mkdir()
+    for name in runtime.MODULES:
+        if name=='monitoring/raw_gauges.py':continue
+        path=release/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text('candidate')
+    target=tmp_path/'runtime';target.mkdir()
+    (target/'native_records.py').write_text('installed')
+    with pytest.raises(AssertionError,match='Incomplete generator bundle'):runtime.sync(tmp_path,target)
+    assert (target/'native_records.py').read_text()=='installed'
+    assert not (tmp_path/'runtime-install.json').exists()

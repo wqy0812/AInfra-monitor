@@ -2,7 +2,13 @@
 
 2026-10-11 已批准 D1–D6，现行实现见 [口径评审](native-standard-review-20261011.md)。生产按新系统建设；测试环境迁移不要求复刻旧 Python 的窗口否决、代次发布及自动历史接续。
 
-官方 vmalert 1.151.0 每 5 秒计算固定 1 分钟窗口并写回 VM，指标前缀 `monitoring_native_`。规则来源为 `monitoring/native_rules.py`，286 条规则均直接读取原始指标，不依赖另一条记录规则的写入时序。API 只读记录并转换 code-eval JSON；请求画像及网关查询仍提供原有只读接口。Perses 使用 `victoriametrics` 数据源，已移除 `/internal/perses` 代理和 `perses-accelerated` 数据源。
+官方 vmalert 1.151.0 每 5 秒计算固定 1 分钟窗口并写回 VM，指标前缀 `monitoring_native_`。规则来源为 `monitoring/native_rules.py`，当前源码的 202 条规则均直接读取原始指标，不依赖另一条记录规则的写入时序。API 只读计算记录及原始瞬时值并转换 code-eval JSON；请求画像及网关查询仍提供原有只读接口。Perses 使用 `victoriametrics` 数据源，已移除 `/internal/perses` 代理和 `perses-accelerated` 数据源。
+
+A3 Prefill、Decode 的输出与 Decode Token 速率共用 `monitoring_native_backend_output_tokens_per_second`，API 保留 `output_tokens` / `decode_tokens` 两个字段，Perses 两张相关看板读取同一记录；DCU/XPU 的独立 Decode 统计保持不变。此合并将源码规则数从 286 减至 284，不改变统计窗口、来源、单位或历史数值口径。VM 中旧的 A3 `backend_decode_tokens_per_second` 记录保留但不再读取；历史始终使用原本就存在的输出速率记录，缺口不回退到旧别名。部署时须同步更新 API、规则服务、Perses 资源及生成器，发布身份以实际验收为准。
+
+另有 82 条瞬时值记录已从源码移除，规则数进一步减为 202。内存/负载、文件系统容量、调度队列、KV 占用、卡温度/功耗、Store/segment 容量及 XPU 原生命中率由 `monitoring/raw_gauges.py` 统一生成原始查询；API 按来源合并字段并放入同一次 VM 请求，Perses 使用同一查询定义。`monitoring_direct_*` 只是查询响应中的字段别名，既不写入 VM，也不增加新采集。
+
+瞬时值保留原来的 up、新鲜度、DCU 设备采样成功/时间、容量有限非负及比率范围检查，角色、rank、设备、Store/segment 身份和显示单位不变。旧的 82 条规则所写历史保留但排除读取；当前与历史都直接读原始样本，原始数据仍存在时可显示早于记录启用时间的历史。计算记录继续缺口留空，直读不充当其回源。快照仍按原有 15s 读取余量对齐，不混用不同时刻，也不宣称本次调整缩短了整体快照延迟。
 
 ## 统计定义
 
@@ -31,8 +37,10 @@ python3 deploy/release.py acceleration audit --evidence AUDIT_DIR
 
 所有证据目录预先显式创建；按停机窗口替换受影响组件，失败留证并修复当前版本。`audit` 在已安装 API 容器中只读比较每条原始表达式和相同时刻的存储记录，分别报告有数据和空结果；空结果不代表真实业务覆盖。
 
+`check` 和容器发布验收除规则健康外，还要求当前 vmalert 进程已有成功发送、无丢弃，并从目标 VM 读回三个环境、两个角色的配置实例数记录。六条记录须在当前进程启动后写入且样本年龄小于 30s；该记录不依赖业务请求或后端 up，因此无流量、来源故障不会阻止验证写入链路。读取使用原始样本时间并禁用查询缓存，旧进程的记录或仅有发送计数不能通过。历史累计发送错误会保留在证据中，恢复后可通过新鲜记录读回验收。自定义 VM 可用 `acceleration check --vm URL` 指定；容器替换使用容器的 `--vm` / `VM_URL` 配置。
+
 首次安装先准备固定镜像，设置 `MONITOR_VM_IMAGE`、`MONITOR_API_IMAGE`、`MONITOR_NATIVE_IMAGE` 为完整本地 image ID，显式配置 `ALLOWED_CLIENTS`，再执行 `deploy/start.py central`。此入口同时启动 VM、vmagent、vmalert、只读 API；已有容器时拒绝首次安装，改用发布入口。
 
-每次重启只开始正常评估，不执行 replay、不写 generation/publication 文件。新指标启用前或记录缺口保留空白，不以旧口径或原始查询自动填补。VM 历史、发送缓冲、旧水位和发布文件保持原样。需要历史时可另行显式运行官方 replay，提供 `monitoring.recording_runtime --replay-start ISO_TIME --replay-end ISO_TIME` 的两个边界；不能把另一个实时 writer 启在相同记录时间范围。
+每次重启只开始正常评估，不执行 replay、不写 generation/publication 文件。计算指标启用前或记录缺口保留空白，不以旧口径或原始查询自动填补；瞬时值不依赖记录服务。VM 历史、发送缓冲、旧水位和发布文件保持原样。需要计算记录历史时可另行显式运行官方 replay，提供 `monitoring.recording_runtime --replay-start ISO_TIME --replay-end ISO_TIME` 的两个边界；不能把另一个实时 writer 启在相同记录时间范围。
 
 Perses 发布使用 `dashboards prepare/apply` 和 `runtime apply`，校验并发编辑、真实数据源查询及资源读回。合成回归使用 `experiments/native_standard_probe.py --approved`；历史计算模块保留作离线旧口径对照，不被现行 API 或 vmalert 运行入口导入。原先的 Python 延迟重建写入入口已删除。

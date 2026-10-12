@@ -9,7 +9,8 @@ MODULES = ('connection.py', 'align_dashboards.py', 'dashboard_reorg.py', 'dashbo
            'remove_idle_thresholds.py', 'host_cpu_panel.py', 'npu_panels.py', 'xpu_hosts.py',
            'xpu_hardware.py', 'xpu_cache.py', 'xpu_topology.py', 'query_acceleration.py', 'acceleration_catalog.py',
            'acceleration_publication.py', 'acceleration_state.json', 'a3_coverage.py', 'a3_cache.py', 'a3_mooncake.py',
-           'panel_trim.py', 'summary_dashboard.py', 'drilldown_layout.py', 'query_slimming.py', 'native_records.py')
+           'panel_trim.py', 'summary_dashboard.py', 'drilldown_layout.py', 'query_slimming.py', 'native_records.py',
+           'monitoring/__init__.py', 'monitoring/native_rules.py', 'monitoring/raw_gauges.py')
 
 
 def encoded(path):
@@ -23,6 +24,7 @@ def sync(root, runtime):
     from dashboard_reorg import RETIRED
     from panel_trim import RETIRED_DASHBOARDS
     files = {name:release/name for name in MODULES}
+    assert all(path.is_file() for path in files.values()), 'Incomplete generator bundle'
     files.update({str(p.relative_to(release)):p for p in (release/'projects').rglob('*.json')})
     for project in ('dcu-monitoring','a3-monitoring','xpu-monitoring'):
         files['projects/'+project+'/perses-accelerated-datasource.json']=None
