@@ -1,6 +1,7 @@
 """Single-instance, staggered real SSE probes; the monitoring API stays read-only."""
 import asyncio
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 import fcntl
 import json
 import logging
@@ -15,7 +16,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 import httpx
 
-from .probes import INTERVAL, TARGETS, samples
+from .probes import INTERVAL, OFFSETS, TARGETS, samples
 
 LOG = logging.getLogger(__name__)
 TIMEOUT = 60
@@ -37,6 +38,8 @@ class Stream:
         self.first_output_at = None
         self.finished = False
         self.done = False
+        self.skip_lf = False
+        self.first_line = True
 
     def event(self):
         if not self.data:
@@ -87,13 +90,19 @@ class Stream:
         self.size += len(chunk)
         if self.size > MAX_BYTES:
             raise ProbeFailure('invalid_stream')
+        if self.skip_lf and chunk:
+            self.skip_lf = False
+            chunk = chunk.removeprefix(b'\n')
         self.buffer += chunk
-        while match := re.search(rb'\r\n|\r(?!$)|\n', self.buffer):
+        while match := re.search(rb'\r\n|\r|\n', self.buffer):
             line, self.buffer = self.buffer[:match.start()], self.buffer[match.end():]
+            # CR already ends the line; only suppress a following LF across chunks.
+            self.skip_lf = match.group() == b'\r' and not self.buffer
             try:
-                line = line.decode('utf-8')
+                line = line.decode('utf-8-sig' if self.first_line else 'utf-8')
             except UnicodeDecodeError:
                 raise ProbeFailure('invalid_stream') from None
+            self.first_line = False
             if not line:
                 self.event()
             elif line.startswith('data:'):
@@ -107,13 +116,16 @@ class Stream:
             raise ProbeFailure('empty_output')
 
 
-async def probe(client, url, *, timeout=TIMEOUT):
+async def probe(client, url, *, api_key='', timeout=TIMEOUT):
     started, clock = time.time(), time.monotonic()
     status, reason = None, 'success'
     stream = Stream()
+    headers = {'Accept': 'text/event-stream'}
+    if api_key:
+        headers['Authorization'] = 'Bearer ' + api_key
     try:
         async with asyncio.timeout(timeout):
-            async with client.stream('POST', url, json=BODY, headers={'Accept': 'text/event-stream'},
+            async with client.stream('POST', url, json=BODY, headers=headers,
                                      timeout=httpx.Timeout(timeout, connect=min(10, timeout))) as response:
                 status = response.status_code
                 if not 200 <= status < 300:
@@ -134,18 +146,37 @@ async def probe(client, url, *, timeout=TIMEOUT):
             'http_status': status, 'reason': reason}
 
 
+@dataclass(frozen=True)
+class Target:
+    url: str
+    api_key: str = field(default='', repr=False)
+
+
 def load_targets(path):
     values = json.loads(Path(path).read_text())
     if not isinstance(values, dict) or set(values) != {env for env, _ in TARGETS}:
         raise ValueError('Configure exactly a3-vllm, xpu-pd and dcu-pd business endpoints')
-    for url in values.values():
+    targets = {}
+    for environment, value in values.items():
+        if isinstance(value, str):
+            url, api_key = value, ''
+        elif isinstance(value, dict) and 'url' in value and not set(value) - {'url', 'api_key'}:
+            url, api_key = value['url'], value.get('api_key', '')
+        else:
+            raise ValueError('Probe targets must be URLs or objects with url and optional api_key')
+        if not isinstance(url, str):
+            raise ValueError('Probe target URL must be a string')
+        if (not isinstance(api_key, str) or len(api_key) > 8192
+                or any(not 33 <= ord(char) <= 126 for char in api_key)):
+            raise ValueError('Probe API keys must contain only visible ASCII characters, up to 8192 bytes')
         parsed = urlsplit(url)
         if (parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username or parsed.password
                 or parsed.query or parsed.fragment or parsed.path != '/v1/chat/completions'):
             raise ValueError('Probe targets must be full gateway /v1/chat/completions URLs without credentials')
-    if len(set(values.values())) != len(TARGETS):
+        targets[environment] = Target(url, api_key)
+    if len({target.url for target in targets.values()}) != len(TARGETS):
         raise ValueError('Probe targets must be distinct gateway entrances')
-    return values
+    return targets
 
 
 def next_run(now, offset):
@@ -153,14 +184,14 @@ def next_run(now, offset):
     return (math.floor((now-offset)/INTERVAL)+1)*INTERVAL+offset
 
 
-async def cycle(client, vm, environment, url):
-    result = await probe(client, url)
+async def cycle(client, vm, environment, url, *, api_key=''):
+    result = await probe(client, url, api_key=api_key)
     response = await client.post(vm + '/api/v1/import', content=samples(environment, result), timeout=5)
     response.raise_for_status()
     return result
 
 
-async def run_target(client, vm, environment, url, offset):
+async def run_target(client, vm, environment, url, offset, *, api_key=''):
     while True:
         due = next_run(time.time(), offset)
         await asyncio.sleep(max(0, due-time.time()))
@@ -168,7 +199,7 @@ async def run_target(client, vm, environment, url, offset):
         if not 0 <= time.time()-due < 5:
             continue
         try:
-            await cycle(client, vm, environment, url)
+            await cycle(client, vm, environment, url, api_key=api_key)
         except Exception as error:
             # Failed imports leave gaps. Never repeat a generation after a lost response.
             LOG.error('Probe observation not stored: %s (%s)', environment, type(error).__name__)
@@ -183,8 +214,9 @@ async def lifespan(app):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         async with httpx.AsyncClient(trust_env=False, follow_redirects=False,
                                     limits=httpx.Limits(max_connections=6)) as client:
-            tasks = [asyncio.create_task(run_target(client, vm, env, targets[env], i*100))
-                     for i, (env, _) in enumerate(TARGETS)]
+            tasks = [asyncio.create_task(run_target(client, vm, env, targets[env].url, OFFSETS[env],
+                                                   api_key=targets[env].api_key))
+                     for env, _ in TARGETS]
             app.state.tasks, app.state.client, app.state.vm = tasks, client, vm
             try:
                 yield

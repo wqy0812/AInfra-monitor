@@ -28,6 +28,7 @@ async def test_probe_import_export_preserves_failure_gaps_and_missing_fields():
         (await client.get(vm+'/internal/force_flush')).raise_for_status()
         data = await probes.history(client, vm, now)
     a3, xpu, dcu = data['services']
+    assert [service['offset_seconds'] for service in data['services']] == [0, 100, 200]
     assert a3['status'] == 'failure'
     assert [record['finished_at'] for record in a3['records']] == [now-1200, now-2]
     assert a3['latest']['reason'] == 'incomplete_stream'

@@ -97,6 +97,48 @@ def test_sse_comments_crlf_and_size_limit():
         worker.Stream().feed(b'x' * (worker.MAX_BYTES+1))
 
 
+@pytest.mark.parametrize('newline', [b'\n', b'\r\n', b'\r'])
+@pytest.mark.parametrize('chunk_size', [1, 3, 65536])
+@pytest.mark.parametrize('prefix', [b'', b'\xef\xbb\xbf'])
+def test_complete_sse_line_endings_and_bom(newline, chunk_size, prefix):
+    payload = prefix + (output()+FINISH+DONE).replace(b'\n', newline)
+    stream = worker.Stream()
+    for start in range(0, len(payload), chunk_size):
+        stream.feed(payload[start:start+chunk_size])
+        stream.feed(b'')
+    stream.finish()
+    assert stream.output and stream.finished and stream.done
+
+
+@pytest.mark.parametrize('newline', [b'\n', b'\r\n', b'\r'])
+def test_sse_terminal_data_line_still_requires_an_empty_line(newline):
+    stream = worker.Stream()
+    stream.feed((output()+FINISH+b'data: [DONE]\n').replace(b'\n', newline))
+    with pytest.raises(worker.ProbeFailure, match='incomplete_stream'):
+        stream.finish()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('api_key', ['', 'synthetic-business-key'])
+async def test_cycle_sends_business_credentials_only_to_model(api_key):
+    calls = []
+    def respond(request):
+        calls.append(request)
+        if request.url.host == 'model.test':
+            assert request.headers.get('Authorization') == ('Bearer ' + api_key if api_key else None)
+            return httpx.Response(200, headers={'Content-Type': 'text/event-stream'},
+                                  content=output()+FINISH+DONE)
+        assert request.url.host == 'vm.test'
+        assert 'Authorization' not in request.headers
+        assert b'synthetic-business-key' not in request.content
+        return httpx.Response(204)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        result = await worker.cycle(client, 'http://vm.test', 'a3-vllm',
+                                    'http://model.test/v1/chat/completions', api_key=api_key)
+    assert result['reason'] == 'success' and len(calls) == 2
+    assert 'synthetic-business-key' not in json.dumps(result)
+
+
 def observation(now, reason='success'):
     return {'reason': reason, 'started_at': now-2, 'finished_at': now, 'duration_seconds': 2,
             'first_output_seconds': .1, 'http_status': 200}
@@ -108,6 +150,7 @@ def test_raw_observations_gaps_staleness_and_partial_writes():
     partial = probes.samples('xpu-pd', observation(now-1)).splitlines()[0]
     data = probes.decode(raw+partial, now-86400, now)
     a3, xpu, dcu = data['services']
+    assert [service['offset_seconds'] for service in data['services']] == [0, 100, 200]
     assert a3['status'] == 'unknown' and a3['latest']['status'] == 'success'
     assert xpu['status'] == 'unknown' and xpu['latest']['reason'] == 'incomplete_observation'
     assert dcu['status'] == 'failure'
@@ -169,28 +212,48 @@ def test_configuration_validates_full_gateway_urls(tmp_path):
     path = tmp_path/'targets.json'
     targets = {env: f'http://{name.lower()}.test/v1/chat/completions' for env, name in probes.TARGETS}
     path.write_text(json.dumps(targets))
-    assert worker.load_targets(path) == targets
+    assert worker.load_targets(path) == {env: worker.Target(url) for env, url in targets.items()}
     for bad in ('http://test/health', 'http://secret:password@test/v1/chat/completions', 'file:///v1/chat/completions'):
         path.write_text(json.dumps({**targets, 'a3-vllm': bad}))
         with pytest.raises(ValueError):
             worker.load_targets(path)
 
 
+def test_configuration_accepts_optional_keys_without_exposing_them(tmp_path):
+    path = tmp_path/'targets.json'
+    targets = {env: f'http://{name.lower()}.test/v1/chat/completions' for env, name in probes.TARGETS}
+    configured = {'url': targets['a3-vllm'], 'api_key': 'synthetic-business-key'}
+    path.write_text(json.dumps({**targets, 'a3-vllm': configured}))
+    loaded = worker.load_targets(path)
+    assert loaded['a3-vllm'] == worker.Target(configured['url'], configured['api_key'])
+    assert loaded['xpu-pd'].api_key == ''
+    assert configured['api_key'] not in repr(loaded)
+    for bad in (None, 123, 'synthetic\nsecret', 'synthetic\rsecret', 'synthetic secret', '密钥', 'x' * 8193):
+        path.write_text(json.dumps({**targets, 'a3-vllm': {**configured, 'api_key': bad}}))
+        with pytest.raises(ValueError, match='Probe API keys'):
+            worker.load_targets(path)
+
+
 @pytest.mark.asyncio
 async def test_single_worker_lock_and_shutdown_do_not_record_cancellations(tmp_path, monkeypatch):
     path = tmp_path/'targets.json'
-    path.write_text(json.dumps({env: f'http://{name.lower()}.test/v1/chat/completions' for env, name in probes.TARGETS}))
+    path.write_text(json.dumps({env: {'url': f'http://{name.lower()}.test/v1/chat/completions',
+                                   'api_key': 'synthetic-' + env} for env, name in probes.TARGETS}))
     monkeypatch.setenv('PROBE_TARGETS_FILE', str(path))
     monkeypatch.setenv('STATE_DIR', str(tmp_path))
     started = []
-    async def blocked(*args):
+    async def blocked(*args, api_key):
         started.append(args[2])
+        assert args[3] == f'http://{dict(probes.TARGETS)[args[2]].lower()}.test/v1/chat/completions'
+        assert args[4] == probes.OFFSETS[args[2]]
+        assert api_key == 'synthetic-' + args[2]
         await asyncio.Event().wait()
     monkeypatch.setattr(worker, 'run_target', blocked)
     app = SimpleNamespace(state=SimpleNamespace())
     async with worker.lifespan(app):
         await asyncio.sleep(0)
         assert set(started) == {env for env, _ in probes.TARGETS}
+        assert all(not task.done() for task in app.state.tasks)
         with pytest.raises(BlockingIOError):
             async with worker.lifespan(SimpleNamespace(state=SimpleNamespace())):
                 raise AssertionError('duplicate worker started')
@@ -203,8 +266,9 @@ async def test_single_worker_lock_and_shutdown_do_not_record_cancellations(tmp_p
 @pytest.mark.asyncio
 async def test_scheduler_is_serial_even_when_generation_takes_time(monkeypatch):
     active, peak, calls = 0, 0, 0
-    async def delayed(*args):
+    async def delayed(*args, api_key):
         nonlocal active, peak, calls
+        assert api_key == 'synthetic-key'
         active += 1
         peak = max(peak, active)
         await asyncio.sleep(.01)
@@ -215,5 +279,5 @@ async def test_scheduler_is_serial_even_when_generation_takes_time(monkeypatch):
     monkeypatch.setattr(worker, 'cycle', delayed)
     monkeypatch.setattr(worker, 'next_run', lambda now, offset: now+.001)
     with pytest.raises(asyncio.CancelledError):
-        await worker.run_target(None, 'http://vm.test', 'a3-vllm', 'http://model.test', 0)
+        await worker.run_target(None, 'http://vm.test', 'a3-vllm', 'http://model.test', 0, api_key='synthetic-key')
     assert calls == 2 and peak == 1

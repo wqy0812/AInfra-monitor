@@ -10,6 +10,7 @@ import httpx
 INTERVAL = 300
 STALE_AFTER = 600
 TARGETS = (('a3-vllm', 'A3'), ('xpu-pd', 'XPU'), ('dcu-pd', 'DCU'))
+OFFSETS = {environment: index * 100 for index, (environment, _) in enumerate(TARGETS)}
 REASONS = ('success', 'http_error', 'timeout', 'connection_error', 'stream_error',
            'invalid_stream', 'empty_output', 'incomplete_stream')
 FIELDS = ('result', 'started_at_seconds', 'duration_seconds', 'first_output_seconds', 'http_status')
@@ -69,6 +70,7 @@ def decode(raw, start, end):
                             'http_status': int(status) if valid and status else None})
         latest = records[-1] if records else None
         services.append({'environment': environment, 'name': name, 'latest': latest,
+                         'offset_seconds': OFFSETS[environment],
                          'status': latest['status'] if latest and end-latest['finished_at'] <= STALE_AFTER else 'unknown',
                          'records': records})
     return {'source': 'victoriametrics', 'observed_at': end, 'start': start, 'end': end,
