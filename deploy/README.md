@@ -17,6 +17,12 @@
 
 首次安装保留 `start.py`、`start_test4.py`；公共容器校验为 `container_validation.py`。采集输入为 `scrape.yml`、`profile_a3_scrape.yml`、`xpu_hardware_scrape.yml`。只读网关历史检查已迁到 `scripts/check_gateway_history.py`。
 
+## aigate 双服务接入
+
+当前 `scrape.yml` 与 A3 片段直接采集固定 Router 的 `aigate-proxy :18082`；不向切流入口采集，也不再依赖 `aigate-profile-key`、`aigate-a3-profile-key` 或 `xpu-profile-key` 文件。首次安装只需要现有 `/config` 配置目录挂载；无需凭据卷。既有凭据文件可保留作历史材料，当前采集不读取它们。
+
+本变更须与 aigate 拆分同一维护窗口发布：先验证各功能服务 `/runtime/v1/status` 中的 Router 身份，再部署免认证采集配置并按通用入口替换 vmagent。保留既有 VM 数据目录及 `/buffer`，不复制或重新标记旧时序。记录各环境切换生效时间、功能服务 boot 与配置摘要，核验 `up{job="aigate"}`、样本新鲜度和受影响图表；切流后目标的 environment 不变化。多个入口共享一个功能服务时仍只抓一次。采集前核对实际监听和网络访问范围；切流控制密钥仍由其管理端口使用。
+
 ## API 镜像构建
 
 固定模板为 [Dockerfile.api](Dockerfile.api)。构建从指定 commit 读取完整 `monitoring/`、`requirements.txt` 和模板；不打包未提交文件。模板先核对基础镜像已安装的依赖版本，再删除原 API 源码目录并完整复制，避免旧模块在多次覆盖构建后残留。不更新依赖、不联网安装、不替换容器。

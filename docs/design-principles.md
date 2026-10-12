@@ -1,6 +1,6 @@
 # 设计原则
 
-监控是三个仓库中独立的观测面：vmagent 采集，VictoriaMetrics 存储，vmalert 计算记录规则，monitoring-api 只读查询，Perses 展示。原始瞬时值直接查询 VM，不重复保存记录；平台（[AInfra](https://github.com/wqy0812/AInfra)）只读消费查询结果。网关（[AInfra-gate](https://github.com/wqy0812/AInfra-gate)）通过观测端口暴露 `aigate_*` 指标。
+监控是三个仓库中独立的观测面：vmagent 采集，VictoriaMetrics 存储，vmalert 计算记录规则，monitoring-api 只读查询，Perses 展示。原始瞬时值直接查询 VM，不重复保存记录；平台（[AInfra](https://github.com/wqy0812/AInfra)）只读消费查询结果。网关功能服务 `aigate-proxy`（[AInfra-gate](https://github.com/wqy0812/AInfra-gate)）通过免认证观测端口暴露 `aigate_*` 指标；切流服务不重复采集或计数。
 
 当前按一套部署管理，不预设其他部署环境；增加部署由用户另行说明。本文区分已实现行为、已决定待实现的目标和待验证方案。
 
@@ -8,7 +8,7 @@
 
 1. **部署升级采用停机窗口，Router 切流在线完成。** 监控按[停机窗口升级](maintenance-window-upgrade.md)处理，不为升级零中断增加流程，也不执行版本回退。网关运行中的交换或目标切换保持服务在线，已受理请求沿用原快照；监控保留真实断档和切流前后的实际指标归属。
 2. **删除无消费者的退役实现。** 代码、专属测试和发布输入在本套部署及当前工具不再依赖后删除，历史从 Git 查。一次性迁移在本套部署完成并验收后清理，保留仍有用途的数据保护测试及迁移证据；历史发布输入按现有归档规则冻结。
-3. **一个事实只有一个权威归属。** 业务配置和绑定归平台数据库；时序、采集与补算水位归监控；网关快照和在途计数保存在内存中。副本说明来源、版本和失效方式。
+3. **一个事实只有一个权威归属。** 任务、绑定和操作记录归平台数据库；功能服务参数以其本地配置文件为权威；时序、采集与补算水位归监控；切流快照和在途计数保存在内存中。副本说明来源、版本和失效方式。
 4. **关键流程测试覆盖生产路径。** 纯计算逻辑保留单元测试，外部边界可模拟；查询、统计、采集和存储逻辑变化时，按范围执行真实 VM 语义测试。
 5. **发布身份是 Git commit 加镜像 ID。** 统一从 `deploy/release.py` 进入，原始证据放忽略的 `evidence/`。
 6. **文档标明实现状态。** 操作说明描述当前行为；设计方案区分已实现、已决定待实现和待验证内容，规则用正向表述。
@@ -19,7 +19,7 @@
 
 | 环节 | 组件 | 规则 |
 | --- | --- | --- |
-| 采集 | vmagent（`deploy/scrape.yml`） | 保留各平台真实 job 与标签；网关只抓 `aigate_.*`，密钥用 `bearer_token_file` |
+| 采集 | vmagent（`deploy/scrape.yml`） | 保留各平台真实 job 与标签；直接抓功能服务 `aigate_.*`，免认证，environment 固定归属 Router |
 | 存储 | VictoriaMetrics | 唯一时序存储；升级保留历史、缓冲、水位和真实断档 |
 | 计算记录 | vmalert（`monitoring/native_rules.py`） | 固定窗口计算；每条规则只读原始指标 |
 | 查询 | monitoring-api（`monitoring/`） | latest、history、request-profile；读取计算记录和原始瞬时值；来源 IP 白名单，默认只允许回环 |

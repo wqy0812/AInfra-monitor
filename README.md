@@ -18,6 +18,8 @@ test4 配置的接口为 VM `127.0.0.1:18428`、vmagent `127.0.0.1:18429`、API 
 
 中央数据目录 `/data2/monitoring` 中，`vm/` 保存时序，`buffer/` 保存发送缓冲，`state/` 保留旧处理水位和管理状态，现行只读 API 不再写入，`release/` 保存程序，`evidence/` 保存执行证据。升级保留历史、缓冲、水位和真实断档。
 
+aigate 拆分后，vmagent 直接访问 `aigate-proxy` 的免认证观测端口；环境标签固定归属其 Router，包含经切流入口与直连的请求。切流服务不重复统计，多个入口共享同一功能服务时只采集一次。指标名与查询 API 保持兼容，历史标签保留原归属；协调接入见[部署说明](deploy/README.md#aigate-双服务接入)，统计边界见[指标口径](docs/metrics-and-history.md#aigate-拆分后的观测归属)。
+
 ## 查询与统计
 
 - `/api/monitoring/latest`：当前快照、源观测时间、模型/主机/缓存指标及存储与积压状态。

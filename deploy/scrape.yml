@@ -64,8 +64,11 @@ scrape_configs:
   static_configs:
   - targets: ['127.0.0.1:18428']
     labels: {environment: dcu-pd}
+# Scrape aigate-proxy directly. Each target is fixed to its Router environment;
+# never register a switch entry here or relabel history after an entry switches.
+# Proxy metrics require no credentials. Keep job/service labels for query and
+# historical series compatibility across the coordinated split-service cutover.
 - job_name: aigate
-  bearer_token_file: /config/aigate-profile-key
   static_configs:
   - targets: ['122.235.251.106:18082']
     labels: {environment: dcu-pd, node: dcu1, service: aigate}
@@ -105,7 +108,6 @@ scrape_configs:
     regex: '(npu_.*|machine_npu_nums)'
     action: keep
 - job_name: aigate-a3
-  bearer_token_file: /config/aigate-a3-profile-key
   static_configs:
   - targets: ['122.52.5.131:18082']
     labels: {environment: a3-vllm, node: worker-131, service: aigate}
@@ -118,7 +120,6 @@ scrape_configs:
     action: keep
 
 - job_name: aigate-xpu
-  bearer_token_file: /config/xpu-profile-key
   static_configs:
   - targets: ['122.209.21.33:18082']
     labels: {environment: xpu-pd, node: xpu-1, service: aigate}

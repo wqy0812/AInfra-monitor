@@ -8,7 +8,7 @@ from pathlib import Path
 
 from generate import panel, variable, derived_schema
 from project_queries import Queries, ratio
-from metric_scope import apply_scope, request_description
+from metric_scope import apply_scope, request_description, proxy_descriptions
 
 ROOT = Path(__file__).resolve().parent
 PROJECTS = {"dcu-monitoring": "dcu-pd", "a3-monitoring": "a3-vllm", "xpu-monitoring": "xpu-pd"}
@@ -327,14 +327,14 @@ def build(snapshot):
     from dashboard_columns import expand
     snapshot = expand(snapshot, read_resources(ROOT / 'projects'))
     from native_records import apply as native
-    if 'monitoring_native_' in json.dumps(snapshot):return native(snapshot)
+    if 'monitoring_native_' in json.dumps(snapshot):return proxy_descriptions(native(snapshot))
     from dashboard_reorg import migrate
     from panel_trim import apply as trim
     from summary_dashboard import apply as summarize
     from drilldown_layout import apply as drilldown
     if any(d['metadata']['name'] == 'backend-performance' for d in snapshot['dashboards']):
         from align_dashboards import align
-        return summarize(drilldown(trim(align(migrate(snapshot)[0])[0])))
+        return proxy_descriptions(summarize(drilldown(trim(align(migrate(snapshot)[0])[0]))))
     by_key = {(d["metadata"]["project"], d["metadata"]["name"]): d for d in snapshot["dashboards"]}
     result = {"projects": [], "datasources": [], "dashboards": []}
     ds = next(x for x in snapshot["datasources"] if x["metadata"]["name"] == "victoriametrics")
@@ -372,7 +372,7 @@ def build(snapshot):
     from dcu_bottlenecks import default_configure
     result['dashboards'] = [default_configure(remove_panels(d)) for d in result['dashboards']]
     from align_dashboards import align
-    return summarize(drilldown(trim(align(migrate(result)[0])[0])))
+    return proxy_descriptions(summarize(drilldown(trim(align(migrate(result)[0])[0]))))
 
 
 def validate(resources):

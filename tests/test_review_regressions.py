@@ -80,6 +80,20 @@ def test_all_configured_targets_including_relabeled_gateways_pass():
     assert len(validation.validate_targets(up, stamps, expected, 100)) == 43
 
 
+def test_router_proxy_scrapes_keep_identity_without_secret_files():
+    import yaml
+    config = yaml.safe_load((ROOT / 'deploy/scrape.yml').read_text())
+    proxies = [job for job in config['scrape_configs'] if job['job_name'].startswith('aigate')]
+    assert len(proxies) == 3
+    assert {target['labels']['environment'] for job in proxies for target in job['static_configs']} == {'dcu-pd', 'a3-vllm', 'xpu-pd'}
+    for job in proxies:
+        assert not {'authorization', 'bearer_token', 'bearer_token_file', 'basic_auth', 'oauth2'} & job.keys()
+        assert job['metric_relabel_configs'] == [{'source_labels':['__name__'], 'regex':'aigate_.*', 'action':'keep'}]
+        assert all(target['labels']['service'] == 'aigate' for target in job['static_configs'])
+    fragment = yaml.safe_load((ROOT / 'deploy/profile_a3_scrape.yml').read_text())
+    assert fragment == [next(job for job in proxies if job['job_name'] == 'aigate-a3')]
+
+
 @pytest.mark.parametrize('fault', ['missing', 'extra', 'duplicate', 'environment', 'down', 'stale', 'future', 'nan', 'missing-timestamp'])
 def test_target_validation_rejects_identity_or_observation_fault(fault):
     expected, up, stamps = target_rows()

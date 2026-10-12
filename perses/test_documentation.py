@@ -11,7 +11,7 @@ import pytest
 import project_coverage
 import project_split
 from dashboard_columns import apply as columns
-from metric_scope import request_description
+from metric_scope import request_description, proxy_descriptions
 
 ROOT = Path(__file__).resolve().parent
 
@@ -74,3 +74,19 @@ def test_description_normalization_preserves_custom_panels_and_numeric_queries()
         assert after['spec']['panels'][key]['spec']['queries'] == panel['spec']['queries']
         assert after['spec']['panels'][key]['spec']['plugin'] == panel['spec']['plugin']
     assert after['spec']['layouts'] == d['spec']['layouts']
+
+
+def test_router_proxy_guidance_preserves_queries_and_explains_direct_peer():
+    resources = project_split.read_resources(ROOT / 'projects')
+    updated = proxy_descriptions(copy.deepcopy(resources))
+    assert updated == resources
+    for dashboard in updated['dashboards']:
+        if not dashboard['metadata']['name'].startswith('gateway'):
+            continue
+        assert '按 Router 所属环境统计' in dashboard['spec']['display']['description']
+        assert '拆分前历史保留原归属' in dashboard['spec']['display']['description']
+        for panel in dashboard['spec']['panels'].values():
+            assert '主机网关。按采集环境归属' not in panel['spec']['display']['description']
+            queries = json.dumps(panel['spec']['queries'])
+            if 'aigate_stream_write_active_max_seconds' in queries:
+                assert '功能服务到切流服务这一段' in panel['spec']['display']['description']

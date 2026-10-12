@@ -17,10 +17,36 @@ def request_description(text):
         '且只统计流式请求画像': '画像包含流式及非流式请求',
         '读取流式请求的错误响应': '读取完整响应',
         '读取后续流、读取错误响应': '读取后续流、读取完整响应',
+        '主机网关。按采集环境归属': 'Router 功能服务。按 Router 所属环境归属',
+        '按网关所在环境归属，DCU 网关转发至 A3 时仍计入 DCU 曲线。': '按功能服务连接的 Router 所属环境归属；切流入口变化不改变归属。',
+        '同一请求经两层网关会分别计数，不可相加当作全局去重请求量。': '切流服务不重复统计；经切流入口与直连功能服务的请求均由目标功能服务统计。',
+        '同一请求经两层网关分别计数，勿相加作为全局请求量。': '切流服务不重复统计；功能服务包含切流入口与直连请求。',
+        '两个网关分别计数，同一请求经过两层网关时不可相加去重。': '各 Router 功能服务分别统计，切流服务不重复统计。',
     }
     for old, new in replacements.items():
         text = text.replace(old, new)
     return re.sub(r'(?<!非)流式请求速率', '请求速率', text)
+
+
+def proxy_descriptions(resources):
+    """Keep generated guidance aligned with the Router-bound observation source."""
+    owner_note = '拆分后按 Router 所属环境统计，包含切流入口与直连请求；切流服务不重复计数。拆分前历史保留原归属。'
+    peer_note = '写出耗时观测功能服务的直接连接对端；经切流入口访问时表示功能服务到切流服务这一段，不能据此判定最终客户端阻塞。'
+    for dashboard in resources['dashboards']:
+        spec = dashboard['spec']
+        if dashboard['metadata']['name'].startswith('gateway'):
+            desc = request_description(spec['display'].get('description', ''))
+            if owner_note not in desc:
+                desc += '\n\n' + owner_note
+            spec['display']['description'] = desc
+        for panel in spec['panels'].values():
+            panel = panel['spec']
+            desc = request_description(panel['display'].get('description', ''))
+            query = ' '.join(q['spec']['plugin']['spec']['query'] for q in panel.get('queries', []))
+            if ('aigate_stream_write_active_max_seconds' in query or 'gateway.write_active_max_seconds' in query) and peer_note not in desc:
+                desc += '\n\n' + peer_note
+            panel['display']['description'] = desc
+    return resources
 
 
 def gateway_scope(name):

@@ -20,7 +20,9 @@
 
 沿用停机窗口与 `deploy/release.py`，不需要升级网关或修改历史数据。首次安装前，从平台“网关与 Router 登记”核对三个业务 URL，按 `deploy/probes.example.json` 准备实际 JSON 配置；不要复制 Router 地址。配置是入口地址的部署副本，入口地址变更后同步，Router 交换无需修改。
 
-每个入口可以保持 URL 字符串，也可以使用 `{"url": "http://gateway/v1/chat/completions", "api_key": "入口业务密钥"}`。未设置密钥或为空时不发送认证头；有密钥时仅对该入口发送 `Authorization: Bearer ...`，不发送给 VM，也不写入探测结果。密钥限 8192 个可见 ASCII 字符，不包含空白。业务凭据仍由平台管理，这里是运维同步的部署副本，入口密钥轮换后同步配置并重启 worker。实际配置文件不得提交到 Git；含密钥时设置权限为 `0600`，沿用配置文件只读挂载，避免将密钥写入命令行或日志。
+拆分后的 aigate 切流业务入口免认证，配置只保留 URL，不配置 `api_key`，也不使用切流控制密钥。探测按入口归属的 `model_probe_*` 标签与按 Router 归属的 `aigate_*` 指标含义不同：切换入口目标后，探测标签不变，生成请求计入新的目标功能服务。
+
+worker 继续兼容需业务认证的其他入口配置 `{"url": "http://gateway/v1/chat/completions", "api_key": "入口业务密钥"}`；未设置密钥或为空时不发送认证头。有密钥时仅对该入口发送 `Authorization: Bearer ...`，不发送给 VM，也不写入探测结果。密钥限 8192 个可见 ASCII 字符，不包含空白。实际配置文件不得提交到 Git；含密钥时设置权限为 `0600`，沿用配置文件只读挂载，避免将密钥写入命令行或日志。
 
 1. 使用 `release.py api-image` 构建包含本功能的已提交源码镜像，并通过 `release.py container monitoring-api IMAGE --evidence DIR` 更新只读 API。
 2. 首次使用 `release.py probes --image IMAGE --config /absolute/probes.json --state /data2/monitoring/state --evidence DIR` 安装 worker。IMAGE 必须是不可变本地镜像 ID，配置文件、state 与独立空证据目录必须预先存在；新增服务器目录须告知用户。
