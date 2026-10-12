@@ -57,7 +57,7 @@ class ComponentProbe:
         config = container['Config']
         args = (config.get('Entrypoint') or []) + (config.get('Cmd') or [])
         env = dict(x.split('=', 1) for x in config.get('Env', []) if '=' in x)
-        if name == 'monitoring-api':
+        if name in ('monitoring-api', 'monitoring-probes'):
             host, port = option(args, '--host'), option(args, '--port')
             require(host and port, 'Missing API listener arguments')
             address = ('[' + host + ']' if ':' in host and not host.startswith('[') else host) + ':' + port
@@ -87,7 +87,10 @@ class ComponentProbe:
                 data = response.read().decode()
             return json.loads(data) if as_json else data
 
-        if self.name == 'monitoring-api':
+        if self.name == 'monitoring-probes':
+            value = fetch('/health', True)
+            require(value['status'] == 'ok' and value['targets'] == 3, 'Probe worker or VM unavailable')
+        elif self.name == 'monitoring-api':
             require(fetch('/health', True)['status'] == 'ok', 'API health degraded')
             for environment in ('dcu-pd', 'a3-vllm', 'xpu-pd'):
                 data = fetch('/api/monitoring/latest?environment=' + environment, True)

@@ -193,3 +193,5 @@ async def history(request:Request,hours:float=1,start:float|None=None,end:float|
 
 from .request_profile import router as request_profile_router
 app.include_router(request_profile_router)
+from .probes import router as probe_router
+app.include_router(probe_router)

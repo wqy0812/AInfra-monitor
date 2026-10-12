@@ -296,6 +296,56 @@ def test_component_probes_check_real_payloads_and_actual_listener(monkeypatch, n
     with pytest.raises(RuntimeError):probe.check(cv.time.monotonic() + 20)
 
 
+def test_probe_worker_readiness_uses_loopback_scheduler_health(monkeypatch):
+    state = container('monitoring-probes')
+    state['Config']['Cmd'] = ['-m', 'uvicorn', 'monitoring.probe_worker:app', '--host', '127.0.0.1', '--port', '18433']
+    probe = cv.ComponentProbe('monitoring-probes', state)
+    bad = False
+    def fetch(url, **kwargs):
+        assert url == 'http://127.0.0.1:18433/health'
+        return io.BytesIO(json.dumps({'status': 'unavailable' if bad else 'ok', 'targets': 3}).encode())
+    monkeypatch.setattr(cv.urllib.request, 'build_opener', lambda *a: SimpleNamespace(open=fetch))
+    probe.check(cv.time.monotonic()+10)
+    bad = True
+    with pytest.raises(RuntimeError):
+        probe.check(cv.time.monotonic()+10)
+
+
+@pytest.mark.parametrize('failure', [False, True])
+def test_probe_install_retains_evidence_and_never_removes_failed_worker(tmp_path, monkeypatch, failure):
+    monkeypatch.setitem(sys.modules, 'replace', replacement)
+    module = load('review_probe_install', 'deploy/probes.py')
+    config, state, evidence = tmp_path/'probes.json', tmp_path/'state', tmp_path/'evidence'
+    config.write_text('{}')
+    state.mkdir(); evidence.mkdir()
+    image = 'sha256:'+'a'*64
+    calls = []
+    def command(*args):
+        calls.append(args)
+        if args[:3] == ('docker', 'image', 'inspect'):
+            return json.dumps([{'Config': {'Labels': {'monitoring.component': 'api', 'org.opencontainers.image.revision': 'commit'}}}])
+        return 'worker-id' if '-d' in args else ''
+    worker = container('monitoring-probes')
+    worker['Id'], worker['Image'] = 'worker-id', image
+    worker['Config']['Cmd'] = ['-m', 'uvicorn', 'monitoring.probe_worker:app', '--host', '127.0.0.1', '--port', '18433']
+    monkeypatch.setattr(module, 'cmd', command)
+    monkeypatch.setattr(module, 'find', lambda name: None)
+    monkeypatch.setattr(module, 'inspect', lambda *a, **k: worker)
+    def wait(*args):
+        if failure:
+            raise RuntimeError('readiness failed')
+    monkeypatch.setattr(module, 'wait_ready', wait)
+    if failure:
+        with pytest.raises(RuntimeError, match='readiness failed'):
+            module.install(image, config, state, evidence)
+        assert json.loads((evidence/'probe-install-failure.json').read_text())['recovery'] == 'fix_forward'
+    else:
+        assert module.install(image, config, state, evidence)['acceptance'] == 'scheduler_and_vm_ready'
+        assert (evidence/'probe-install.json').exists()
+    assert (evidence/'probe-install-input.json').exists()
+    assert not any(call[1] in ('rm', 'stop', 'rename') for call in calls)
+
+
 image_release = load('review_image_release', 'perses/performance/image_release.py')
 local_candidate = load('review_local_candidate', 'perses/performance/local_candidate.py')
 

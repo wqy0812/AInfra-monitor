@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 COMMANDS = {
     'api-image': ('deploy/api_image.py', 'Build committed API sources on a pinned local Python runtime'),
     'container': ('deploy/replace.py', 'Replace an owned container in a maintenance window'),
+    'probes': ('deploy/probes.py', 'First install of the real-request probe worker'),
     'dashboards': ('perses/project_release.py', 'Prepare, publish or audit project resources'),
     'image': ('perses/performance/image_release.py', 'Load or publish a pinned Perses image'),
     'runtime': ('perses/reorg_runtime.py', 'Install generator files with a concurrency journal'),
