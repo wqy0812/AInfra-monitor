@@ -1,6 +1,6 @@
 # 发布身份与历史检索
 
-当前操作见 [项目 README](../../README.md)、[部署工具](../../deploy/README.md)、[Perses 维护](../../perses/README.md) 和 [停机窗口升级](../maintenance-window-upgrade.md)。本轮核验了 API、生成器和受影响网关看板；其他组件保持各自最近的历史记录，不代表本轮重新验收。
+当前操作见 [项目 README](../../README.md)、[部署工具](../../deploy/README.md)、[Perses 维护](../../perses/README.md) 和 [停机窗口升级](../maintenance-window-upgrade.md)。本轮更新并核验 monitoring-api；生成器、看板及其他组件保持各自最近的历史记录，不代表本轮重新验收。
 
 ## 最近保留的版本记录
 
@@ -8,13 +8,21 @@
 | --- | --- | --- | --- |
 | 维护工具 | 2026-10-14 | 源码 `1f9d280922ca0b73cc77d3f2d42505bf081e077b`；通用 api-image/container/runtime/dashboards 入口 | test4 `/data2/monitoring/releases/gateway-replay-filter-20261014/source/` |
 | 已安装生成器 | 2026-10-14 | 源码 `1f9d280922ca0b73cc77d3f2d42505bf081e077b`；35 个模块字节核验，独立生成的 15 项在途查询排除回放 | `gateway-replay-filter-20261014/runtime/` |
-| monitoring-api | 2026-10-14 | 源码 `1f9d280922ca0b73cc77d3f2d42505bf081e077b`；镜像 `sha256:2d7e160b38f137d1d2cd8eb91cf105a65a7fce9f89c509569f585d1356dccd2a`；网关在途查询排除回放序列 | `gateway-replay-filter-20261014/api-build/`、`api-release/`、`checks/acceptance.json` |
+| monitoring-api | 2026-10-14 | 源码 `fd114f62230d5e18d4e4b066176bb04861a78969`；镜像 `sha256:35fd590ac9748492ed6ace1b95d78df6d0972066d972eb80b5fff4e244626eb0`；history 新增后端错误速率与节点平均加速卡利用率 | `overview-metrics-20261014-fd114f6/api-build/`、`api-release/`、`checks/acceptance.json` |
 | monitoring-probes | 2026-10-14 | 保持源码 `f69f1161a91608312f79389d408afd71c01ec6c3` / 镜像 `sha256:2613fddadf60e1e79f53bdd6fb9987ccf4f1f15e18f215015729430940c8aa8c`；A3/XPU/DCU 各每 60 秒一次 | `probes-minute-20261014-f69f116/probes-release/`、`checks/probes-first-cycle.json` |
 | vmalert | 2026-10-12 | 源码 `f8ce79b`；镜像 `sha256:9eedd2fd65f87f4737efe06b17b3cd37f0e3178375a28bf00b948778de7d34e6`；官方二进制 1.151.0，202 条规则 | `native-gauges-20261012-f8ce79b/native-build/`、`native-release/`、`checks/native-check.json`、`checks/native-audit.json` |
 | Perses 看板 | 2026-10-14 | 查询源码 `1f9d280`；3 项目、21 看板、261 面板；只更新 6 张看板的 15 项查询，30 项 VM/代理对照通过 | `gateway-replay-filter-20261014/dashboards/` |
 | Perses | 2026-10-09 | `0.54.0-perf.3`；镜像 `sha256:978402ac5154e3ee2cf8c66f244fc7169be74125ef01a5fe9d28c1e8a24764e7` | 原 TLS 发布记录和 [构建版本锁](../../perses/performance/release-lock-perf3.json) |
 
-**网关在途查询修复（2026-10-14 15:18 上线，北京时间）**：源码 `1f9d280922ca0b73cc77d3f2d42505bf081e077b` 已提交并推送。新版网关每个 backend 同时输出普通与回放 gauge，原查询将两套序列计入后端组数，导致完整性检查把全部在途数据过滤为空。API 和看板增加 `traffic!="replay"`，保留旧版无标签数据、测得的零值以及缺样/过期/重启留空规则。
+**概览指标 API（2026-10-14 16:06 上线，北京时间）**：源码 `fd114f62230d5e18d4e4b066176bb04861a78969` 已提交并推送。以原 API 镜像 `sha256:2d7e160b38f137d1d2cd8eb91cf105a65a7fce9f89c509569f585d1356dccd2a` 为固定基底禁网构建，仅替换 monitoring-api。36 个运行源码文件与构建清单完全一致；环境、启动参数、HostConfig 和挂载一致，restart_count=0，三环境健康、快照年龄约 18–21 秒。
+
+`full` / `summary` 均返回后端错误速率及 Prefill / Decode 节点平均利用率。固定截止 15 分钟前的 5 分钟窗口中，三个环境各 61 个时间点与直接 VM 查询逐值一致；六条利用率曲线均有 61 个有效点，DCU 错误速率有 61 个有效点。A3/XPU 当前没有 `aigate_upstream_errors_total{request_scope="all"}` 原始序列，起点指标和抓取正常；错误速率按既定口径留空，不补零，也未为验收制造错误请求。
+
+首次近期窗口比较出现一处 A3 利用率读取差异，随后固定历史窗口的 API / VM 对照通过；原因未归定为计算缺陷或具体采集问题，初次脚本、失败输出及后续对照保留在 `checks/`。本地相关回归 88 passed、独立 VM 批次 89 passed；图表顺序与真实页面验收随配套 code-eval Web `030426e27d6f41f76be3499716f0b3f9a5def339` 记录。
+
+服务器新增 test4 `/data2/monitoring/releases/overview-metrics-20261014-fd114f6/`，包含 `source/`、`api-build/`、`api-release/`、`checks/`。本地公开证据为 `evidence/overview-metrics-20261014-fd114f6/`；源 bundle SHA-256 为 `a6e74f8df5b3ff716d2c85652bc0832e677650b2deb771417dfdd545d644b67a`。私有容器快照仅保留服务器受限目录，公开证据不包含环境凭据。未更新采集器、vmalert、VM、Perses 或探测 worker；历史、发送缓冲和处理水位保留。
+
+**此前网关在途查询修复（2026-10-14 15:18 上线，北京时间）**：源码 `1f9d280922ca0b73cc77d3f2d42505bf081e077b` 已提交并推送。新版网关每个 backend 同时输出普通与回放 gauge，原查询将两套序列计入后端组数，导致完整性检查把全部在途数据过滤为空。API 和看板增加 `traffic!="replay"`，保留旧版无标签数据、测得的零值以及缺样/过期/重启留空规则。
 
 以已安装 API 镜像 `sha256:2613fddadf60e1e79f53bdd6fb9987ccf4f1f15e18f215015729430940c8aa8c` 为固定基底禁网构建，只替换 monitoring-api。运行容器 35 个源码文件与输入清单完全一致；环境配置、启动参数、HostConfig、资源限制及数据挂载保持一致，restart_count=0，三环境 health=ok。生成器通过通用 runtime 工具安装；看板基于发布前快照仅替换查询，保留线上说明、布局和其他编辑，资源并发核验和完整读回通过。15 项受影响查询分别按 15/60 秒步长进行 VM/代理对照，30 项全部通过且无空结果。
 
