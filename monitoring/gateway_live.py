@@ -25,7 +25,8 @@ FIELDS = (IDLE, OLDEST, BACKEND_WAIT, WRITE_ACTIVE)
 
 def selector(metric, environment):
     scope = 'streaming' if metric.startswith('aigate_stream_') else 'all'
-    extra = ',request_scope=' + json.dumps(scope) if metric.startswith('aigate_') else ''
+    # Replay exports its own gauges even when idle; it is not another backend.
+    extra = ',traffic!="replay",request_scope=' + json.dumps(scope) if metric.startswith('aigate_') else ''
     return metric + '{job="aigate",environment=' + json.dumps(environment) + extra + '}'
 
 

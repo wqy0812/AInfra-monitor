@@ -88,6 +88,7 @@ def quality_panels(document,env):
 
 def apply(resources):
     from dashboard_columns import source_identity
+    from metric_scope import apply_scope
     result=copy.deepcopy(resources)
     for document in result['dashboards']:
         project=document['metadata']['project'];env=ENV[project];dashboard=document['metadata']['name']
@@ -96,6 +97,8 @@ def apply(resources):
             spec=panel['spec'];changed=False
             for item in spec.get('queries',[]):
                 query=item['spec']['plugin']['spec'];original=query['query']
+                if 'aigate_live_backend_groups' in original:
+                    query['query'] = apply_scope(original)
                 accelerated=query.get('datasource',{}).get('name')=='perses-accelerated'
                 if 'monitoring_chart_value' in original:
                     found=re.findall(r'path=~?"((?:\\.|[^"\\])*)"',original)

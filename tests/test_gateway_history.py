@@ -9,7 +9,7 @@ from monitoring import gateway_live as live
 from monitoring.api import Service
 
 
-@pytest.mark.parametrize('environment,project', [('dcu-pd', 'dcu-monitoring'), ('a3-vllm', 'a3-monitoring')])
+@pytest.mark.parametrize('environment,project', [('dcu-pd', 'dcu-monitoring'), ('a3-vllm', 'a3-monitoring'), ('xpu-pd', 'xpu-monitoring')])
 @pytest.mark.parametrize('step', [5, 15, 60, 3605])
 def test_queries_match_current_project_dashboards(environment, project, step):
     path = Path(__file__).parents[1] / 'perses/projects' / project / 'dashboards/gateway-generation.json'
@@ -126,7 +126,7 @@ async def test_latest_snapshot_does_not_fill_missing_native_history():
 def test_new_metrics_are_streaming_and_old_samples_do_not_fill_them():
     for field in (live.BACKEND_WAIT, live.WRITE_ACTIVE):
         expr = live.expressions('dcu-pd', 15)[field]
-        assert f'aigate_stream_{field}{{job="aigate",environment="dcu-pd",request_scope="streaming"}}' in expr
+        assert f'aigate_stream_{field}{{job="aigate",environment="dcu-pd",traffic!="replay",request_scope="streaming"}}' in expr
         for guard in ('aigate_live_backend_groups', 'timestamp(', 'count_over_time(', 'changes(', 'min_over_time(up'):
             assert guard in expr
     points = [{'ts': 100}, {'ts': 105}]

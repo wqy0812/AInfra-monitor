@@ -68,6 +68,10 @@ def apply_scope(query):
                 metric = family[1]
         extra = ''
         if metric.startswith('aigate_'):
+            # Live inventory counts backends, not ordinary/replay series pairs.
+            # Retain unlabelled historical data while excluding replay gauges.
+            if 'aigate_live_backend_groups' in query and 'traffic!="replay"' not in body:
+                body += (',' if body else '') + 'traffic!="replay"'
             extra = 'request_scope="' + gateway_scope(metric) + '"'
         if extra:
             body += (',' if body else '') + extra

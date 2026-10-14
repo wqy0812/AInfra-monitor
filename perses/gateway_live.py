@@ -18,7 +18,8 @@ RETIRED_PANELS = {'live-idle-' + str(t) for t in (5, 15, 30, 60)}
 
 def selector(metric, environment, extra=''):
     if metric.startswith('aigate_'):
-        extra = 'request_scope=' + json.dumps(gateway_scope(metric)) + (',' + extra if extra else '')
+        # Match the API's ordinary-traffic inventory, including older unlabelled data.
+        extra = 'traffic!="replay",request_scope=' + json.dumps(gateway_scope(metric)) + (',' + extra if extra else '')
     return metric + '{job="aigate",environment=' + json.dumps(environment) + (',' + extra if extra else '') + '}'
 
 

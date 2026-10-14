@@ -12,25 +12,27 @@ from monitoring.gateway_live import expressions, STAGES, IDLE, OLDEST, BACKEND_W
 CASES = ('normal', 'idle', 'absent', 'gap', 'stale', 'restart', 'partial', 'down', 'stage-change', 'missing-stage', 'old-version', 'partial-direction')
 
 
-@pytest.fixture(scope='module')
-def fixture_vm():
+@pytest.fixture(scope='module', params=['none', 'idle', 'active'])
+def fixture_vm(request):
     url = os.environ.get('GATEWAY_TEST_VM_URL')
     if not url:
         pytest.skip('Set GATEWAY_TEST_VM_URL to an isolated local VictoriaMetrics')
     assert url.startswith('http://127.0.0.1:'), 'Never inject fixtures into a remote service'
-    base = int(time.time() // 5) * 5 - len(CASES) * 1000 - 600
+    # Each replay mode has a disjoint time range so stale instances from an
+    # earlier fixture cannot participate in another mode's completeness gate.
+    base = int(time.time() // 5) * 5 - (len(CASES) * 1000 + 600) * (3 - ['none', 'idle', 'active'].index(request.param))
     client = httpx.Client(base_url=url, trust_env=False, timeout=20)
     lines, ends = [], {}
     for number, case in enumerate(CASES):
         start = base + number * 1000
         ends[case] = start + 300
-        for environment, scale in [('dcu-pd', 1), ('a3-vllm', 2)]:
+        for environment, scale in [('dcu-pd', 1), ('a3-vllm', 2), ('xpu-pd', 3)]:
             for i in range(61):
                 if case == 'absent' or (case == 'gap' and i == 59) or (case == 'stale' and i > 55):
                     continue
                 ts = start + 5 * i
                 def emit(name, value, **labels):
-                    tags = {'job': 'aigate', 'environment': environment, 'instance': case, **labels}
+                    tags = {'job': 'aigate', 'environment': environment, 'instance': case + '-' + request.param, **labels}
                     if name.startswith('aigate_'):
                         tags.setdefault('request_scope', 'streaming' if name.startswith('aigate_stream_') else 'all')
                     label = ','.join(k + '=' + json.dumps(v) for k, v in tags.items())
@@ -39,6 +41,17 @@ def fixture_vm():
                 emit('aigate_profile_start_time_seconds', start + 295 if case == 'restart' and i >= 59 else start - 600)
                 emit('aigate_live_backend_groups', 2)
                 for backend in ('first', 'second'):
+                    # Replay series exist even without replay requests. Keep them
+                    # complete when ordinary traffic is partial: they must neither
+                    # suppress valid values nor fill a real observation gap.
+                    if request.param != 'none':
+                        replay_value = 0 if request.param == 'idle' else 999999
+                        for metric in ('aigate_inflight_oldest_age_seconds', 'aigate_stream_idle_max_seconds',
+                                       'aigate_stream_backend_wait_max_seconds', 'aigate_stream_write_active_max_seconds'):
+                            emit(metric, replay_value, backend=backend, traffic='replay')
+                        for name in STAGES:
+                            emit('aigate_inflight_oldest_stage', int(name == 'writing_client' and replay_value > 0),
+                                 backend=backend, stage=name, traffic='replay')
                     if case == 'partial' and backend == 'second' and i > 55:
                         continue
                     age = 0 if case == 'idle' else ((100 if backend == 'first' else 400) + i) * scale
@@ -64,7 +77,7 @@ def fixture_vm():
         client.close()
 
 
-@pytest.mark.parametrize('environment,project,scale', [('dcu-pd', 'dcu-monitoring', 1), ('a3-vllm', 'a3-monitoring', 2)])
+@pytest.mark.parametrize('environment,project,scale', [('dcu-pd', 'dcu-monitoring', 1), ('a3-vllm', 'a3-monitoring', 2), ('xpu-pd', 'xpu-monitoring', 3)])
 @pytest.mark.parametrize('step', [15, 60, 300])
 @pytest.mark.parametrize('case', CASES)
 def test_real_vm_gates_aggregation_and_dashboard_parity(fixture_vm, environment, project, scale, step, case):
