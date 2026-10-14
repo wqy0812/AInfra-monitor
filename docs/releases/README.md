@@ -1,20 +1,28 @@
 # 发布身份与历史检索
 
-当前操作见 [项目 README](../../README.md)、[部署工具](../../deploy/README.md)、[Perses 维护](../../perses/README.md) 和 [停机窗口升级](../maintenance-window-upgrade.md)。API 与探测 worker 的 2026-10-14 记录已经本轮线上核验；其他组件保持各自最近的历史记录，不代表本轮重新验收。
+当前操作见 [项目 README](../../README.md)、[部署工具](../../deploy/README.md)、[Perses 维护](../../perses/README.md) 和 [停机窗口升级](../maintenance-window-upgrade.md)。本轮核验了 API、生成器和受影响网关看板；其他组件保持各自最近的历史记录，不代表本轮重新验收。
 
 ## 最近保留的版本记录
 
 | 范围 | 记录日期 | 版本身份 | 证据位置 |
 | --- | --- | --- | --- |
-| 维护工具 | 2026-10-14 | 源码 `f69f1161a91608312f79389d408afd71c01ec6c3`；通用 api-image/container 入口 | test4 `/data2/monitoring/releases/probes-minute-20261014-f69f116/source/` |
-| 已安装生成器 | 2026-10-12 | 源码 `f8ce79ba26492b4a4e054e797d11b8c03c4f9c28`；Git bundle SHA-256 `448f1922a769f3b050fb1a266c119d3969323fc936021d26367c61901888ace1` | `/data2/monitoring/releases/native-gauges-20261012-f8ce79b/runtime/` |
-| monitoring-api | 2026-10-14 | 源码 `f69f1161a91608312f79389d408afd71c01ec6c3`；镜像 `sha256:2613fddadf60e1e79f53bdd6fb9987ccf4f1f15e18f215015729430940c8aa8c`；interval=60、stale=120、offset=0/20/40 | `probes-minute-20261014-f69f116/api-build/`、`api-release/`、`checks/acceptance.json` |
-| monitoring-probes | 2026-10-14 | 与 API 同源码/镜像；A3/XPU/DCU 各每 60 秒一次，请求总时限 50 秒、VM 导入总时限 5 秒 | 同批 `probes-release/`、`checks/probes-first-cycle.json` |
+| 维护工具 | 2026-10-14 | 源码 `1f9d280922ca0b73cc77d3f2d42505bf081e077b`；通用 api-image/container/runtime/dashboards 入口 | test4 `/data2/monitoring/releases/gateway-replay-filter-20261014/source/` |
+| 已安装生成器 | 2026-10-14 | 源码 `1f9d280922ca0b73cc77d3f2d42505bf081e077b`；35 个模块字节核验，独立生成的 15 项在途查询排除回放 | `gateway-replay-filter-20261014/runtime/` |
+| monitoring-api | 2026-10-14 | 源码 `1f9d280922ca0b73cc77d3f2d42505bf081e077b`；镜像 `sha256:2d7e160b38f137d1d2cd8eb91cf105a65a7fce9f89c509569f585d1356dccd2a`；网关在途查询排除回放序列 | `gateway-replay-filter-20261014/api-build/`、`api-release/`、`checks/acceptance.json` |
+| monitoring-probes | 2026-10-14 | 保持源码 `f69f1161a91608312f79389d408afd71c01ec6c3` / 镜像 `sha256:2613fddadf60e1e79f53bdd6fb9987ccf4f1f15e18f215015729430940c8aa8c`；A3/XPU/DCU 各每 60 秒一次 | `probes-minute-20261014-f69f116/probes-release/`、`checks/probes-first-cycle.json` |
 | vmalert | 2026-10-12 | 源码 `f8ce79b`；镜像 `sha256:9eedd2fd65f87f4737efe06b17b3cd37f0e3178375a28bf00b948778de7d34e6`；官方二进制 1.151.0，202 条规则 | `native-gauges-20261012-f8ce79b/native-build/`、`native-release/`、`checks/native-check.json`、`checks/native-audit.json` |
-| Perses 看板 | 2026-10-12 | 资源源码 `f8ce79b`；3 项目、21 看板、261 面板；修改 5 张公开看板，16 项受影响查询检查通过 | `native-gauges-20261012-f8ce79b/dashboards/`；本机 `output/playwright/native-gauges-20261012-f8ce79b/` |
+| Perses 看板 | 2026-10-14 | 查询源码 `1f9d280`；3 项目、21 看板、261 面板；只更新 6 张看板的 15 项查询，30 项 VM/代理对照通过 | `gateway-replay-filter-20261014/dashboards/` |
 | Perses | 2026-10-09 | `0.54.0-perf.3`；镜像 `sha256:978402ac5154e3ee2cf8c66f244fc7169be74125ef01a5fe9d28c1e8a24764e7` | 原 TLS 发布记录和 [构建版本锁](../../perses/performance/release-lock-perf3.json) |
 
-**一分钟探测配套发布（2026-10-14 08:56—08:59，北京时间）**：已推送源码 `f69f1161a91608312f79389d408afd71c01ec6c3`，以原已安装镜像 `sha256:7733d4acf1ffa2d02dc8918ad51ecf3ca0387fec828c1bb48b1eec739b29e7e1` 为不可变基底，复用通用工具禁网构建并替换 API、worker。两个容器各 35 个源码文件与构建清单一致，启动参数、环境配置、资源限制、state 挂载及探测配置摘要保持一致，restart_count=0。API、worker 健康，三环境快照新鲜且来源完整；Mac 非白名单读取返回 403，平台代理正常读取。
+**网关在途查询修复（2026-10-14 15:18 上线，北京时间）**：源码 `1f9d280922ca0b73cc77d3f2d42505bf081e077b` 已提交并推送。新版网关每个 backend 同时输出普通与回放 gauge，原查询将两套序列计入后端组数，导致完整性检查把全部在途数据过滤为空。API 和看板增加 `traffic!="replay"`，保留旧版无标签数据、测得的零值以及缺样/过期/重启留空规则。
+
+以已安装 API 镜像 `sha256:2613fddadf60e1e79f53bdd6fb9987ccf4f1f15e18f215015729430940c8aa8c` 为固定基底禁网构建，只替换 monitoring-api。运行容器 35 个源码文件与输入清单完全一致；环境配置、启动参数、HostConfig、资源限制及数据挂载保持一致，restart_count=0，三环境 health=ok。生成器通过通用 runtime 工具安装；看板基于发布前快照仅替换查询，保留线上说明、布局和其他编辑，资源并发核验和完整读回通过。15 项受影响查询分别按 15/60 秒步长进行 VM/代理对照，30 项全部通过且无空结果。
+
+本地单元/生成回归 40 passed，独立真实 VM 324 passed，覆盖三环境、无回放/空闲回放/活跃回放、缺样、过期、重启及不完整后端。线上三环境截图时段 14:04:50—15:04:40 的后端等待和写出时间均恢复 719 个有效点（API 实际步长 5 秒），最近 6 分钟也有持续新数据。Chrome 1280×720 与 390×844 竖屏触控模拟验证 A3 两张图有曲线、无网关空数据提示，手机无横向溢出、无页面运行错误；桌面仅既存 favicon 404。浏览器证据位于 `output/playwright/gateway-replay-filter-20261014/`。API 非白名单读取仍为 403，Perses 未认证资源读取仍为 401。
+
+服务器新增 test4 `/data2/monitoring/releases/gateway-replay-filter-20261014/` 及其 `source/`、`api-build/`、`api-release/`、`dashboards/resources/`、`runtime/release/`、`checks/` 子目录。Git bundle SHA-256 为 `2d48a60546033a4620911ee6eb38d98f23a6144790fdae8f666df8fe44c715c9`；本地公开证据在 `evidence/gateway-replay-filter-20261014/`，服务器私有配置快照未打包。VM 历史、发送缓冲及处理水位保留；未更改网关、模型服务、vmagent、vmalert 或探测 worker，没有发起模型请求或回放。
+
+**此前一分钟探测配套发布（2026-10-14 08:56—08:59，北京时间）**：以下为探测 worker 当前版本和旧 API 的发布记录；API 已由上表版本替换。已推送源码 `f69f1161a91608312f79389d408afd71c01ec6c3`，以原已安装镜像 `sha256:7733d4acf1ffa2d02dc8918ad51ecf3ca0387fec828c1bb48b1eec739b29e7e1` 为不可变基底，复用通用工具禁网构建并替换 API、worker。两个容器各 35 个源码文件与构建清单一致，启动参数、环境配置、资源限制、state 挂载及探测配置摘要保持一致，restart_count=0。API、worker 健康，三环境快照新鲜且来源完整；Mac 非白名单读取返回 403，平台代理正常读取。
 
 新 worker 08:56:51 启动后，首轮自然定时请求全部成功：A3 08:57:00 开始，首输出 0.691 秒、总耗时 1.350 秒；XPU 08:57:20 开始，首输出 0.665 秒、总耗时 2.222 秒；DCU 08:57:40 开始，首输出 0.429 秒、总耗时 0.642 秒。均 HTTP 200、有效输出及流完整结束，仅消费定时请求，没有另加手动模型请求。API 返回 interval=60、stale=120、offset=0/20/40。
 
