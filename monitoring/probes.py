@@ -7,10 +7,10 @@ import time
 from fastapi import APIRouter, HTTPException, Request
 import httpx
 
-INTERVAL = 300
-STALE_AFTER = 600
+INTERVAL = 60
+STALE_AFTER = 120
 TARGETS = (('a3-vllm', 'A3'), ('xpu-pd', 'XPU'), ('dcu-pd', 'DCU'))
-OFFSETS = {environment: index * 100 for index, (environment, _) in enumerate(TARGETS)}
+OFFSETS = {environment: index * (INTERVAL // len(TARGETS)) for index, (environment, _) in enumerate(TARGETS)}
 REASONS = ('success', 'http_error', 'timeout', 'connection_error', 'stream_error',
            'invalid_stream', 'empty_output', 'incomplete_stream')
 FIELDS = ('result', 'started_at_seconds', 'duration_seconds', 'first_output_seconds', 'http_status')

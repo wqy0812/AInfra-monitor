@@ -83,7 +83,7 @@ async def test_failures_are_not_retried(mode, expected):
         return httpx.Response(503 if mode == 'http' else 200,
                               headers={'Content-Type': 'text/html' if mode == 'html' else 'text/event-stream'}, stream=stream)
     async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
-        result = await worker.probe(client, 'http://model.test/v1/chat/completions', timeout=.01 if mode == 'timeout' else 60)
+        result = await worker.probe(client, 'http://model.test/v1/chat/completions', timeout=.01 if mode == 'timeout' else 50)
     assert result['reason'] == expected and len(calls) == 1
     assert 'private' not in json.dumps(result)
 
@@ -146,11 +146,11 @@ def observation(now, reason='success'):
 
 def test_raw_observations_gaps_staleness_and_partial_writes():
     now = 100000
-    raw = probes.samples('a3-vllm', observation(now-601)) + probes.samples('dcu-pd', observation(now-1, 'timeout'))
+    raw = probes.samples('a3-vllm', observation(now-121)) + probes.samples('dcu-pd', observation(now-1, 'timeout'))
     partial = probes.samples('xpu-pd', observation(now-1)).splitlines()[0]
     data = probes.decode(raw+partial, now-86400, now)
     a3, xpu, dcu = data['services']
-    assert [service['offset_seconds'] for service in data['services']] == [0, 100, 200]
+    assert [service['offset_seconds'] for service in data['services']] == [0, 20, 40]
     assert a3['status'] == 'unknown' and a3['latest']['status'] == 'success'
     assert xpu['status'] == 'unknown' and xpu['latest']['reason'] == 'incomplete_observation'
     assert dcu['status'] == 'failure'
@@ -167,9 +167,85 @@ def test_conflicting_or_invalid_observations_are_unknown():
 
 
 def test_schedule_skips_missed_slots_and_staggers():
-    assert [worker.next_run(900, offset) for offset in (0, 100, 200)] == [1200, 1000, 1100]
-    assert worker.next_run(1200, 0) == 1500
-    assert worker.next_run(9000, 0) == 9300
+    assert [worker.next_run(900, offset) for offset in (0, 20, 40)] == [960, 920, 940]
+    assert worker.next_run(1200, 0) == 1260
+    assert worker.next_run(9000, 0) == 9060
+    for offset in probes.OFFSETS.values():
+        assert worker.next_run(900+offset, offset) == 960+offset
+        assert worker.next_run(900+offset-.1, offset) == 900+offset
+        assert worker.next_run(913+offset, offset) == 960+offset
+
+
+def test_probe_contract_and_freshness_boundary():
+    raw = probes.samples('a3-vllm', observation(1000))
+    data = probes.decode(raw, 1, 1120)
+    assert data['interval_seconds'] == 60
+    assert data['stale_after_seconds'] == 120
+    assert data['services'][0]['status'] == 'success'
+    expired = probes.decode(raw, 1, 1121)['services'][0]
+    assert expired['status'] == 'unknown' and expired['latest']['status'] == 'success'
+
+
+@pytest.mark.asyncio
+async def test_default_request_deadline_is_fifty_seconds_and_closes_stream(monkeypatch):
+    timeout = asyncio.timeout
+    deadlines = []
+    def accelerated(seconds):
+        deadlines.append(seconds)
+        return timeout(.01)
+    monkeypatch.setattr(worker.asyncio, 'timeout', accelerated)
+    stream = Chunks([output(), FINISH, DONE], delay=.05)
+    def respond(request):
+        assert request.extensions['timeout'] == {'connect': 10, 'read': 50, 'write': 50, 'pool': 50}
+        return httpx.Response(200, headers={'Content-Type': 'text/event-stream'}, stream=stream)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        result = await worker.probe(client, 'http://model.test/v1/chat/completions')
+    assert deadlines == [50]
+    assert result['reason'] == 'timeout' and stream.closed
+
+
+@pytest.mark.asyncio
+async def test_import_has_a_total_deadline_even_with_continuous_response_bytes(monkeypatch):
+    timeout = asyncio.timeout
+    deadlines = []
+    def accelerated(seconds):
+        deadlines.append(seconds)
+        return timeout(.025)
+    monkeypatch.setattr(worker.asyncio, 'timeout', accelerated)
+    generate = AsyncMock(return_value=observation(time.time()))
+    monkeypatch.setattr(worker, 'probe', generate)
+    stream = Chunks([b' ']*100, delay=.005)
+    requests = []
+    def respond(request):
+        requests.append(request)
+        assert request.extensions['timeout']['read'] == 5
+        return httpx.Response(200, stream=stream)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        with pytest.raises(TimeoutError):
+            await worker.cycle(client, 'http://vm.test', 'a3-vllm', 'http://model.test/v1/chat/completions')
+    assert deadlines == [5]
+    assert generate.await_count == len(requests) == 1
+    assert stream.closed
+
+
+@pytest.mark.asyncio
+async def test_suspended_scheduler_skips_elapsed_slot_without_burst(monkeypatch):
+    clock = [901.]
+    monkeypatch.setattr(worker.time, 'time', lambda: clock[0])
+    waits = []
+    async def sleep(seconds):
+        waits.append(seconds)
+        clock[0] += seconds + (6 if len(waits) == 1 else 0)
+    monkeypatch.setattr(worker.asyncio, 'sleep', sleep)
+    calls = []
+    async def cycle(*args, **kwargs):
+        calls.append(clock[0])
+        raise asyncio.CancelledError()
+    monkeypatch.setattr(worker, 'cycle', cycle)
+    with pytest.raises(asyncio.CancelledError):
+        await worker.run_target(None, 'http://vm.test', 'a3-vllm', 'http://model.test', 0)
+    assert waits == [59, 54]
+    assert calls == [1020]
 
 
 @pytest.mark.asyncio

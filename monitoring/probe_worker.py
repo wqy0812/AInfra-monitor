@@ -19,7 +19,8 @@ import httpx
 from .probes import INTERVAL, OFFSETS, TARGETS, samples
 
 LOG = logging.getLogger(__name__)
-TIMEOUT = 60
+TIMEOUT = 50
+IMPORT_TIMEOUT = 5
 MAX_BYTES = 1024 * 1024
 BODY = {'messages': [{'role': 'user', 'content': '请简短地回复：你好。'}],
         'stream': True, 'max_tokens': 64, 'n': 1}
@@ -186,8 +187,10 @@ def next_run(now, offset):
 
 async def cycle(client, vm, environment, url, *, api_key=''):
     result = await probe(client, url, api_key=api_key)
-    response = await client.post(vm + '/api/v1/import', content=samples(environment, result), timeout=5)
-    response.raise_for_status()
+    # Bound the entire import, including a response that keeps trickling bytes.
+    async with asyncio.timeout(IMPORT_TIMEOUT):
+        response = await client.post(vm + '/api/v1/import', content=samples(environment, result), timeout=IMPORT_TIMEOUT)
+        response.raise_for_status()
     return result
 
 
