@@ -34,7 +34,7 @@ def test_decode_retains_zero_and_rejects_wrong_environment_invalid_and_ambiguous
 
 def test_gaps_and_stage_or_backend_changes_break_lines():
     points = [{'ts': ts} for ts in (100, 105, 110, 115, 120, 130)]
-    gateway = {ts: {live.IDLE: 1, live.BACKEND_WAIT: 2, live.WRITE_ACTIVE: 3, live.OLDEST: ts, 'backend': 'a', 'stage': 'streaming'}
+    gateway = {ts: {live.IDLE: 1, live.BACKEND_WAIT: 2, live.WRITE_ACTIVE: 3, live.ERRORS: 0, live.OLDEST: ts, 'backend': 'a', 'stage': 'streaming'}
                for ts in (100, 105, 110, 120, 130)}
     gateway[110]['stage'] = 'writing_client'
     gateway[120]['backend'] = 'b'
@@ -46,13 +46,14 @@ def test_gaps_and_stage_or_backend_changes_break_lines():
 
 
 @pytest.mark.asyncio
-async def test_each_query_has_an_independent_timeout_and_error_boundary():
+@pytest.mark.parametrize('failed_field', [live.IDLE, live.ERRORS])
+async def test_each_query_has_an_independent_timeout_and_error_boundary(failed_field):
     async def query(expr, *args):
-        if 'aigate_stream_idle_max_seconds' in expr:
+        if expr == live.expressions('dcu-pd', 5)[failed_field]:
             await asyncio.sleep(1)
         return [row([[100, '55']], backend='a', stage='streaming')]
     points, status = await live.history(query, 'dcu-pd', 100, 110, 5, timeout=.01)
-    assert status == {field: 'unavailable' if field == live.IDLE else 'ok' for field in live.FIELDS}
+    assert status == {field: 'unavailable' if field == failed_field else 'ok' for field in live.FIELDS}
     assert points[100][live.OLDEST] == 55
     assert points[100]['stage_name'] == '读取后续流'
 
@@ -84,7 +85,7 @@ async def test_history_merges_gateway_timestamps_caches_and_preserves_backend_fi
             node = result['points'][0]['nodes']['decode']
             assert node['requests'] == node['percentiles']['e2e']['p95'] == 7
         assert await service.history(1, 100, 110) is result
-        assert len(calls) == 5
+        assert len(calls) == 7
         assert all(args[1:] == (100, 110, 5) for args in calls)
     finally:
         await service.client.aclose()

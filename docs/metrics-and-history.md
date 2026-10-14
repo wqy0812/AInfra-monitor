@@ -55,6 +55,19 @@ XPU 最近批次 `cache_hit_rate` 可能在空闲时保持旧值；一分钟 Tok
 
 已记录 XPU 角色标签在 **2026-09-29 23:46:25 +08:00** 修正；此前错误角色历史没有改写，跨边界查询须保留这一限制。当前角色按采集配置和实际进程核验。没有当前来源的 CPU 缓存容量、独立命中率或回载/淘汰指标不补零；旧时序出现过计数不证明当前实例仍提供它们。
 
+## code-eval 概览指标
+
+`/api/monitoring/history` 的 `full` 与 `summary` 视图均返回下列聚合字段，查询口径与 Perses 总览一致：
+
+| history 字段 | 单位与口径 |
+| --- | --- |
+| `points[].gateway.backend_errors_per_second` | 次/秒；`aigate_upstream_errors_total` 的固定 1 分钟速率，包含流式与非流式，按网关采集环境汇总 |
+| `points[].nodes.<prefill或decode>.accelerator_utilization_percent` | %；对应节点有效加速卡采样的算术平均，不对缺失卡补零，部分采样不代表完整覆盖 |
+
+错误计数保留完整性、重置与进程起点检查；利用率保留各平台总览的采样有效性和新鲜度检查。长时间范围仍使用 1 分钟错误速率，并检查显示步长内的采集断档。有效零值保留，缺样与过期为 `null`；`gap_before` 标记断点，不使用 latest 填补历史。
+
+`gateway_status.backend_errors_per_second` 和 `accelerator_status` 分别为 `ok` 或 `unavailable`；`ok` 表示查询成功，不保证每个节点、每个时间点有样本。两项新增查询分别受 4 秒超时保护，失败只使对应字段留空，其他成功查询继续返回。接口只读使用既有 VM 指标，不新增采集、记录规则或数据库状态。
+
 ## 流停顿方向
 
 | 网关 gauge（秒） | history 字段 | 含义 |

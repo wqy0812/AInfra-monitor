@@ -20,7 +20,8 @@ IDLE = 'stream_idle_max_seconds'
 OLDEST = 'oldest_age_seconds'
 BACKEND_WAIT = 'backend_wait_max_seconds'
 WRITE_ACTIVE = 'write_active_max_seconds'
-FIELDS = (IDLE, OLDEST, BACKEND_WAIT, WRITE_ACTIVE)
+ERRORS = 'backend_errors_per_second'
+FIELDS = (IDLE, OLDEST, BACKEND_WAIT, WRITE_ACTIVE, ERRORS)
 
 
 def selector(metric, environment):
@@ -69,6 +70,30 @@ def oldest(environment):
     return f'({joined}) or ({idle})'
 
 
+def backend_error_rate(environment):
+    """Match the summary's all-request, fixed one-minute error counter rate."""
+    def metric(name):
+        scope = ',request_scope="all"' if name.startswith('aigate_') else ''
+        return name + '{job="aigate",environment=' + json.dumps(environment) + scope + '}'
+
+    up = metric('up')
+    origin = metric('aigate_error_metrics_start_time_seconds')
+    source = (f'({up} == 1) and (time() - timestamp({up}) < 15) '
+              f'and (min_over_time({up}[1m]) == 1) and (count_over_time({up}[1m]) >= 12) '
+              f'and (min_over_time({up}[$__interval]) == 1) and (count_over_time({up}[$__interval]) >= ($__interval / 5)) '
+              f'and on(job,instance,environment) ((time() - {origin} >= 60) and (time() - timestamp({origin}) < 15) '
+              f'and (changes({origin}[1m]) == 0) and (count_over_time({origin}[1m]) >= 12) '
+              f'and (changes({origin}[$__interval]) == 0) and (count_over_time({origin}[$__interval]) >= ($__interval / 5)))')
+    counter = metric('aigate_upstream_errors_total')
+    good = (f'(count_over_time({counter}[1m]) >= 12) and (resets({counter}[1m]) == 0) '
+            f'and (count_over_time({counter}[$__interval]) >= ($__interval / 5)) and (resets({counter}[$__interval]) == 0) '
+            f'and (time() - timestamp({counter}) < 15) '
+            f'and on(job,instance,environment) ({source})')
+    bad = f'(count_over_time({counter}[1m]) unless ({good}))'
+    return (f'(sum by(environment) (rate({counter}[1m]) and ({good}))) '
+            f'unless on(environment) (count by(environment) ({bad}))')
+
+
 def expressions(environment, step):
     if environment not in ('dcu-pd', 'a3-vllm', 'xpu-pd') or not isinstance(step, int) or step < 5 or step % 5:
         raise ValueError('Invalid gateway history environment or step')
@@ -77,6 +102,7 @@ def expressions(environment, step):
         OLDEST: oldest(environment),
         BACKEND_WAIT: f'max by(environment) ({complete_gauge("aigate_stream_backend_wait_max_seconds", environment)})',
         WRITE_ACTIVE: f'max by(environment) ({complete_gauge("aigate_stream_write_active_max_seconds", environment)})',
+        ERRORS: backend_error_rate(environment),
     }
     return {key: query.replace('$__interval', f'{step}s') for key, query in queries.items()}
 

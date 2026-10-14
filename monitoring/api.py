@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.gzip import GZipMiddleware
 from .access import client_allowlist
 from .query_client import QueryClient
-from . import gateway_live, native_schema, raw_gauges
+from . import accelerator_history, gateway_live, native_schema, raw_gauges
 from .native_rules import PREFIX, build, READ_DELAY_SECONDS, MAX_RECORD_AGE_SECONDS
 
 ENVIRONMENTS=tuple(native_schema.NODES)
@@ -114,8 +114,9 @@ class Service:
     async def _history(self,hours,start,end,step,view):
         async with self.slots:
             tasks=[asyncio.create_task(self.query(history_expression(self.environment,view),start,end,step)),
-                   asyncio.create_task(gateway_live.history(self.query,self.environment,start,end,step))]
-            try:rows,gateway=await asyncio.gather(*tasks)
+                   asyncio.create_task(gateway_live.history(self.query,self.environment,start,end,step)),
+                   asyncio.create_task(accelerator_history.history(self.query,self.environment,start,end,step))]
+            try:rows,gateway,accelerator=await asyncio.gather(*tasks)
             finally:
                 for task in tasks:
                     if not task.done():task.cancel()
@@ -123,10 +124,13 @@ class Service:
         points=native_schema.points(rows,self.environment,start,end,step,summary=view=='summary')
         by_time={p['ts']:p for p in points}
         for ts in gateway[0]:by_time.setdefault(ts,native_schema.empty_point(self.environment,ts))
+        for ts in accelerator[0]:by_time.setdefault(ts,native_schema.empty_point(self.environment,ts))
         points=[by_time[t] for t in sorted(by_time)]
         gateway_live.attach(points,gateway[0],step)
+        accelerator_history.attach(points,accelerator[0],step)
         return {'environment':self.environment,'hours':hours,'stride':step//5,'points':points,
-            'source':'victoriametrics','retention_hours':720,'gateway_status':gateway[1],'metric_policy':native_schema.POLICY}
+            'source':'victoriametrics','retention_hours':720,'gateway_status':gateway[1],
+            'accelerator_status':accelerator[1],'metric_policy':native_schema.POLICY}
 
     async def close(self):
         tasks=list(self.history_tasks.values())
