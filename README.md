@@ -24,7 +24,7 @@ aigate 拆分后，vmagent 直接访问 `aigate-proxy` 的免认证观测端口�
 
 - `/api/monitoring/latest`：当前快照、源观测时间、模型/主机/缓存指标及存储与积压状态。
 - `/api/monitoring/history`：按环境查询，支持大于 0、最多 720 小时；默认完整数据，`view=summary` 去除逐卡/逐 rank 资源明细，保留聚合数值、空值和断档。返回的是实际已积累历史。
-- `/api/monitoring/probes`：三个网关入口最近 24 小时真实流式请求探测；独立 worker 每 5 分钟发起一次，API 只读、不触发生成。配置、口径与启用步骤见 [服务探测](docs/service-probes.md)。
+- `/api/monitoring/probes`：三个网关入口最近 24 小时真实流式请求探测；独立 worker 对每个入口每 60 秒发起一次（三个入口按 0/20/40 秒错开），API 只读、不触发生成。配置、口径与启用步骤见 [服务探测](docs/service-probes.md)。
 - `/api/request-profile/metrics`：从 VM 查询网关计数与直方图，按 `environment=dcu-pd|a3-vllm|xpu-pd` 隔离来源，默认 DCU；声明 `counter_method=lifecycle-v2`。
 - `/health`：三环境模型来源、处理进度和错误；缺失必需来源或水位过旧时报告降级。
 - Perses 通过 VM 读取计算记录和原始瞬时值，`/internal/perses/` 已移除。定义与维护见 [原生记录规则](docs/native-recording-rules.md)。
@@ -43,11 +43,11 @@ A3 总体、设备和外部 KV 贡献使用明确的共同分母；启用时间�
 
 首次安装使用 `scripts/download.py` 下载并验证固定依赖，`deploy/start.py` / `deploy/start_test4.py` 创建缺失服务，Perses 使用 `perses/install.py` 和 `perses/seed.py`。初始化镜像默认值不代表线上最新镜像；重建时必须重新核验并显式提供本次验证的镜像。
 
-后续升级统一从 `python3 deploy/release.py --help` 进入，支持 API 镜像构建、容器、Perses 镜像、看板、生成器和加速发布。API 构建使用 Git commit、固定模板及不可变基础镜像 ID；容器替换命令在目标主机本地运行，连接与传输遵循工作区 SSH MCP 约束。流程见 [停机窗口升级](docs/maintenance-window-upgrade.md)、[部署工具](deploy/README.md) 和 [Perses 维护](perses/README.md)。新增服务器目录须告知用户。
+后续升级统一从 `python3 deploy/release.py --help` 进入，支持 API 镜像构建、容器、Perses 镜像、看板、生成器、原生记录规则和服务探测发布。API 构建使用 Git commit、固定模板及不可变基础镜像 ID；容器替换命令在目标主机本地运行，连接与传输遵循工作区 SSH MCP 约束。流程见 [停机窗口升级](docs/maintenance-window-upgrade.md)、[部署工具](deploy/README.md) 和 [Perses 维护](perses/README.md)。新增服务器目录须告知用户。
 
 允许停机；保留版本、所有权、访问控制、并发编辑和读回检查。失败停止后续步骤并修复当前版本，现行工具没有可执行回退入口。每次发布使用新的证据目录，不重用旧报告冒充验收。
 
-DCU 时延重算入口为 `python -m monitoring.latency_rebuild --vm <VM 地址> --state <独立检查点> --start <起点秒> --end <终点秒>`，起止时间须对齐 5 秒。工具会向 VM 写入当前请求口径的时延派生序列，执行前核对目标、范围与源码版本；不修改正常服务水位。检查点使用文件锁和代码指纹，仅在 VM 确认导入后推进；续跑使用相同源码与检查点，代码变化则新建检查点并核对重叠输出，不修改指纹绕过校验。参数与批次逻辑见 [重算工具](monitoring/latency_rebuild.py)。
+原生记录规则不提供历史重算：记录启用前和缺口留空，不回源或补算。原 DCU 时延重算工具 `monitoring/latency_rebuild.py` 已于 2026-10-11 随预计算一起删除，原文用 `git show 236c171^:monitoring/latency_rebuild.py` 查阅。
 
 ## 仓库边界
 

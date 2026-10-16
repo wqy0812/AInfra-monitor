@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize('component', [
-    'api-image', 'container', 'probes', 'image', 'dashboards', 'runtime', 'acceleration', 'acceleration-ready', 'merges', 'queries',
+    'api-image', 'container', 'probes', 'image', 'dashboards', 'runtime', 'acceleration', 'acceleration-ready',
 ])
 def test_unified_help_loads_each_implementation_without_workspace_path_assumptions(component, tmp_path):
     result = subprocess.run([sys.executable, str(ROOT / 'deploy/release.py'), component, '--help'],
@@ -20,7 +20,7 @@ def test_unified_help_loads_each_implementation_without_workspace_path_assumptio
     assert 'rollback' not in result.stdout.lower()
 
 
-@pytest.mark.parametrize('component', ['image', 'dashboards', 'runtime', 'acceleration', 'merges'])
+@pytest.mark.parametrize('component', ['image', 'dashboards', 'runtime', 'acceleration'])
 def test_removed_rollback_is_rejected_by_actual_component_parser(component, tmp_path):
     args = [sys.executable, str(ROOT / 'deploy/release.py'), component, 'rollback', '--evidence', str(tmp_path)]
     if component == 'acceleration':
@@ -34,7 +34,7 @@ def test_removed_rollback_is_rejected_by_actual_component_parser(component, tmp_
 def test_no_importable_rollback_implementation_remains():
     # These are the maintained tool directories. Ignored release payloads and
     # local evidence may contain immutable copies of earlier source versions.
-    for directory in ('deploy', 'deploy/perses_acceleration', 'perses', 'perses/performance'):
+    for directory in ('deploy', 'perses', 'perses/performance'):
         for path in (ROOT / directory).glob('*.py'):
             if path.name.startswith('test') or 'tests' in path.parts:
                 continue

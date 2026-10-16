@@ -71,6 +71,6 @@ python3 deploy/release.py image apply --evidence DIR --lock DIR/release-lock.jso
 
 `apply` 检查镜像摘要、架构、版本和原镜像身份，在停机窗口内替换 Perses；保留 systemd、访问控制、数据挂载、并发编辑检查，启动后读取所有项目（包括自定义项目）的资源。凭据来自目标机 `admin-credentials.json` 或 `PERSES_CREDENTIALS_FILE`；令牌按服务隔离，过期最多重新认证一次。
 
-没有候选服务、30 分钟观察或回退选项。失败保留当前状态、原资源快照及原始异常，修复后重新核验。旧容器只作为当前事务证据；存在同名临时容器时停止并要求先核查。相关看板变更通过 `deploy/release.py dashboards` 发布；查询合并专项通过 `deploy/release.py merges`，不再重跑旧 13 面板迁移器。
+没有候选服务、30 分钟观察或回退选项。失败保留当前状态、原资源快照及原始异常，修复后重新核验。旧容器只作为当前事务证据；存在同名临时容器时停止并要求先核查。相关看板变更通过 `deploy/release.py dashboards` 发布，不再重跑旧 13 面板迁移器。
 
 早期性能发布、旧回退过程和测量数字通过 [Git 历史](../../docs/releases/README.md) 查阅，不作为当前操作入口。

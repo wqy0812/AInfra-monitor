@@ -1,3 +1,5 @@
+> 2026-10-16：`queries`、`merges` 发布子命令及 `deploy/perses_acceleration/` 工具已随预计算一起退役（见 [退役清单](releases/retired-code.md)），已准入的改写保留在 `perses/projects/` 与 `perses/acceleration_state.json`，看板变更统一经 `deploy/release.py dashboards` 发布。下文的批次审计与发布流程仅为历史记录。
+
 # 面板查询瘦身
 
 本功能按批次生成候选，审计通过后才更新发布清单。`perses/projects`、线上面板和加速 catalog 继续代表已发布资源，不能用本地候选覆盖尚未准入的资源。

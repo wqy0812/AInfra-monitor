@@ -39,6 +39,6 @@ python3 deploy/release.py dashboards apply --evidence DIR --resources perses/pro
 
 生成器安装使用 `deploy/release.py runtime apply --evidence DIR --runtime TARGET`，输入为 `DIR/release/`；保留字节日志并防止覆盖并发编辑。Perses 镜像使用 `deploy/release.py image load|apply`，构建和锁定版本见 [performance](performance/README.md)。凭据在目标机 `admin-credentials.json`，可通过 `PERSES_CREDENTIALS_FILE` 指定。
 
-连接、停机、测试范围和数据保护遵循 [停机窗口升级](../docs/maintenance-window-upgrade.md)。查询合并和数据源切换的专项覆盖、正确性与性能验收见 [加速运维](../deploy/perses_acceleration/README.md)。
+连接、停机、测试范围和数据保护遵循 [停机窗口升级](../docs/maintenance-window-upgrade.md)。查询合并、改写和加速数据源的专项发布工具已于 2026-10-16 退役（见 [退役清单](../docs/releases/retired-code.md)）；看板变更统一经 `deploy/release.py dashboards` 发布。
 
 图表含义见 [METRICS_GUIDE](METRICS_GUIDE.md)，采集基线见 [METRIC_COVERAGE](METRIC_COVERAGE.md)。生效时间和真实断档说明保留在面板及相关口径记录中；历史安装、分类迁移与发布过程见 [归档](../docs/releases/README.md)。
