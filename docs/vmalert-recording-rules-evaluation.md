@@ -1,4 +1,4 @@
-> 后续已扩展为全部 18 项原生替换，当前入口见 [原生记录规则运维](native-recording-rules.md)。本文保留当时实验范围与证据。
+> 后续已扩展为全部 18 项原生替换，当前入口见 [原生记录规则运维](native-recording-rules.md)。本文保留当时实验范围与证据；`vmalert_recording_trial.py` 依赖的预计算实现已于 2026-10-16 删除，原文用 `git show 42312a9:experiments/vmalert_recording_trial.py` 查阅。
 
 # Issue #4：原生记录规则替代预计算的评估
 
@@ -22,7 +22,7 @@ VictoriaMetrics 的记录规则由独立的 **vmalert** 组件执行，通过 re
 新增两个仅供本地实验的文件：
 
 - [`vmalert_recording_rules.py`](../experiments/vmalert_recording_rules.py)：从当前 catalog 生成 7 个 group、126 条规则；保留原表达式，只展开步长和全选变量；规则名包含 panel/revision 身份摘要及步长。
-- [`vmalert_recording_trial.py`](../experiments/vmalert_recording_trial.py)：创建临时 VM/vmalert 容器，导入现有合成数据，运行原生 replay，比较原表达式、记录指标以及现有预计算。结束后删除本次容器和网络，保留本地规则与证据。
+- `vmalert_recording_trial.py`（已删除）：创建临时 VM/vmalert 容器，导入现有合成数据，运行原生 replay，比较原表达式、记录指标以及现有预计算。结束后删除本次容器和网络，保留本地规则与证据。
 
 ```sh
 .venv/bin/python --version

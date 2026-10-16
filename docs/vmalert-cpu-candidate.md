@@ -1,4 +1,4 @@
-> 后续已扩展为全部 18 项原生替换，当前入口见 [原生记录规则运维](native-recording-rules.md)。本文保留当时实验范围与证据。
+> 后续已扩展为全部 18 项原生替换，当前入口见 [原生记录规则运维](native-recording-rules.md)。本文保留当时实验范围与证据；文中的 `perses_recording.py` 和实验脚本已于 2026-10-16 删除，用 `git show 42312a9:<路径>` 查阅。
 
 # vmalert CPU 小范围候选
 
@@ -6,7 +6,7 @@
 
 ## 已实现
 
-[`monitoring/perses_recording.py`](../monitoring/perses_recording.py) 提供 `cpu_rules()` 与 `CPURecordingService`。
+`monitoring/perses_recording.py`（已删除）提供 `cpu_rules()` 与 `CPURecordingService`。
 
 每条原生规则在**同一次 VM 表达式求值**中返回业务向量以及向量的数量：
 
