@@ -1,12 +1,12 @@
-"""Check acceleration startup after the shared container release completes."""
+"""Check native recording and read-only API readiness after the shared container release completes."""
 import argparse
 import json
 from pathlib import Path
 import sys
 import time
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'perses'))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'perses'))
 from replace import inspect
 from release_support import save, record_failure
 from native_recording import fetch

@@ -51,7 +51,7 @@ Perses TLS 的原记录确认 HTTPS、HTTP/2、认证和资源保留；证书与
 ## 当前说明与材料
 
 - [指标口径与历史边界](../metrics-and-history.md)：请求范围、A3 贡献分母、采集完整性、CPU 聚合及流停顿。
-- [时间范围与缓存](../time-navigation.md)、[查询加速](../perses-query-acceleration.md)、[当前加速清单](../../deploy/perses_acceleration/STATUS.md)。
+- [时间范围与缓存](../time-navigation.md)、[查询加速](../perses-query-acceleration.md)（历史记录，现行为原生记录规则）。
 - [代码退役索引](retired-code.md)：原路径及 SHA-256。
 
 日期目录中的 Dockerfile、manifest、panels、版本锁和校验和保留。原始执行证据在忽略的 evidence/work 目录，Git 检出不能恢复它们。新发布更新本页对应组件的版本身份、验收范围及证据位置；过程日志和审核流水不另行提交，旧版本从 Git 查阅。

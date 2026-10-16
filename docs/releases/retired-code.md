@@ -18,6 +18,22 @@ git show a624c42:perses/dashboards/overview.json
 - 查询/生成器所用 `generate.py`、`gateway_generation.py`、`generate_xpu.py`、迁移与平台辅助模块保留；只删除旧 CLI 的不可达实现。
 - 加速 API 的构建/替换复用通用容器入口，启动验收由 `api_readiness.py` 提供。续办工具读取新证据，也能只读识别历史证据；不生成旧回退结果。
 - 容器、镜像、看板、生成器及加速发布的回退函数/选项已删除，现行失败留证和并发编辑测试保留。固化于旧批次的性能豁免发布器也已退役。
-- 没有仅因“无代码引用”就删除通用 CLI 诊断：内存窗口、覆盖探针、浏览器首屏、性能复验和本地合成工具仍保留，用途见 [加速运维](../../deploy/perses_acceleration/README.md)。
+- 没有仅因“无代码引用”就删除通用 CLI 诊断：内存窗口、覆盖探针、浏览器首屏、性能复验和本地合成工具当时仍保留；它们随 2026-10-16 的加速工具退役一并删除，见下节。
 
 版本锁、manifest、源码摘要、采集输入、必要测试样本和历史正文仍保留。执行报告、容器快照与凭据不新增到 Git；远端旧文件不受本地清理影响。
+
+## 2026-10-16 预计算加速工具退役
+
+2026-10-11 起查询加速改由 vmalert 原生记录规则提供，Perses 直接查 VM，`perses-accelerated` 数据源和 `/internal/perses` 代理已删除。旧预计算的分组准入、补算、查询合并与改写发布工具随之失去消费者，本次删除；退役前的源码提交为 `42312a9`。
+
+- 删除 `deploy/perses_acceleration/` 下 26 个文件（预计算分组发布、补算与续办、查询合并 `merge_release.py`、查询改写 `query_release.py`、浏览器与合成对照、HTTP/2 对照、生成器事务等）及 `deploy/release.py` 的 `merges`、`queries` 子命令。
+- 删除只覆盖上述工具的 13 个测试文件；`test_column_maintenance.py`、`test_forward_repair.py`、`test_release_entrypoints.py` 去掉对应用例，保留生成器列映射和通用看板发布的回归。
+- `api_readiness.py` 已用于原生记录与只读 API 的就绪检查，移到 `deploy/api_readiness.py`，`acceleration-ready` 子命令保持不变。
+- 仍保留：`perses/` 中被生成器安装清单引用的 `query_acceleration.py`、`acceleration_catalog.py`、`acceleration_publication.py`、`query_slimming.py`、`acceleration_state.json`（收敛见 [#2](https://github.com/wqy0812/AInfra-monitor/issues/2)）；`monitoring/perses_acceleration.py`、`perses_recording.py`、`recording_acceptance.py` 及其测试。`experiments/vmalert_recording_trial.py` 依赖已删除的 `synthetic.py`，重跑时从 Git 取回。
+
+在仓库内只读检索原文：
+
+```sh
+git ls-tree -r --name-only 42312a9 -- deploy/perses_acceleration
+git show 42312a9:deploy/perses_acceleration/README.md
+```
