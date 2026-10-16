@@ -34,3 +34,9 @@
 查询加速现采用固定 1m 原生 vmalert：`acceleration build/publish/check/audit`、`acceleration-ready`。Perses 直接查 VM；新记录缺口留空，不回源、不自动 replay。具体步骤见 [原生记录规则运维](native-recording-rules.md)。
 
 现行入口：[部署说明](../deploy/README.md)、[测试说明](../tests/README.md)、[Perses 维护](../perses/README.md)。已完成批次脚本已退役，追溯方式见 [退役清单](releases/retired-code.md)；历史正文与必要输入保留在归档中。
+
+## Docker API 兼容
+
+test1–5 已统一为 Docker 29.9.1 / Compose 5.6.0，但 dcu1/dcu2 的 monitoring-node、monitoring-dcu 仍运行于 Docker 18.09.7。通用 `deploy/replace.py` 因此保留现场需要的 API 1.39 和 1.56 两档，删除通用版本范围协商；通过本机 Unix socket 的 `/version` 核对并使用服务端 API，在停止或重命名原容器前完成检查。服务端不可达、响应非法或 API 不在这两档时拒绝继续，不猜测版本或重试结果未知的创建请求。后续部署节点的 Docker API 基线变化需同步更新工具和相关回归。部署时同步当前 `replace.py`、`container_validation.py` 及其现行依赖；历史发布包不作为当前工具入口。
+
+2026-10-16 本轮通过 SSH MCP 逐台核验 test1–5：Docker 客户端/服务端均为 29.9.1、Compose 均为 5.6.0、Docker 服务均为 active。此前 test4 曾取消升级并保持 28.5.2，随后已完成升级；早前取消记录不代表当前状态。本轮仅核验版本，没有重新升级或重启 monitoring。此前预置安装包、在线备份副本和现场证据保留，在线副本仍不等同于停机一致性备份。

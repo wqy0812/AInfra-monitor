@@ -53,3 +53,9 @@ git show 42312a9:deploy/perses_acceleration/README.md
 `native_standard_rules.py`；旧计算对照模块及其专属测试随后一并删除，见上节。
 当前操作以[原生记录规则](../native-recording-rules.md)为准。本次仅清理仓库文件，
 不清理本地原始实验数据或服务器上的历史文件、容器和证据。
+
+## 2026-10-16 Docker 基线与入口收敛
+
+test1–5 的 Docker / Compose 已核验为 29.9.1 / 5.6.0；复审核验 dcu1/dcu2 仍为 Docker 18.09.7，并运行 monitoring-node、monitoring-dcu。通用替换工具保留现场所需的 API 1.39 / 1.56 两档及其回归，删除通用范围协商和已不使用的 28.5.2 成功用例。版本不匹配、连接失败、创建结果未知和失败留证回归继续保留。此次仅只读核验 DCU 节点，没有升级 Docker 或重启采集器。
+
+删除只转调公共安装函数的 `deploy/start_test4.py`，首次安装使用 `deploy/start.py central`；公共安装的白名单和不可变镜像检查不变。旧包装器可通过 `git show ab9b1daf3b4207746ce757ebecefee2f65576a72:deploy/start_test4.py` 查阅。本轮源码清理未同步远端工具，也未清理任何现场文件。

@@ -9,7 +9,7 @@ monitoring 采集 DCU、A3、XPU 的模型、主机、加速卡、网关和缓�
 | 组件 | 配置与职责 |
 | --- | --- |
 | VictoriaMetrics / vmagent | test4 中央存储与采集；固定版本见 `vendor/releases.json`，当前采集目标以 `deploy/scrape.yml` 为准 |
-| monitoring-api | `monitoring/`；来源 IP 白名单、三环境只读 JSON 查询与请求画像查询；配置见 `deploy/start_test4.py` |
+| monitoring-api | `monitoring/`；来源 IP 白名单、三环境只读 JSON 查询与请求画像查询；配置见 `deploy/start.py central` |
 | 节点采集 | node/DCU exporter 及平台原生 HTTP 指标；采集配置保留各平台真实 job 与标签 |
 | Perses | `perses/projects/` 保存分区源定义；发布为 3 个项目、21 张看板、261 个面板，网关与模型推理各一个入口；统一直接使用 VM 数据源 |
 | 原生记录规则 | `monitoring/native_rules.py` 定义 202 条 raw-only 规则；速率和分位数固定 1m 窗口、5s 记录；82 个瞬时值字段由 `monitoring/raw_gauges.py` 直读原始采样，不重复落盘 |
@@ -41,7 +41,7 @@ A3 总体、设备和外部 KV 贡献使用明确的共同分母；启用时间�
 
 本地使用 pyenv 管理的 Python 3.11+ 和项目 `.venv`，运行前核对版本。测试按改动范围选择，入口见 [测试说明](tests/README.md)。查询、统计、采集/导入或存储逻辑变化才触发相关真实 VM 测试；UI 与性能变化执行各自验收。
 
-首次安装使用 `scripts/download.py` 下载并验证固定依赖，`deploy/start.py` / `deploy/start_test4.py` 创建缺失服务，Perses 使用 `perses/install.py` 和 `perses/seed.py`。初始化镜像默认值不代表线上最新镜像；重建时必须重新核验并显式提供本次验证的镜像。
+首次安装使用 `scripts/download.py` 下载并验证固定依赖，`deploy/start.py` 创建缺失服务，Perses 使用 `perses/install.py` 和 `perses/seed.py`。初始化镜像默认值不代表线上最新镜像；重建时必须重新核验并显式提供本次验证的镜像。
 
 后续升级统一从 `python3 deploy/release.py --help` 进入，支持 API 镜像构建、容器、Perses 镜像、看板、生成器、原生记录规则和服务探测发布。API 构建使用 Git commit、固定模板及不可变基础镜像 ID；容器替换命令在目标主机本地运行，连接与传输遵循工作区 SSH MCP 约束。流程见 [停机窗口升级](docs/maintenance-window-upgrade.md)、[部署工具](deploy/README.md) 和 [Perses 维护](perses/README.md)。新增服务器目录须告知用户。
 

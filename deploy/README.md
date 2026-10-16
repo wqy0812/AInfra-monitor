@@ -14,7 +14,7 @@
 
 例如 `python3 deploy/release.py dashboards --help` 显示实际子命令参数。分组件实现可独立导入，后续功能改动复用这些实现，不新增按功能或日期命名的发布脚本。Perses 发布共用 `perses/release_support.py` 的完整资源快照、原子证据写入、读回和失败留证。
 
-首次安装保留 `start.py`、`start_test4.py`；公共容器校验为 `container_validation.py`。采集输入为 `scrape.yml`、`profile_a3_scrape.yml`、`xpu_hardware_scrape.yml`。只读网关历史检查已迁到 `scripts/check_gateway_history.py`。
+首次安装统一使用 `start.py central|node`；公共容器校验为 `container_validation.py`。采集输入为 `scrape.yml`、`profile_a3_scrape.yml`、`xpu_hardware_scrape.yml`。只读网关历史检查已迁到 `scripts/check_gateway_history.py`。
 
 ## aigate 双服务接入
 

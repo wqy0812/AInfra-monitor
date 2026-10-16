@@ -24,6 +24,73 @@ cv = load('container_validation', 'deploy/container_validation.py')
 replacement = load('review_container_replace', 'deploy/replace.py')
 
 
+def version_connection(monkeypatch, body, status=200, error=None):
+    calls = []
+    class Connection:
+        def __init__(self, *args, **kwargs): pass
+        def request(self, method, path, *args):
+            calls.append((method, path))
+            if error: raise error
+        def getresponse(self): return self
+        def read(self): return body if isinstance(body, bytes) else json.dumps(body).encode()
+        def close(self): calls.append(('close',))
+    Connection.status = status
+    monkeypatch.setattr(replacement, 'Connection', Connection)
+    return calls
+
+
+@pytest.mark.parametrize('version', ['1.39', '1.56'])
+def test_docker_api_baseline(monkeypatch, version):
+    calls = version_connection(monkeypatch, {'ApiVersion': version})
+    assert replacement.docker_api_version() == version
+    assert calls == [('GET', '/version'), ('close',)]
+
+
+@pytest.mark.parametrize('body,status', [
+    ({'ApiVersion': '1.38'}, 200), ({'ApiVersion': '1.51'}, 200), ({'ApiVersion': '1.60'}, 200),
+    ({'ApiVersion': '1.56/containers'}, 200), ({'ApiVersion': 1.56}, 200),
+    ({}, 200), ([], 200), (b'invalid json', 200), ({}, 503),
+])
+def test_docker_api_bad_response_never_falls_back(monkeypatch, body, status):
+    calls = version_connection(monkeypatch, body, status)
+    with pytest.raises((RuntimeError, ValueError, KeyError)):
+        replacement.docker_api_version()
+    assert calls == [('GET', '/version'), ('close',)]
+
+
+def test_docker_api_timeout_precedes_container_mutation(monkeypatch):
+    docker = Docker()
+    for name, function in [('inspect', docker.inspect), ('find', docker.find), ('cmd', docker.command)]:
+        monkeypatch.setattr(replacement, name, function)
+    calls = version_connection(monkeypatch, {}, error=TimeoutError('probe timeout'))
+    before = copy.deepcopy(docker.containers)
+    with pytest.raises(TimeoutError): replacement.replace('monitoring-api', 'candidate')
+    assert docker.containers == before
+    assert docker.calls == [('docker', 'image', 'inspect', 'candidate')]
+    assert calls == [('GET', '/version'), ('close',)]
+
+
+@pytest.mark.parametrize('version', ['1.39', '1.56'])
+def test_unknown_create_result_is_not_retried(monkeypatch, version):
+    calls = version_connection(monkeypatch, {}, error=TimeoutError('unknown result'))
+    with pytest.raises(TimeoutError): replacement.create('synthetic', {}, api_version=version)
+    assert calls == [('POST', '/v'+version+'/containers/create?name=synthetic'), ('close',)]
+
+
+@pytest.mark.parametrize('version', ['1.39', '1.56'])
+def test_replacement_passes_checked_api_to_creation(monkeypatch, version):
+    probe = replacement.docker_api_version
+    docker = Docker()
+    docker.patch(monkeypatch)
+    version_connection(monkeypatch, {'ApiVersion': version})
+    monkeypatch.setattr(replacement, 'docker_api_version', probe)
+    def create(name, config, api_version=None):
+        assert api_version == version
+        return docker.create(name, config, api_version)
+    monkeypatch.setattr(replacement, 'create', create)
+    replacement.replace('monitoring-api', 'candidate')
+
+
 def container(name='monitoring-api'):
     return {'Id': 'original', 'Image': 'previous', 'Name': '/' + name, 'RestartCount': 0,
             'State': {'Running': True, 'StartedAt': 'before'},
@@ -72,7 +139,7 @@ class Docker:
         self.fail(action + '-after')
         return ''
 
-    def create(self, name, config):
+    def create(self, name, config, api_version=None):
         self.calls.append(('create', name))
         self.fail('create-before')
         self.containers[name] = {'Id': 'new', 'Image': config['Image'], 'Config': config,
@@ -87,6 +154,7 @@ class Docker:
         self.calls.append(('accepted',))
 
     def patch(self, monkeypatch):
+        monkeypatch.setattr(replacement, 'docker_api_version', lambda: '1.56')
         for name, function in [('inspect', self.inspect), ('find', self.find), ('cmd', self.command),
                                ('create', self.create), ('wait_ready', self.ready)]:
             monkeypatch.setattr(replacement, name, function)

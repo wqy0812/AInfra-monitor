@@ -38,9 +38,7 @@ async def test_real_middleware_checks_transport_peer_even_with_forwarded_header(
     assert response.status_code == expected
 
 
-@pytest.mark.parametrize('entry', ['start.py', 'start_test4.py'])
-def test_startup_requires_allowlist_before_directory_or_container_changes(tmp_path, monkeypatch, entry):
-    import runpy
+def test_startup_requires_allowlist_before_directory_or_container_changes(tmp_path, monkeypatch):
     import sys
     spec = importlib.util.spec_from_file_location('review_start', ROOT/'deploy/start.py')
     start = importlib.util.module_from_spec(spec)
@@ -51,12 +49,8 @@ def test_startup_requires_allowlist_before_directory_or_container_changes(tmp_pa
     monkeypatch.setattr(start, 'run', lambda *args: pytest.fail('No build before allowlist validation'))
     monkeypatch.setattr(start, 'start', lambda *args: pytest.fail('No container before allowlist validation'))
     with pytest.raises(ValueError, match='explicit client IP'):
-        if entry == 'start.py':
-            monkeypatch.setattr(sys, 'argv', ['start.py', 'central'])
-            start.main()
-        else:
-            monkeypatch.setitem(sys.modules, 'start', start)
-            runpy.run_path(str(ROOT/'deploy/start_test4.py'))
+        monkeypatch.setattr(sys, 'argv', ['start.py', 'central'])
+        start.main()
     assert not list(tmp_path.iterdir())
 
 

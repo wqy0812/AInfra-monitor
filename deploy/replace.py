@@ -42,10 +42,27 @@ class Connection(http.client.HTTPConnection):
         self.sock.connect('/var/run/docker.sock')
 
 
-def create(name, config):
+def docker_api_version():
+    """Check the deployed APIs: DCU exporters use 1.39, test hosts use 1.56."""
     connection = Connection('localhost', timeout=30)
     try:
-        connection.request('POST', '/v1.39/containers/create?name=' + name,
+        connection.request('GET', '/version')
+        response = connection.getresponse()
+        raw = response.read()
+        require(response.status == 200, 'Docker API check failed: HTTP ' + str(response.status))
+        info = json.loads(raw)
+        version = info.get('ApiVersion') if isinstance(info, dict) else None
+        require(version in ('1.39', '1.56'), 'Deployment requires Docker API 1.39 or 1.56')
+        return version
+    finally:
+        connection.close()
+
+
+def create(name, config, api_version=None):
+    api_version = api_version or docker_api_version()
+    connection = Connection('localhost', timeout=30)
+    try:
+        connection.request('POST', '/v' + api_version + '/containers/create?name=' + name,
                            json.dumps(config), {'Content-Type': 'application/json'})
         response = connection.getresponse()
         body = response.read()
@@ -108,6 +125,7 @@ def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=N
         require(name == 'monitoring-node', '--loadavg is only for monitoring-node')
         if '--collector.loadavg' not in config['Cmd']:
             config['Cmd'].append('--collector.loadavg')
+    api_version = docker_api_version()
     require(inspect(name)['Id'] == old['Id'], 'Original container changed before replacement')
     before = {key: old[key] for key in ('Id', 'Image', 'Name', 'State')}
     before['configuration_sha256'] = hashlib.sha256(json.dumps(
@@ -118,7 +136,7 @@ def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=N
     try:
         cmd('docker', 'stop', old['Id'])
         cmd('docker', 'rename', old['Id'], backup)
-        identity = create(name, config)
+        identity = create(name, config, api_version=api_version)
         cmd('docker', 'start', identity)
         wait_ready(inspect, identity, image, probe)
         require(inspect(name)['Id'] == identity, 'Candidate name changed before acceptance completed')
