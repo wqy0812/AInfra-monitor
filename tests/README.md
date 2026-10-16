@@ -67,4 +67,4 @@ docker compose -f tests/compose.vm.yml down
 
 统一发布入口、禁止回退和失败留证检查位于 `test_release_entrypoints.py`、`test_deployment_tools.py`、`test_forward_repair.py`；`test_api_image.py` 检查 API 构建只读取提交源码、固定基础和最终镜像身份、拒绝不安全输入并保留失败证据，其 Docker 调用使用替身，不代表真实镜像或线上验收。Perses 生成器、资源作用域、认证与并发编辑检查继续保留。全量收集可用 `pytest --collect-only` 检查清理后的导入闭包，不代表全量用例已执行。历史脚本专属测试随入口退役，共用下载校验、采集目标身份、网关只读和管理状态并发测试保留。
 
-2026-10-11 原生规则迁移：旧 API encode/PATHS、代次 supervisor、Python 延迟回填及逐点等价写入测试随入口退役。现行 `test_native_monitoring.py`、`test_history_summary.py`、`test_recording_runtime.py` 验证部分覆盖、直接 VM 读取和显式 replay；`experiments/native_standard_probe.py --approved` 验证真实 VM/vmalert 的新语义。旧纯计算对照保留供审计，不属于线上计算链路。
+2026-10-11 原生规则迁移：旧 API encode/PATHS、代次 supervisor、Python 延迟回填及逐点等价写入测试随入口退役。现行 `test_native_monitoring.py`、`test_history_summary.py`、`test_recording_runtime.py` 验证部分覆盖、直接 VM 读取和显式 replay；`experiments/native_standard_probe.py --approved` 验证真实 VM/vmalert 的新语义。旧预计算与候选记录模块的专属测试已退役，历史对照从 Git 查阅。

@@ -40,3 +40,16 @@ git ls-tree -d --name-only 42312a9 deploy/
 git show 42312a9:monitoring/perses_acceleration.py
 git show 42312a9:deploy/perses_acceleration/README.md
 ```
+
+## 2026-10-16 迁移前原生记录规则实验退役
+
+原生规则迁移已完成，删除仅用于迁移前可行性和候选对照的四个脚本：
+`experiments/vmalert_recording_trial.py`、`experiments/vmalert_recording_rules.py`、
+`experiments/vmalert_cpu_candidate.py`、`experiments/vmalert_cpu_browser.py`。
+配套历史说明 `docs/vmalert-recording-rules-evaluation.md` 和
+`docs/vmalert-cpu-candidate.md` 同时移除。完整原文从提交 `22ceb1f926425a52b06626b513060a3753ffc355` 查阅。
+
+保留当前合成回归入口 `experiments/native_standard_probe.py --approved` 及其依赖
+`native_standard_rules.py`；旧计算对照模块及其专属测试随后一并删除，见上节。
+当前操作以[原生记录规则](../native-recording-rules.md)为准。本次仅清理仓库文件，
+不清理本地原始实验数据或服务器上的历史文件、容器和证据。

@@ -43,4 +43,4 @@ python3 deploy/release.py acceleration audit --evidence AUDIT_DIR
 
 每次重启只开始正常评估，不执行 replay、不写 generation/publication 文件。计算指标启用前或记录缺口保留空白，不以旧口径或原始查询自动填补；瞬时值不依赖记录服务。VM 历史、发送缓冲、旧水位和发布文件保持原样。需要计算记录历史时可另行显式运行官方 replay，提供 `monitoring.recording_runtime --replay-start ISO_TIME --replay-end ISO_TIME` 的两个边界；不能把另一个实时 writer 启在相同记录时间范围。
 
-Perses 发布使用 `dashboards prepare/apply` 和 `runtime apply`，校验并发编辑、真实数据源查询及资源读回。合成回归使用 `experiments/native_standard_probe.py --approved`；历史计算模块保留作离线旧口径对照，不被现行 API 或 vmalert 运行入口导入。原先的 Python 延迟重建写入入口已删除。
+Perses 发布使用 `dashboards prepare/apply` 和 `runtime apply`，校验并发编辑、真实数据源查询及资源读回。合成回归使用 `experiments/native_standard_probe.py --approved`；旧预计算与候选记录模块及其专属测试已退役，历史实现从 Git 查阅。原先的 Python 延迟重建写入入口已删除。
