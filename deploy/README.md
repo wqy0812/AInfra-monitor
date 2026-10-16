@@ -50,6 +50,6 @@ python3 deploy/release.py api-image <commit> \
 
 ## 历史材料
 
-已完成批次的 Python 发布/候选/验证脚本、源代码快照和旧看板基线已移出工作树，检索方式见 [退役清单](../docs/releases/retired-code.md)。现有带日期的目录冻结，仅保留追溯用 Dockerfile、manifest、panels 等输入及归档导航，不能作为新发布计划重跑；新构建复用固定模板，产物和执行记录写入 `work/` / `evidence/`，不新增日期源码目录。
+已完成批次的 Python 发布/候选/验证脚本、源代码快照和旧看板基线已移出工作树，检索方式见 [退役清单](../docs/releases/retired-code.md)。带日期的目录只保留最近两个（`a3-effective-cache-20261008/`、`review-fixes-20261008/`），仅含追溯用 Dockerfile、manifest 等输入，不能作为新发布计划重跑；更早的 7 个已于 2026-10-16 从工作树移除，用 `git ls-tree -d --name-only 42312a9 deploy/` 查阅；新构建复用固定模板，产物和执行记录写入 `work/` / `evidence/`，不新增日期源码目录。
 
 历史正文集中于 [发布归档](../docs/releases/README.md)。`evidence/`、`work/`、运行日志、凭据和镜像归档不入库；版本锁、源输入摘要和校验和继续入库，不按扩展名批量忽略。

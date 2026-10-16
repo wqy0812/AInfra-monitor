@@ -29,11 +29,14 @@ git show a624c42:perses/dashboards/overview.json
 - 删除 `deploy/perses_acceleration/` 下 26 个文件（预计算分组发布、补算与续办、查询合并 `merge_release.py`、查询改写 `query_release.py`、浏览器与合成对照、HTTP/2 对照、生成器事务等）及 `deploy/release.py` 的 `merges`、`queries` 子命令。
 - 删除只覆盖上述工具的 13 个测试文件；`test_column_maintenance.py`、`test_forward_repair.py`、`test_release_entrypoints.py` 去掉对应用例，保留生成器列映射和通用看板发布的回归。
 - `api_readiness.py` 已用于原生记录与只读 API 的就绪检查，移到 `deploy/api_readiness.py`，`acceleration-ready` 子命令保持不变。
-- 仍保留：`perses/` 中被生成器安装清单引用的 `query_acceleration.py`、`acceleration_catalog.py`、`acceleration_publication.py`、`query_slimming.py`、`acceleration_state.json`（收敛见 [#2](https://github.com/wqy0812/AInfra-monitor/issues/2)）；`monitoring/perses_acceleration.py`、`perses_recording.py`、`recording_acceptance.py` 及其测试。`experiments/vmalert_recording_trial.py` 依赖已删除的 `synthetic.py`，重跑时从 Git 取回。
+- 同日按确认继续删除：`monitoring/` 下已无入口引用的 `perses_acceleration.py`、`perses_recording.py`、`recording_acceptance.py`，测试用副本 `tests/legacy_acceleration.py` 及只覆盖它们的 6 个测试文件，依赖它们的实验脚本 `experiments/vmalert_cpu_candidate.py`、`vmalert_recording_trial.py`；`deploy/` 下带日期的目录只保留最近两个（`a3-effective-cache-20261008`、`review-fixes-20261008`），删除另外 7 个。
+- 仍保留：`perses/` 中被生成器安装清单引用的 `query_acceleration.py`、`acceleration_catalog.py`、`acceleration_publication.py`、`query_slimming.py`、`acceleration_state.json`，以及查询瘦身测试仍使用的 `monitoring/perses_acceleration_catalog.json`（收敛见 [#2](https://github.com/wqy0812/AInfra-monitor/issues/2)）。
 
 在仓库内只读检索原文：
 
 ```sh
 git ls-tree -r --name-only 42312a9 -- deploy/perses_acceleration
+git ls-tree -d --name-only 42312a9 deploy/
+git show 42312a9:monitoring/perses_acceleration.py
 git show 42312a9:deploy/perses_acceleration/README.md
 ```
