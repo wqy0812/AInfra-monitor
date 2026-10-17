@@ -149,8 +149,10 @@ def test_raw_observations_gaps_staleness_and_partial_writes():
     raw = probes.samples('a3-vllm', observation(now-121)) + probes.samples('dcu-pd', observation(now-1, 'timeout'))
     partial = probes.samples('xpu-pd', observation(now-1)).splitlines()[0]
     data = probes.decode(raw+partial, now-86400, now)
-    a3, xpu, dcu = data['services']
-    assert [service['offset_seconds'] for service in data['services']] == [0, 20, 40]
+    a3, xpu, dcu, ppu = data['services']
+    assert [service['offset_seconds'] for service in data['services']] == [0, 20, 40, 50]
+    assert ppu['environment'] == 'ppu' and ppu['name'] == 'PPU'
+    assert ppu['status'] == 'unknown' and ppu['latest'] is None and ppu['records'] == []
     assert a3['status'] == 'unknown' and a3['latest']['status'] == 'success'
     assert xpu['status'] == 'unknown' and xpu['latest']['reason'] == 'incomplete_observation'
     assert dcu['status'] == 'failure'
@@ -167,7 +169,7 @@ def test_conflicting_or_invalid_observations_are_unknown():
 
 
 def test_schedule_skips_missed_slots_and_staggers():
-    assert [worker.next_run(900, offset) for offset in (0, 20, 40)] == [960, 920, 940]
+    assert [worker.next_run(900, offset) for offset in probes.OFFSETS.values()] == [960, 920, 940, 950]
     assert worker.next_run(1200, 0) == 1260
     assert worker.next_run(9000, 0) == 9060
     for offset in probes.OFFSETS.values():
@@ -265,13 +267,14 @@ async def test_read_api_never_generates_and_uses_raw_export(monkeypatch):
     def respond(request):
         calls.append(request)
         assert request.method == 'GET' and request.url.path == '/api/v1/export'
-        return httpx.Response(200, text=probes.samples('a3-vllm', observation(time.time()-1)))
+        assert 'environment=~"a3-vllm|xpu-pd|dcu-pd|ppu"' in request.url.params['match[]']
+        return httpx.Response(200, text=probes.samples('ppu', observation(time.time()-1)))
     async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
         request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(services={
             'dcu-pd': SimpleNamespace(client=client, slots=asyncio.Semaphore(2))})))
         monkeypatch.setattr(worker, 'probe', AsyncMock(side_effect=AssertionError('must stay read-only')))
         data = await probes.probe_history(request)
-        assert data['services'][0]['status'] == 'success' and len(calls) == 1
+        assert data['services'][3]['status'] == 'success' and len(calls) == 1
 
 
 @pytest.mark.asyncio
@@ -289,6 +292,11 @@ def test_configuration_validates_full_gateway_urls(tmp_path):
     targets = {env: f'http://{name.lower()}.test/v1/chat/completions' for env, name in probes.TARGETS}
     path.write_text(json.dumps(targets))
     assert worker.load_targets(path) == {env: worker.Target(url) for env, url in targets.items()}
+    for invalid in ({key: value for key, value in targets.items() if key != 'ppu'},
+                    {**targets, 'unknown': 'http://unknown.test/v1/chat/completions'}):
+        path.write_text(json.dumps(invalid))
+        with pytest.raises(ValueError, match='Configure exactly'):
+            worker.load_targets(path)
     for bad in ('http://test/health', 'http://secret:password@test/v1/chat/completions', 'file:///v1/chat/completions'):
         path.write_text(json.dumps({**targets, 'a3-vllm': bad}))
         with pytest.raises(ValueError):

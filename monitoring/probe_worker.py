@@ -156,7 +156,7 @@ class Target:
 def load_targets(path):
     values = json.loads(Path(path).read_text())
     if not isinstance(values, dict) or set(values) != {env for env, _ in TARGETS}:
-        raise ValueError('Configure exactly a3-vllm, xpu-pd and dcu-pd business endpoints')
+        raise ValueError('Configure exactly these business endpoints: ' + ', '.join(env for env, _ in TARGETS))
     targets = {}
     for environment, value in values.items():
         if isinstance(value, str):

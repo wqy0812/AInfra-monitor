@@ -9,8 +9,9 @@ import httpx
 
 INTERVAL = 60
 STALE_AFTER = 120
-TARGETS = (('a3-vllm', 'A3'), ('xpu-pd', 'XPU'), ('dcu-pd', 'DCU'))
-OFFSETS = {environment: index * (INTERVAL // len(TARGETS)) for index, (environment, _) in enumerate(TARGETS)}
+TARGETS = (('a3-vllm', 'A3'), ('xpu-pd', 'XPU'), ('dcu-pd', 'DCU'), ('ppu', 'PPU'))
+# Keep existing schedules stable when adding an entrance: history uses these offsets.
+OFFSETS = {'a3-vllm': 0, 'xpu-pd': 20, 'dcu-pd': 40, 'ppu': 50}
 REASONS = ('success', 'http_error', 'timeout', 'connection_error', 'stream_error',
            'invalid_stream', 'empty_output', 'incomplete_stream')
 FIELDS = ('result', 'started_at_seconds', 'duration_seconds', 'first_output_seconds', 'http_status')
@@ -81,7 +82,8 @@ async def history(client, vm, now=None):
     end = time.time() if now is None else now
     start = end - 86400
     response = await client.get(vm + '/api/v1/export', params={
-        'match[]': '{__name__=~"model_probe_(' + '|'.join(FIELDS) + ')",environment=~"a3-vllm|xpu-pd|dcu-pd"}',
+        'match[]': '{__name__=~"model_probe_(' + '|'.join(FIELDS) + ')",environment=~"'
+                   + '|'.join(environment for environment, _ in TARGETS) + '"}',
         'start': start, 'end': end}, timeout=6)
     response.raise_for_status()
     return decode(response.text, start, end)
