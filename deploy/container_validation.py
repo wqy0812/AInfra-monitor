@@ -89,7 +89,7 @@ class ComponentProbe:
 
         if self.name == 'monitoring-probes':
             value = fetch('/health', True)
-            require(value['status'] == 'ok' and value['targets'] == 3, 'Probe worker or VM unavailable')
+            require(value['status'] == 'ok' and value['targets'] == 4, 'Probe worker or VM unavailable')
         elif self.name == 'monitoring-api':
             require(fetch('/health', True)['status'] == 'ok', 'API health degraded')
             for environment in ('dcu-pd', 'a3-vllm', 'xpu-pd'):
