@@ -109,8 +109,8 @@ scrape_configs:
     action: keep
 - job_name: aigate-a3
   static_configs:
-  - targets: ['122.52.5.131:18082']
-    labels: {environment: a3-vllm, node: worker-131, service: aigate}
+  - targets: ['122.209.21.24:18082']
+    labels: {environment: a3-vllm, node: a3-1, service: aigate}
   relabel_configs:
   - target_label: job
     replacement: aigate
