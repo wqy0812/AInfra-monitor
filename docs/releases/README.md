@@ -1,11 +1,12 @@
 # 发布身份与历史检索
 
-当前操作见 [项目 README](../../README.md)、[部署工具](../../deploy/README.md)、[Perses 维护](../../perses/README.md) 和 [停机窗口升级](../maintenance-window-upgrade.md)。本轮更新并核验 monitoring-api 和 monitoring-probes；生成器、看板及其他组件保持各自最近的历史记录，不代表本轮重新验收。
+当前操作见 [项目 README](../../README.md)、[部署工具](../../deploy/README.md)、[Perses 维护](../../perses/README.md) 和 [停机窗口升级](../maintenance-window-upgrade.md)。最新一轮核验 A3 采集配置与 gateway 更新后的数据新鲜度；线上配置已一致，无需重启。API、probes、生成器、看板及其他组件的既有版本记录分别保留，不以当前仓库 HEAD 代替运行身份。
 
 ## 最近保留的版本记录
 
 | 范围 | 记录日期 | 版本身份 | 证据位置 |
 | --- | --- | --- | --- |
+| aigate 采集配置 | 2026-10-17 23:38 | 源码 `f0ff0c186be2d0f2af8b1771e21ec54702c81227`；线上配置已一致，未重启 vmagent | test4 `/data2/monitoring/releases/multi-target-replay-20261017/checks/` |
 | 维护工具 | 2026-10-17 | 源码 `c626bc3006e12148270c78c94226685790fbce65`；探测 worker 就绪检查要求四个目标 | test4 `/data2/monitoring/releases/ppu-probes-20261017/source/` |
 | 已安装生成器 | 2026-10-14 | 源码 `1f9d280922ca0b73cc77d3f2d42505bf081e077b`；35 个模块字节核验，独立生成的 15 项在途查询排除回放 | `gateway-replay-filter-20261014/runtime/` |
 | monitoring-api | 2026-10-17 | 源码 `055e8962e459bdf94cb594e270101097e2474e49`；镜像 `sha256:6a34995a5ce1c551b2e7590b063edcf331b9b311cbfba53e8ddd1a85e3c060ed`；服务探测查询增加 PPU | `ppu-probes-20261017/api-build/`、`api-release/`、`checks/` |
@@ -13,6 +14,12 @@
 | vmalert | 2026-10-12 | 源码 `f8ce79b`；镜像 `sha256:9eedd2fd65f87f4737efe06b17b3cd37f0e3178375a28bf00b948778de7d34e6`；官方二进制 1.151.0，202 条规则 | `native-gauges-20261012-f8ce79b/native-build/`、`native-release/`、`checks/native-check.json`、`checks/native-audit.json` |
 | Perses 看板 | 2026-10-14 | 查询源码 `1f9d280`；3 项目、21 看板、261 面板；只更新 6 张看板的 15 项查询，30 项 VM/代理对照通过 | `gateway-replay-filter-20261014/dashboards/` |
 | Perses | 2026-10-09 | `0.54.0-perf.3`；镜像 `sha256:978402ac5154e3ee2cf8c66f244fc7169be74125ef01a5fe9d28c1e8a24764e7` | 原 TLS 发布记录和 [构建版本锁](../../perses/performance/release-lock-perf3.json) |
+
+**A3 迁移后的采集配置核验（2026-10-17 23:38，北京时间）**：采集目标为 `122.209.21.24:18082`、node=`a3-1`。已提交并推送的 `f0ff0c186be2d0f2af8b1771e21ec54702c81227` 修正配置及回归断言，相关回归 16 项通过。线上 `/data2/monitoring/release/deploy/scrape.yml` 与提交逐字节一致，SHA-256 `cef61cfacce589ac6d9e904cc9d3fa4bc551c39730434500eb41f6d0de957366`，因此没有重写配置、重启 vmagent 或重新构建 API/probes。`profile_a3_scrape.yml` 为仓库片段，现场无对应运行文件，本次仅保存候选输入。
+
+A3 `up=1`，当前地址存在 357 条 aigate 指标序列；配套四环境 gateway 更新完成后，DCU/XPU/A3 三个既有 aigate 采集目标仍均为 `up=1`，采样年龄约 0.19–2.70 秒。只核验本次相关采集，未重做全看板或性能验收。VM 历史、发送缓冲、处理水位和原挂载保持。
+
+本次新增服务器目录 test4 `/data2/monitoring/releases/multi-target-replay-20261017/`，含 `inputs/`、`private/`、`checks/`。脱敏收据集中在 `code-eval/deploy/evidence/multi-target-replay-20261017/public/monitoring-verification.json`。网关的多密钥配置与版本身份见 [aigate 发布记录](../../../aigate/docs/DEPLOYMENT.md)，平台镜像和页面验收见 [code-eval 发布记录](../../../code-eval/deploy/releases/README.md)。
 
 **PPU 网关探测（2026-10-17 21:53—21:58，北京时间）**：PPU 使用平台已登记的切流业务入口 `http://122.209.21.209:60010/v1/chat/completions`，稳定标签 `ppu`。保留其他三个入口配置和 0/20/40 秒调度，新目标使用每分钟第 50 秒；启用前保持真实缺测，不生成历史记录。配套 code-eval Web 源码 `6e23abf4b1d0cd7a79773de87eb04a10b59c04fd` 已发布，最终平台维护为 false。
 
