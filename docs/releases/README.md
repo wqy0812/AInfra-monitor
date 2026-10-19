@@ -1,5 +1,17 @@
 # 发布身份与历史检索
 
+## 2026-10-20 三入口探测与平台展示配套
+
+源码 `c49639d6bd65d387bafd21a3aceb7e0a488c048c` 已推送，06:52:50—06:52:59（北京时间）在维护窗口替换 monitoring-api 和 monitoring-probes。原固定基底为 `sha256:6a34995a5ce1c551b2e7590b063edcf331b9b311cbfba53e8ddd1a85e3c060ed`，两组件最终镜像均为 `sha256:922eb778d62a1a05a558188a513212db551db3ae5863394773fb7afdb25ce157`。通用工具按精确提交离线构建，两个容器各 32 个源码文件与输入清单一致，启动参数、环境、资源和数据挂载保持，restart_count=0。
+
+探测配置仅去除 PPU，保留 A3/XPU/DCU 的原入口与每分钟 0/20/40 秒调度；API 和部署工具的就绪检查同步为 3 个目标。本次预检发现通用检查仍要求 4 个目标，已在上述源码内修正并增加 3 接受/4 拒绝的回归。相关部署、修复及探测回归共 161 项通过，独立真实 VM 语义测试 1 项通过。
+
+API 健康、worker `/health` 为 `{"status":"ok","targets":3}`，三个环境 Prefill/Decode 来源覆盖完整，核验时快照年龄约 18 秒。新 worker 启动后三个入口均产生新定时观测：XPU 为成功/HTTP 200；A3、DCU 为 http_error/HTTP 503，与平台读回的两入口业务准入关闭一致，保留失败记录而未更改准入。只消费自然定时请求，未增加手动模型请求。配套 code-eval `4002092acc831f02d03fa61a02bbc1a135d19dc1` 已发布，三入口页面经桌面/手机触控模拟验收。
+
+线上 scrape.yml 已与提交一致，SHA-256 `ec9232ff1c3479a2bf6cb47a8ed5cc6742663b5f445b5cda950d8e0ced983fa9`，无需重写或重启 vmagent；VM、vmagent、vmalert、Perses、历史、发送缓冲和处理水位保持。Mac 非白名单访问 monitoring API 仍为 403。准备阶段第一次浅 bundle 缺少父提交，克隆未成功；换为完整 bundle 后在精确提交构建，未影响运行服务。
+
+服务器新增 test4 `/data2/monitoring/releases/performance-display-20261020/`，含 `build/`、`api/`、`probes/`、`private/`、`repo-full/`。本地脱敏收据为 `evidence/performance-display-20261020/`；受限配置快照仅在服务器保留。
+
 ## 2026-10-19 A3 网关采集地址迁回
 
 A3 gateway 指标目标更新为 122.52.5.131:18082，自动探针更新为 http://122.52.5.131:9090/v1/chat/completions；模型和节点采集地址保持。维护窗口内停止/启动同版本 monitoring-vmagent、monitoring-probes，保留 VM 历史、缓冲与水位。最终 up=1、指标年龄约 4.1 秒，自动探针 success/HTTP 200；相关本地回归 11 passed。新增 test4 `/data2/monitoring/releases/a3-relocate-back-20261019/` 保存原配置和验收。
@@ -14,10 +26,10 @@ A3 gateway 指标目标更新为 122.52.5.131:18082，自动探针更新为 http
 | 范围 | 记录日期 | 版本身份 | 证据位置 |
 | --- | --- | --- | --- |
 | aigate 采集配置 | 2026-10-17 23:38 | 源码 `f0ff0c186be2d0f2af8b1771e21ec54702c81227`；线上配置已一致，未重启 vmagent | test4 `/data2/monitoring/releases/multi-target-replay-20261017/checks/` |
-| 维护工具 | 2026-10-17 | 源码 `c626bc3006e12148270c78c94226685790fbce65`；探测 worker 就绪检查要求四个目标 | test4 `/data2/monitoring/releases/ppu-probes-20261017/source/` |
+| 维护工具 | 2026-10-20 | 源码 `c49639d6bd65d387bafd21a3aceb7e0a488c048c`；探测 worker 就绪检查要求三个目标 | test4 `/data2/monitoring/releases/performance-display-20261020/repo-full/` |
 | 已安装生成器 | 2026-10-14 | 源码 `1f9d280922ca0b73cc77d3f2d42505bf081e077b`；35 个模块字节核验，独立生成的 15 项在途查询排除回放 | `gateway-replay-filter-20261014/runtime/` |
-| monitoring-api | 2026-10-17 | 源码 `055e8962e459bdf94cb594e270101097e2474e49`；镜像 `sha256:6a34995a5ce1c551b2e7590b063edcf331b9b311cbfba53e8ddd1a85e3c060ed`；服务探测查询增加 PPU | `ppu-probes-20261017/api-build/`、`api-release/`、`checks/` |
-| monitoring-probes | 2026-10-17 | 源码和镜像同 API；A3/XPU/DCU/PPU 每 60 秒一次，偏移 0/20/40/50 秒 | `ppu-probes-20261017/probes-release/`、`evidence/ppu-probes-20261017/first-cycle.json` |
+| monitoring-api | 2026-10-20 | 源码 `c49639d6bd65d387bafd21a3aceb7e0a488c048c`；镜像 `sha256:922eb778d62a1a05a558188a513212db551db3ae5863394773fb7afdb25ce157`；服务探测保留三个入口 | `evidence/performance-display-20261020/` |
+| monitoring-probes | 2026-10-20 | 源码和镜像同 API；A3/XPU/DCU 每 60 秒一次，偏移 0/20/40 秒 | `evidence/performance-display-20261020/verification.json` |
 | vmalert | 2026-10-12 | 源码 `f8ce79b`；镜像 `sha256:9eedd2fd65f87f4737efe06b17b3cd37f0e3178375a28bf00b948778de7d34e6`；官方二进制 1.151.0，202 条规则 | `native-gauges-20261012-f8ce79b/native-build/`、`native-release/`、`checks/native-check.json`、`checks/native-audit.json` |
 | Perses 看板 | 2026-10-14 | 查询源码 `1f9d280`；3 项目、21 看板、261 面板；只更新 6 张看板的 15 项查询，30 项 VM/代理对照通过 | `gateway-replay-filter-20261014/dashboards/` |
 | Perses | 2026-10-09 | `0.54.0-perf.3`；镜像 `sha256:978402ac5154e3ee2cf8c66f244fc7169be74125ef01a5fe9d28c1e8a24764e7` | 原 TLS 发布记录和 [构建版本锁](../../perses/performance/release-lock-perf3.json) |
