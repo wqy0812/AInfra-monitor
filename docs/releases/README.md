@@ -1,5 +1,12 @@
 # 发布身份与历史检索
 
+## 2026-10-19 A3 网关采集地址迁回
+
+A3 gateway 指标目标更新为 122.52.5.131:18082，自动探针更新为 http://122.52.5.131:9090/v1/chat/completions；模型和节点采集地址保持。维护窗口内停止/启动同版本 monitoring-vmagent、monitoring-probes，保留 VM 历史、缓冲与水位。最终 up=1、指标年龄约 4.1 秒，自动探针 success/HTTP 200；相关本地回归 11 passed。新增 test4 `/data2/monitoring/releases/a3-relocate-back-20261019/` 保存原配置和验收。
+
+完整记录见 [A3 迁回验收](../../../environment/A3/changes/20261019-aigate-relocate-back/README.md)。
+
+
 当前操作见 [项目 README](../../README.md)、[部署工具](../../deploy/README.md)、[Perses 维护](../../perses/README.md) 和 [停机窗口升级](../maintenance-window-upgrade.md)。最新一轮核验 A3 采集配置与 gateway 更新后的数据新鲜度；线上配置已一致，无需重启。API、probes、生成器、看板及其他组件的既有版本记录分别保留，不以当前仓库 HEAD 代替运行身份。
 
 ## 最近保留的版本记录

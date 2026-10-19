@@ -28,9 +28,8 @@ async def test_probe_import_export_preserves_failure_gaps_and_missing_fields():
         response.raise_for_status()
         (await client.get(vm+'/internal/force_flush')).raise_for_status()
         data = await probes.history(client, vm, now)
-    a3, xpu, dcu, ppu = data['services']
-    assert [service['offset_seconds'] for service in data['services']] == [0, 20, 40, 50]
-    assert ppu['environment'] == 'ppu' and ppu['status'] == 'unknown' and ppu['records'] == []
+    a3, xpu, dcu = data['services']
+    assert [service['offset_seconds'] for service in data['services']] == [0, 20, 40]
     assert a3['status'] == 'failure'
     assert [record['finished_at'] for record in a3['records']] == [now-1200, now-2]
     assert a3['latest']['reason'] == 'incomplete_stream'
@@ -49,12 +48,12 @@ async def test_probe_import_export_preserves_failure_gaps_and_missing_fields():
             'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n'
             'data: [DONE]\n\n'))
     async with httpx.AsyncClient(trust_env=False, mounts={'http://model.test': httpx.MockTransport(model)}) as client:
-        result = await probe_worker.cycle(client, vm, 'ppu', 'http://model.test/v1/chat/completions')
+        result = await probe_worker.cycle(client, vm, 'xpu-pd', 'http://model.test/v1/chat/completions')
         assert result['reason'] == 'success'
         (await client.get(vm+'/internal/force_flush')).raise_for_status()
         data = await probes.history(client, vm)
-    assert data['services'][3]['status'] == 'success'
-    assert len(data['services'][3]['records']) == 1
+    assert data['services'][1]['status'] == 'success'
+    assert any(r['status'] == 'success' for r in data['services'][1]['records'])
     assert len(data['services'][0]['records']) == 2
 
 

@@ -73,7 +73,7 @@ def test_all_configured_targets_including_relabeled_gateways_pass():
     assert {('vllm-a3', '122.209.21.25:' + str(port), 'a3-vllm') for port in range(7100, 7116)} <= expected
     assert {('vllm-a3', '122.209.21.24:' + str(port), 'a3-vllm') for port in range(7100, 7104)} <= expected
     assert ('mooncake-a3', '122.209.21.24:9003', 'a3-vllm') in expected
-    assert ('aigate', '122.209.21.24:18082', 'a3-vllm') in expected
+    assert ('aigate', '122.52.5.131:18082', 'a3-vllm') in expected
     assert ('aigate', '122.209.21.33:18082', 'xpu-pd') in expected
     assert {('node-xpu', address + ':9110', 'xpu-pd') for address in ('122.209.21.33', '122.209.21.34')} <= expected
     assert {('xpu-hardware', address + ':9507', 'xpu-pd') for address in ('122.209.21.33', '122.209.21.34')} <= expected

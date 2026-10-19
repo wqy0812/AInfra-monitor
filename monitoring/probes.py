@@ -9,9 +9,9 @@ import httpx
 
 INTERVAL = 60
 STALE_AFTER = 120
-TARGETS = (('a3-vllm', 'A3'), ('xpu-pd', 'XPU'), ('dcu-pd', 'DCU'), ('ppu', 'PPU'))
+TARGETS = (('a3-vllm', 'A3'), ('xpu-pd', 'XPU'), ('dcu-pd', 'DCU'))
 # Keep existing schedules stable when adding an entrance: history uses these offsets.
-OFFSETS = {'a3-vllm': 0, 'xpu-pd': 20, 'dcu-pd': 40, 'ppu': 50}
+OFFSETS = {'a3-vllm': 0, 'xpu-pd': 20, 'dcu-pd': 40}
 REASONS = ('success', 'http_error', 'timeout', 'connection_error', 'stream_error',
            'invalid_stream', 'empty_output', 'incomplete_stream')
 FIELDS = ('result', 'started_at_seconds', 'duration_seconds', 'first_output_seconds', 'http_status')

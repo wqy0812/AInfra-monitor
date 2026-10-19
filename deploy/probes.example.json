@@ -1,6 +1,5 @@
 {
   "a3-vllm": "http://a3-gateway.example.invalid/v1/chat/completions",
   "xpu-pd": "http://xpu-gateway.example.invalid/v1/chat/completions",
-  "dcu-pd": "http://dcu-gateway.example.invalid/v1/chat/completions",
-  "ppu": "http://ppu-gateway.example.invalid/v1/chat/completions"
+  "dcu-pd": "http://dcu-gateway.example.invalid/v1/chat/completions"
 }

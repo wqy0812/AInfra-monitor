@@ -369,16 +369,16 @@ def test_probe_worker_readiness_uses_loopback_scheduler_health(monkeypatch):
     state['Config']['Cmd'] = ['-m', 'uvicorn', 'monitoring.probe_worker:app', '--host', '127.0.0.1', '--port', '18433']
     probe = cv.ComponentProbe('monitoring-probes', state)
     bad = False
-    targets = 4
+    targets = 3
     def fetch(url, **kwargs):
         assert url == 'http://127.0.0.1:18433/health'
         return io.BytesIO(json.dumps({'status': 'unavailable' if bad else 'ok', 'targets': targets}).encode())
     monkeypatch.setattr(cv.urllib.request, 'build_opener', lambda *a: SimpleNamespace(open=fetch))
     probe.check(cv.time.monotonic()+10)
-    targets = 3
+    targets = 4
     with pytest.raises(RuntimeError):
         probe.check(cv.time.monotonic()+10)
-    targets = 4
+    targets = 3
     bad = True
     with pytest.raises(RuntimeError):
         probe.check(cv.time.monotonic()+10)
