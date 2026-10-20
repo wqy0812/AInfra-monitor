@@ -22,7 +22,7 @@ DCU、A3、XPU 各有 7 个公开入口，共 261 个面板：总览、网关监
 
 在本目录执行 `python3 project_split.py` 再生成项目资源，执行 `python3 project_coverage.py --docs-only` 同步图表说明。当前生成器仍读取现有项目 JSON 并保留编辑；不承诺从空目录重建。部分迁移/查询辅助模块仍被导入，本次清理保留这些依赖。
 
-`seed.py` 仅创建缺失资源，保留服务器已有内容。旧顶层 `dashboards/`、单项目 project/datasource 基线和专题发布器已退役，查阅原文件见 [退役清单](../docs/releases/retired-code.md)。`generate.py`、`gateway_generation.py`、`compare.py`、`validate.py` 保留到现行工具的简短兼容入口。
+`seed.py` 仅创建缺失资源，保留服务器已有内容。旧顶层 `dashboards/`、单项目 project/datasource 基线和专题发布器已退役，查阅原文件见 [退役清单](../docs/releases/retired-code.md)。`generate.py`、`gateway_generation.py` 保留到现行工具的简短兼容入口。发布内容核验统一使用 `project_release.py audit-published`。
 
 ## 发布
 
