@@ -1,5 +1,17 @@
 # 发布身份与历史检索
 
+## 2026-10-20 性能报告服务缓存观测
+
+北京时间 20:51:07 完成修复版 API 替换，配套 code-eval 于 20:54:01 完成验收并恢复准入。源码 `5de56302a90ecfb657cae4198eb79abc7feb2cc0`，最终镜像 `sha256:b69a6553ec3a25e6260298bf1dd46bcda4e6b29163d454e4171f2c1bddecc8e7`，固定基底 `sha256:922eb778d62a1a05a558188a513212db551db3ae5863394773fb7afdb25ce157`；36 个 API 包内文件逐项与精确提交构建清单一致。源码为本地提交，未推送。
+
+新增实际后端端点到监控组的版本化配置，以及来源解析、报告观测两个只读查询接口；沿用传输层 IP 白名单、原生缓存指标和既有并发限制。DCU/A3 独立计算不重叠 30 秒计数增量，XPU 保存原生比例的有效时长加权值；趋势保留各自原生口径。来源按实际后端和核验的有效期选择，模型文字及网关所在环境不参与推断。说明见[服务缓存观测](../report-cache-observations.md)。
+
+首次 API 提交 `30d3699a5e594b8cb43c08f3df13f781efa1ad4c`、镜像 `sha256:f6beac848fd51459370d6297198ddebe0497e7a169838bc4a7f901646a2ba0ec` 的当前短窗口查询正常，但真实历史补录暴露 VM 对 50 点以上缓存查询的时间轴调整，12 份报告均无有效匹配。保留首次构建、替换及补录回执，修复报告专用查询 `nocache=1`，独立 VM 用 60 点、带小数起点的历史用例验证后发布当前版本；没有回退或改动普通看板的缓存参数。重新补录的 12 份报告均 complete、覆盖 100%。
+
+相关回归 62 passed、6 skipped（需显式隔离 VM 的既有用例）；本轮独立真实 VM 回归 9 passed，临时 VM 已清理。线上 DCU/A3/XPU 来源解析与 10 分钟观测均完整；最终三环境 Prefill/Decode 覆盖分别为 1/1、4/16、1/1，核验时数据年龄约 20 秒。平台实际 engine 来源可访问新接口，Mac 非白名单及伪造 X-Forwarded-For 均为 403。仅替换 API，原挂载保持；vmagent/vmalert 身份和挂载核验一致，未更改 VM 历史、发送缓冲、处理水位、采集配置、规则或模型服务。
+
+test4 新增 `/data2/monitoring/releases/service-cache-20261020/`，含 repo、build、build-r2、window、window-r2；各轮材料保留，未清理远端证据。脱敏验收回执和来源配置证据在本地 `evidence/cache-reports-20261020/{verified.json,live-backends.json}`。配套平台源码开发提交 `27aa9c492814a1969c696a060ef7cc7c5d87d4b7`、发布提交 `07bd6c4d97d47a465e4a3a0e9eb1cf7e0806d599`，版本和历史补录边界见 code-eval 的 `deploy/releases/README.md`。
+
 ## 2026-10-20 三入口探测与平台展示配套
 
 源码 `c49639d6bd65d387bafd21a3aceb7e0a488c048c` 已推送，06:52:50—06:52:59（北京时间）在维护窗口替换 monitoring-api 和 monitoring-probes。原固定基底为 `sha256:6a34995a5ce1c551b2e7590b063edcf331b9b311cbfba53e8ddd1a85e3c060ed`，两组件最终镜像均为 `sha256:922eb778d62a1a05a558188a513212db551db3ae5863394773fb7afdb25ce157`。通用工具按精确提交离线构建，两个容器各 32 个源码文件与输入清单一致，启动参数、环境、资源和数据挂载保持，restart_count=0。
