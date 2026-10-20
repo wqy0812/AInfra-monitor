@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "bindings": [
+    {
+      "backend_url": "http://122.235.251.106:10016/v1/chat/completions",
+      "environment": "dcu-pd",
+      "valid_from": 1792232502.490588,
+      "evidence": "2026-10-20 read-only test1 router runtime; proxy-dcu config 2becca59e531dc191345e49bad9be2c447ceb9a3cf56e7b40ff15b2830615dc3; existing DCU Prefill scrape group; historical validity starts at earliest archived report with the exact same immutable proxy config_digest; evidence/cache-reports-20261020/live-backends.json"
+    },
+    {
+      "backend_url": "http://122.209.21.24:8077/v1/chat/completions",
+      "environment": "a3-vllm",
+      "valid_from": 1792431511.001264,
+      "evidence": "2026-10-20 read-only test1 router runtime; proxy-a3 config 6be653e255ce3aa7b2c2f69fa5842f468c3c777a140f8864f2a97858b040dff2; existing A3 Prefill scrape group; historical validity starts at earliest archived report with the exact same immutable proxy config_digest; evidence/cache-reports-20261020/live-backends.json"
+    },
+    {
+      "backend_url": "http://122.209.21.33:18501/v1/chat/completions",
+      "environment": "xpu-pd",
+      "valid_from": 1792229633.498346,
+      "evidence": "2026-10-20 read-only test1 router runtime; proxy-xpu config b4ae063c4b36a8dbcbcd0f77f58b719d542487cf7bf30a0f4248e6b85f4b4025; existing XPU Prefill scrape group; historical validity starts at earliest archived report with the exact same immutable proxy config_digest; evidence/cache-reports-20261020/live-backends.json"
+    }
+  ]
+}

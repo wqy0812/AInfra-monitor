@@ -199,3 +199,5 @@ from .request_profile import router as request_profile_router
 app.include_router(request_profile_router)
 from .probes import router as probe_router
 app.include_router(probe_router)
+from .cache_observations import router as cache_observation_router
+app.include_router(cache_observation_router)
