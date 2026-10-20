@@ -54,8 +54,10 @@ class Service:
         self.latest_point=None;self.error=None;self.watermark=0;self.started=time.time()
         self.cache=OrderedDict();self.history_tasks={}
 
-    async def query(self,expr,start,end,step):
-        r=await self.client.post(VM+'/api/v1/query_range',data={'query':expr,'start':start,'end':end,'step':step,'latency_offset':'1ms'})
+    async def query(self,expr,start,end,step,*,nocache=False):
+        data={'query':expr,'start':start,'end':end,'step':step,'latency_offset':'1ms'}
+        if nocache:data['nocache']=1
+        r=await self.client.post(VM+'/api/v1/query_range',data=data)
         r.raise_for_status();data=r.json()
         if data.get('status')!='success' or data.get('isPartial'):raise ValueError('VM query failed')
         return data['data']['result']

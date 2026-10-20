@@ -108,8 +108,10 @@ async def test_real_vm_cache_report_bucket_semantics(environment, monkeypatch):
     url = os.environ.get('MONITORING_TEST_VM_URL')
     if not url:pytest.skip('dedicated real VM required')
     from monitoring import api
-    end = int(time.time()//30)*30-120+.31762
-    start = end-120
+    # >=50 points activates VM's cache timestamp alignment. Preserve the
+    # report's fractional timeline even for older, cacheable query ranges.
+    end = int(time.time()//30)*30-3600+.31762
+    start = end-1800
     monkeypatch.setattr(api, 'VM', url)
     lines = []
     job = 'vllm-a3' if environment == 'a3-vllm' else 'sglang-prefill'
@@ -140,7 +142,7 @@ async def test_real_vm_cache_report_bucket_semantics(environment, monkeypatch):
     try:
         async with service.client.scope():
             result = await observations.observe(service, {'source': sources.source(environment)}, start, end, 0)
-        assert len(result['points']) == 4
+        assert len(result['points']) == 60
         assert result['status'] == 'complete', result
         for point in result['points']:
             assert point['valid_seconds'] == 30

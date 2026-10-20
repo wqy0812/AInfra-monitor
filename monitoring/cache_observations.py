@@ -135,7 +135,10 @@ async def observe(service, snapshot, start, end, offset):
     def stats(selector, width):
         return 'aggr_over_time((' + ','.join(json.dumps(r) for r in ROLLUPS) + '),' + selector + '[' + str(width) + 's]) keep_metric_names'
     async def query(expression, left=start+30, right=end):
-        return await service.query(expression, left, right, 30)
+        # VM aligns ranges with >=50 points to epoch multiples of step when
+        # response caching is enabled. Reports require their actual start's
+        # fractional offset, including for counter baselines and trend centers.
+        return await service.query(expression, left, right, 30, nocache=True)
     # Counter baselines use actual samples at/before the left boundary. Range
     # summaries are strictly (left,right], avoiding overlap across buckets.
     calculation = 'avg_over_time' if environment == 'xpu-pd' else 'increase_prometheus'
