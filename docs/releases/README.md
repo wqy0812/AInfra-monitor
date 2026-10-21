@@ -1,5 +1,15 @@
 # 发布身份与历史检索
 
+## 2026-10-21 底座目录配套监控来源接口
+
+源码 `eeebf3454fe9c11d6ca6b416eae0d172ee43c974` 已推送 main，test4 仅替换 monitoring-api。固定基底为 `sha256:b69a6553ec3a25e6260298bf1dd46bcda4e6b29163d454e4171f2c1bddecc8e7`，最终镜像为 `sha256:24e6e5f0c09ad40829976a696443c6cc658bb15295826283532691c51cdb8e7e`。使用通用 api-image 工具按精确提交、精确依赖禁网构建，36 个运行包文件与输入清单一致；API 运行参数、环境、HostConfig 和 state 挂载保持，restart_count=0。
+
+新增只读 `/api/monitoring/sources` 目录，latest/history 响应增加同源元数据，供 code-eval 的底座登记、固定 Router 监控与画像使用。没有改变 VM 统计查询或采集口径。相关回归 29 项已通过；线上三环境 health=ok、Prefill/Decode 来源完整、快照年龄小于 30 秒，新来源目录和 latest 元数据通过。固定 10 分钟历史窗口的三环境各返回 113 点，来源身份一致；平台实际 Web 可读，Mac 非白名单访问新目录仍为 403。
+
+本次只替换 API，未更新 probes、VM、vmagent、vmalert、Perses、gate 或模型服务，保留历史、发送缓冲、处理水位与访问控制。配套 code-eval 应用 `afa6e15ffcf4617c6bf100e8c65e5ff4c07ebb3c` 已发布 test1 engine/Web；平台本轮按用户要求不更新 gate。未执行真实模型或判题容器测试。
+
+test4 新增 `/data2/monitoring/releases/foundation-router-20261021/`（repo、build、window、checks、private），完整部署快照保存在受限目录。脱敏完成回执在本地 `evidence/foundation-router-20261021/checks/completed.json`；code-eval 维护窗口与线上桌面/手机验收见其 `deploy/releases/README.md`。一次后台上传排队超时明确未启动，改用前台 SSH MCP 上传后成功；未重复发送未知结果的操作。
+
 ## 2026-10-20 性能报告服务缓存观测
 
 北京时间 20:51:07 完成修复版 API 替换，配套 code-eval 于 20:54:01 完成验收并恢复准入。源码 `5de56302a90ecfb657cae4198eb79abc7feb2cc0`，最终镜像 `sha256:b69a6553ec3a25e6260298bf1dd46bcda4e6b29163d454e4171f2c1bddecc8e7`，固定基底 `sha256:922eb778d62a1a05a558188a513212db551db3ae5863394773fb7afdb25ce157`；36 个 API 包内文件逐项与精确提交构建清单一致。源码为本地提交，未推送。
@@ -38,9 +48,9 @@ A3 gateway 指标目标更新为 122.52.5.131:18082，自动探针更新为 http
 | 范围 | 记录日期 | 版本身份 | 证据位置 |
 | --- | --- | --- | --- |
 | aigate 采集配置 | 2026-10-17 23:38 | 源码 `f0ff0c186be2d0f2af8b1771e21ec54702c81227`；线上配置已一致，未重启 vmagent | test4 `/data2/monitoring/releases/multi-target-replay-20261017/checks/` |
-| 维护工具 | 2026-10-20 | 源码 `c49639d6bd65d387bafd21a3aceb7e0a488c048c`；探测 worker 就绪检查要求三个目标 | test4 `/data2/monitoring/releases/performance-display-20261020/repo-full/` |
+| 维护工具 | 2026-10-21 | 源码 `eeebf3454fe9c11d6ca6b416eae0d172ee43c974`；当前通用 API 构建与维护窗口替换工具 | test4 `/data2/monitoring/releases/foundation-router-20261021/repo/` |
 | 已安装生成器 | 2026-10-14 | 源码 `1f9d280922ca0b73cc77d3f2d42505bf081e077b`；35 个模块字节核验，独立生成的 15 项在途查询排除回放 | `gateway-replay-filter-20261014/runtime/` |
-| monitoring-api | 2026-10-20 | 源码 `c49639d6bd65d387bafd21a3aceb7e0a488c048c`；镜像 `sha256:922eb778d62a1a05a558188a513212db551db3ae5863394773fb7afdb25ce157`；服务探测保留三个入口 | `evidence/performance-display-20261020/` |
+| monitoring-api | 2026-10-21 | 源码 `eeebf3454fe9c11d6ca6b416eae0d172ee43c974`；镜像 `sha256:24e6e5f0c09ad40829976a696443c6cc658bb15295826283532691c51cdb8e7e`；来源目录与 latest/history 元数据 | `evidence/foundation-router-20261021/checks/completed.json` |
 | monitoring-probes | 2026-10-20 | 源码和镜像同 API；A3/XPU/DCU 每 60 秒一次，偏移 0/20/40 秒 | `evidence/performance-display-20261020/verification.json` |
 | vmalert | 2026-10-12 | 源码 `f8ce79b`；镜像 `sha256:9eedd2fd65f87f4737efe06b17b3cd37f0e3178375a28bf00b948778de7d34e6`；官方二进制 1.151.0，202 条规则 | `native-gauges-20261012-f8ce79b/native-build/`、`native-release/`、`checks/native-check.json`、`checks/native-audit.json` |
 | Perses 看板 | 2026-10-14 | 查询源码 `1f9d280`；3 项目、21 看板、261 面板；只更新 6 张看板的 15 项查询，30 项 VM/代理对照通过 | `gateway-replay-filter-20261014/dashboards/` |
