@@ -184,7 +184,13 @@ def selected_service(request,environment):
 async def latest(request:Request,environment:str='dcu-pd'):
  s=selected_service(request,environment)
  if s.error or not s.latest.get('ts') or time.time()-s.latest['ts']>=MAX_RECORD_AGE_SECONDS:raise HTTPException(503,'监控数据暂不可用或过期')
- return s.latest
+ from .cache_sources import source
+ return s.latest | {'source':source(environment)}
+
+@app.get('/api/monitoring/sources')
+def source_catalog():
+ from .cache_sources import source
+ return {'sources':[source(env) | {'nodes':nodes} for env,nodes in native_schema.NODES.items()]}
 @app.get('/api/monitoring/history')
 async def history(request:Request,hours:float=1,start:float|None=None,end:float|None=None,environment:str='dcu-pd',view:str='full'):
  validate_view(view)
@@ -194,7 +200,10 @@ async def history(request:Request,hours:float=1,start:float|None=None,end:float|
  if start is not None or end is not None:
   if start is None or end is None or not all(math.isfinite(x) for x in (start,end)) or not now-720*3600-120<=start<end<=now+5:raise HTTPException(400,'时间范围无效')
  try:
-  async with asyncio.timeout(HISTORY_TIMEOUT):return await s.history(hours,start,end,view=view)
+  async with asyncio.timeout(HISTORY_TIMEOUT):
+   value=await s.history(hours,start,end,view=view)
+   from .cache_sources import source
+   return value | {'source':source(environment)}
  except (TimeoutError,httpx.HTTPError,ValueError):raise HTTPException(503,'监控历史查询暂不可用')
 
 from .request_profile import router as request_profile_router

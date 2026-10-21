@@ -23,7 +23,9 @@ async def test_latest_rejects_failed_missing_or_stale_data(monkeypatch, error, s
             await api.latest(request_for(service))
         assert failure.value.status_code == 503
     else:
-        assert await api.latest(request_for(service)) == service.latest
+        value=await api.latest(request_for(service))
+        assert {k:v for k,v in value.items() if k!='source'} == service.latest
+        assert value['source']['id']=='dcu-pd'
 
 
 @pytest.mark.asyncio
@@ -51,7 +53,8 @@ async def test_history_translates_upstream_errors_and_preserves_arguments(monkey
             await api.history(request_for(service), 1, 10, 90, view='summary')
         assert error.value.status_code == 503
     else:
-        assert await api.history(request_for(service), 1, 10, 90, view='summary') == {'points': []}
+        value=await api.history(request_for(service), 1, 10, 90, view='summary')
+        assert value['points']==[] and value['source']['id']=='dcu-pd'
     service.history.assert_awaited_once_with(1, 10, 90, view='summary')
 
 
