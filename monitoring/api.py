@@ -130,8 +130,8 @@ class Service:
                 await asyncio.gather(*tasks,return_exceptions=True)
         points=native_schema.points(rows,self.environment,start,end,step,summary=view=='summary')
         by_time={p['ts']:p for p in points}
-        for ts in gateway[0]:by_time.setdefault(ts,native_schema.empty_point(self.environment,ts))
-        for ts in accelerator[0]:by_time.setdefault(ts,native_schema.empty_point(self.environment,ts))
+        for ts in gateway[0].keys() | accelerator[0].keys():
+            if ts not in by_time:by_time[ts]=native_schema.empty_point(self.environment,ts)
         points=[by_time[t] for t in sorted(by_time)]
         gateway_live.attach(points,gateway[0],step)
         accelerator_history.attach(points,accelerator[0],step)

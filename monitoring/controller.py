@@ -448,13 +448,9 @@ class Controller:
         for identity, value in await asyncio.gather(*work):
             checks[identity] = value
         self.current(revision)
-        for foundation in self.state['foundations']:
-            definition = next(f for f in catalog['foundations'] if f['id'] == foundation['foundation_id'])
-            foundation['endpoints'] = [{'endpoint_id': e['id'], 'name': e.get('name', e['id']),
-                                       **{k: v for k, v in checks.get(e['id'], {}).items() if k != 'signature'}}
-                                      for e in definition.get('monitoring_endpoints', []) if e.get('enabled', True)]
-            statuses = [e.get('status') for e in foundation['endpoints']]
-            foundation['data_status'] = 'healthy' if statuses and all(s == 'passed' for s in statuses) else 'unavailable' if not statuses else 'partial'
+        # Exporter checks alone do not establish collection health. Keep the
+        # previous complete public observation while component reconciliation
+        # and scrape readback await I/O; publish both observations together below.
         self.save()
         return {identity for identity, check in checks.items() if check.get('status') == 'mismatch'}
 
@@ -464,14 +460,16 @@ class Controller:
         except (httpx.HTTPError, RuntimeError, ValueError, TypeError):
             observations = {}
         self.current(revision)
+        checks = self.state.get('endpoint_checks', {})
+        definitions = {f['id']: f for f in catalog['foundations']}
         for foundation in self.state['foundations']:
-            definition = next(f for f in catalog['foundations'] if f['id'] == foundation['foundation_id'])
-            endpoints = {e['id']: e for e in definition.get('monitoring_endpoints', [])}
-            for endpoint in foundation.get('endpoints', []):
-                target = endpoints[endpoint['endpoint_id']]
-                endpoint.update(observations.get((definition.get('monitoring_source'), target['url']),
-                                {'collection_status': 'unavailable', 'last_scrape_at': None}))
-            states = foundation.get('endpoints', [])
+            definition = definitions[foundation['foundation_id']]
+            states = [{'endpoint_id': e['id'], 'name': e.get('name', e['id']),
+                       **{k: v for k, v in checks.get(e['id'], {}).items() if k != 'signature'},
+                       **observations.get((definition.get('monitoring_source'), e['url']),
+                                          {'collection_status': 'unavailable', 'last_scrape_at': None})}
+                      for e in definition.get('monitoring_endpoints', []) if e.get('enabled', True)]
+            foundation['endpoints'] = states
             healthy = sum(e.get('status') == 'passed' and e.get('collection_status') == 'healthy' for e in states)
             foundation['data_status'] = 'healthy' if states and healthy == len(states) else 'partial' if healthy else 'unavailable'
         self.save()

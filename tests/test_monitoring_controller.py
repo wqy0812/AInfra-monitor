@@ -400,3 +400,60 @@ async def test_gateway_status_distinguishes_unmanaged_disabled_and_worker_pendin
     # Reporting a terminal unconfigured state never opts the gateway into probes.
     dispatch = targets(value=body, control=c.control())
     assert all(target['probe_id'] != 'gateway:ppu' for target in dispatch)
+
+
+@pytest.mark.asyncio
+async def test_endpoint_health_publishes_complete_snapshot_after_scrape_readback(tmp_path):
+    class ObservingPublisher(Publisher):
+        def __init__(self):
+            super().__init__()
+            self.waiting = asyncio.Event()
+            self.release = asyncio.Event()
+            self.block = False
+            self.observations = {}
+
+        async def scrape_status(self):
+            if self.block:
+                self.waiting.set()
+                await self.release.wait()
+            return self.observations
+
+    pub = ObservingPublisher()
+    c = Controller(settings(tmp_path), pub)
+    body = catalog()
+    await c.accept(body)
+    await c.reconcile()
+    previous = c.status()['foundations'][0]
+    assert previous['data_status'] == 'unavailable'
+    assert all(e['collection_status'] == 'unavailable' for e in previous['endpoints'])
+    # Force another exporter check. While readback is blocked, fresh successful
+    # checks must not erase the previous collection result or imply healthy data.
+    c.state['endpoint_checks'] = {}
+    pub.observations = {('foundation-new', e['url']):
+        {'collection_status': 'healthy', 'last_scrape_at': time.time()}
+        for e in body['foundations'][0]['monitoring_endpoints']}
+    pub.block = True
+    task = asyncio.create_task(c.reconcile())
+    try:
+        await asyncio.wait_for(pub.waiting.wait(), 5)
+        during = c.status()['foundations'][0]
+        assert during['endpoints'] == previous['endpoints']
+        assert during['data_status'] == 'unavailable'
+        persisted = json.loads(c.journal_path.read_text())['foundations'][0]
+        assert persisted['endpoints'] == previous['endpoints']
+    finally:
+        pub.release.set()
+        await task
+    after = c.status()['foundations'][0]
+    assert after['data_status'] == 'healthy'
+    assert all(e['status'] == 'passed' and e['collection_status'] == 'healthy'
+               and e['last_scrape_at'] is not None for e in after['endpoints'])
+    assert all(e['checked_at'] > old['checked_at'] for e, old in zip(after['endpoints'], previous['endpoints']))
+    assert all('signature' not in e for e in after['endpoints'])
+
+    # A failed/missing readback replaces the old healthy observation truthfully.
+    pub.observations = {}
+    await c.observe_collection(c.desired['catalog'], 1)
+    assert c.status()['foundations'][0]['data_status'] == 'unavailable'
+    assert all(e['collection_status'] == 'unavailable' and e['last_scrape_at'] is None
+               for e in c.status()['foundations'][0]['endpoints'])

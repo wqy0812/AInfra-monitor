@@ -47,6 +47,33 @@ def test_unknown_view_is_rejected():
     assert e.value.status_code==400
 
 
+def test_history_assembly_work_scales_with_timestamps_and_series(monkeypatch):
+    """A one-hour response must not rebuild the catalog for every sample."""
+    from unittest.mock import Mock
+    from monitoring import source_registry
+    rows=[]
+    for role,node in NODES['a3-vllm'].items():
+        for metric in ('backend_requests_per_second','backend_output_tokens_per_second','backend_expected_instances'):
+            rows.append({'metric':{'__name__':PREFIX+metric,'environment':'a3-vllm','node':node},
+                         'values':[[100+5*i,'0' if metric.endswith('per_second') else '1'] for i in range(100)]})
+    initialize=Mock(wraps=native_schema.empty_point)
+    sources=Mock(wraps=source_registry.sources)
+    monkeypatch.setattr(native_schema,'empty_point',initialize)
+    monkeypatch.setattr(source_registry,'sources',sources)
+    with source_registry.use_catalog(source_registry.legacy_catalog()):
+        points=native_schema.points(rows,'a3-vllm',100,595,5,summary=True)
+    assert len(points)==100
+    assert initialize.call_count==100
+    assert sources.call_count<500
+    for point in points:
+        for node in point['nodes'].values():
+            assert node['requests']==0
+            assert node['output_tokens']==0
+            assert node['coverage']['expected']==1
+            assert node['coverage']['status']=='unknown'
+            assert node['percentiles']['ttft']['p95'] is None
+
+
 @pytest.mark.skipif(not os.environ.get('NATIVE_RECORDING_TEST_VM'), reason='Disposable VM required')
 def test_actual_vm_summary_preserves_decode_cache_values_and_gaps():
     url = os.environ['NATIVE_RECORDING_TEST_VM']

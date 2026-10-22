@@ -129,27 +129,31 @@ def points(rows,environment,start,end,step,summary=False):
     result={};seen=set()
     directory=source_registry.nodes(environment)
     multi={role for role,names in directory.items() if len(names)>1}
+    cache_semantics='xpu-native-prefix-v1' if source_registry.adapter_environment(environment)=='xpu-pd' else 'native-1m-v1'
     for row in rows:
         labels=row['metric']
         if labels.get('environment')!=environment:continue
         paths=mappings(labels)
         if not paths:continue
+        role=role_of(labels)
+        node=labels.get('node')
+        resolved=[]
+        for path,factor in paths:
+            if summary and ('.resources.' in path or '.host.' in path or '.counters.' in path):continue
+            if role in multi and path.startswith('nodes.'+role+'.') and labels.get('monitoring_scope')!='role':
+                # Keep per-node values separately; role statistics come from
+                # pooled records. Resolve this immutable mapping once per row.
+                if node not in directory[role]:continue
+                path='node_details.'+key(node)+'.'+path.removeprefix('nodes.'+role+'.')
+            resolved.append((path,factor))
         for ts,value in row['values']:
             ts=float(ts);value=float(value)
             if not start<=ts<=end or not math.isfinite(value):continue
-            point=result.setdefault(ts,empty_point(environment,ts))
-            for path,factor in paths:
-                if summary and ('.resources.' in path or '.host.' in path or '.counters.' in path):continue
-                role=role_of(labels)
-                node=labels.get('node')
-                if role in multi and path.startswith('nodes.'+role+'.') and labels.get('monitoring_scope')!='role':
-                    # Keep per-node values separately. Role percentiles and
-                    # ratios must come from pooled raw records, not a Python
-                    # average or the last node encountered.
-                    if node in directory[role]:
-                        path='node_details.'+key(node)+'.'+path.removeprefix('nodes.'+role+'.')
-                    else:
-                        continue
+            point=result.get(ts)
+            if point is None:
+                point=empty_point(environment,ts)
+                result[ts]=point
+            for path,factor in resolved:
                 identity=(ts,path)
                 # An old single-store JSON field cannot represent two stores.
                 # Never silently choose one or add replicated capacities.
@@ -159,7 +163,7 @@ def points(rows,environment,start,end,step,summary=False):
         for role,node in point['nodes'].items():
             coverage=node['coverage'];expected=coverage.get('expected');available=coverage.get('available')
             coverage['status']='unknown' if expected is None or available is None else 'complete' if available==expected else 'partial'
-            node['cache_60s']['semantics']='xpu-native-prefix-v1' if source_registry.adapter_environment(environment)=='xpu-pd' else 'native-1m-v1'
+            node['cache_60s']['semantics']=cache_semantics
             note='仅汇总当前可用实例；覆盖不完整' if coverage['status']!='complete' else None
             issues=node['quality'].get('cache',{})
             if any(v for v in issues.values() if v is not None):note='缓存计数存在不一致；曲线显示原生计算结果'
