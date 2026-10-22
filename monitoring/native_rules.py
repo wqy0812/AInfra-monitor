@@ -151,7 +151,7 @@ def resource_rules(add):
         add('device_memory_ratio',f'({value}) and on({SOURCE}) (({success} == 1) and (time()-{stamp} < 15))',role=role)
 
 
-def build():
+def _template_build():
     rules = diagnostic_rules()
 
     def add(name, expression, **labels):
@@ -287,6 +287,96 @@ def build():
              'candidate_max_expression_chars':max(len(r['expr']) for r in rules),
              'interval_seconds':5,'window_seconds':60}
     return config, audit
+
+
+def build(catalog=None):
+    """Bind reviewed metric templates to the applied directory.
+
+    Existing source label sets remain byte-for-byte stable for one-node roles.
+    Multi-node roles additionally record pooled role summaries; quantiles are
+    recomputed from pooled raw buckets, never averaged from node quantiles.
+    """
+    from . import source_registry as registry
+    if catalog is not None:
+        with registry.use_catalog(catalog):
+            return build()
+    template, audit = _template_build()
+    if not registry.configured():
+        return template, audit
+    groups = []
+    definitions = registry.sources()
+    for group in template['groups']:
+        rules = []
+        for environment, definition in definitions.items():
+            baseline = definition['baseline']
+            for original in group['rules']:
+                labels = dict(original['labels'])
+                if ('environment=' + json.dumps(baseline) not in original['expr']
+                        and labels.get('environment') != baseline):
+                    continue
+                role = labels.get('role')
+                if role and role not in definition['nodes']:
+                    continue
+                expr = registry.rewrite_query(original['expr'], environment)
+                if 'environment' in labels:
+                    labels['environment'] = environment
+                name = original['record'].removeprefix(PREFIX)
+                if name in ('backend_available_instances', 'backend_expected_instances'):
+                    # One record per node preserves existing identities and
+                    # provides accurate expected counts when endpoints change.
+                    for node in definition['nodes'].get(role, []):
+                        scoped = _node_scope(expr, environment, 'node=' + json.dumps(node))
+                        if name == 'backend_expected_instances':
+                            scoped = 'vector(' + str(registry.expected_instances(environment, role, node)) + ')'
+                        rules.append({**original, 'expr': scoped,
+                                      'labels': {**labels, 'node': node}})
+                else:
+                    rules.append({**original, 'expr': expr, 'labels': labels})
+
+                # Only fields used by the compact P/D view need pooled copies.
+                scalar = (name.startswith(('backend_', 'host_cpu_', 'prefix_', 'prefill_'))
+                          or name in ('native_prefix_hit_ratio', 'cache_quality_issues', 'histogram_quality_issues'))
+                if not scalar or 'diagnostic' in labels:
+                    continue
+                roles = [role] if role else list(definition['nodes'])
+                for summary_role in roles:
+                    if len(definition['nodes'].get(summary_role, [])) <= 1:
+                        continue
+                    pooled = _node_scope(expr, environment, registry.node_matcher(environment, summary_role))
+                    # Remove only node from grouping, retaining le/engine/rank
+                    # groups that define the source population.
+                    pooled = re.sub(r'by\(([^)]*)\)', lambda m: 'by(' + ','.join(
+                        x for x in m[1].split(',') if x.strip() != 'node') + ')', pooled)
+                    if name == 'backend_expected_instances':
+                        pooled = 'vector(' + str(registry.expected_instances(environment, summary_role)) + ')'
+                    summary_labels = {k: v for k, v in labels.items() if k != 'node'}
+                    summary_labels.update(environment=environment, role=summary_role, monitoring_scope='role')
+                    rules.append({**original, 'expr': pooled, 'labels': summary_labels})
+        if rules:
+            groups.append({**group, 'rules': rules})
+    all_rules = [rule for group in groups for rule in group['rules']]
+    if not groups:
+        # Official vmalert rejects a configuration without rules. This empty
+        # vector keeps reload/removal operational without emitting samples or
+        # retaining any retired foundation's recording rules.
+        rule={'record':PREFIX+'catalog_empty','expr':'vector(0) < 0','labels':{}}
+        groups=[{'name':'native_catalog','interval':'5s','rules':[rule]}]
+        all_rules=[rule]
+    return {'groups': groups}, {**audit, 'rule_count': len(all_rules),
+        'candidate_max_expression_chars': max((len(rule['expr']) for rule in all_rules), default=0),
+        'catalog_revision': registry.catalog().get('revision', 0)}
+
+
+def _node_scope(expression, environment, matcher):
+    """Constrain source selectors, replacing an existing node condition safely."""
+    def replace(found):
+        labels = found[1]
+        if 'environment=' + json.dumps(environment) not in labels:
+            return found[0]
+        pattern = r'\bnode(?:=~|!~|!=|=)"(?:\\.|[^"\\])*"'
+        labels = re.sub(pattern, lambda _: matcher, labels) if re.search(pattern, labels) else labels + ',' + matcher
+        return '{' + labels + '}'
+    return re.sub(r'\{([^{}]*)\}', replace, expression)
 
 
 if __name__ == '__main__':

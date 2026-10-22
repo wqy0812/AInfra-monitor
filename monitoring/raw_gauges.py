@@ -102,7 +102,7 @@ def group_expression(items):
 
 
 @lru_cache(maxsize=128)
-def query(environment,name=None,extra='',summary=False):
+def _template_query(environment,name=None,extra='',summary=False):
     if environment not in HOSTS:raise ValueError('Unknown gauge environment')
     filters=matchers(extra);groups=defaultdict(list)
     for item in definitions():
@@ -119,6 +119,12 @@ def query(environment,name=None,extra='',summary=False):
         function='label_mismatch' if op in ('!=','!~') else 'label_match'
         value=f'{function}(({value}), {json.dumps(key)}, {json.dumps("^(?:"+pattern+")$")})'
     return value
+
+
+def query(environment,name=None,extra='',summary=False):
+    from . import source_registry as registry
+    baseline = registry.adapter_environment(environment)
+    return registry.rewrite_query(_template_query(baseline,name,extra,summary), environment)
 
 
 def rewrite(query_text,environment):

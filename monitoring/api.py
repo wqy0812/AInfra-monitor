@@ -3,6 +3,7 @@ import asyncio
 from collections import OrderedDict
 from contextlib import asynccontextmanager
 import math
+import json
 import os
 from pathlib import Path
 import time
@@ -12,10 +13,10 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.gzip import GZipMiddleware
 from .access import client_allowlist
 from .query_client import QueryClient
-from . import accelerator_history, gateway_live, native_schema, raw_gauges
+from . import accelerator_history, gateway_live, native_schema, raw_gauges, source_registry
 from .native_rules import PREFIX, build, READ_DELAY_SECONDS, MAX_RECORD_AGE_SECONDS
 
-ENVIRONMENTS=tuple(native_schema.NODES)
+ENVIRONMENTS=native_schema.NODES
 VM=os.environ.get('VM_URL','http://127.0.0.1:18428')
 STATE=Path(os.environ.get('STATE_DIR','/state'))
 ALLOWED=set(client_allowlist(os.environ.get('ALLOWED_CLIENTS','127.0.0.1,::1')))
@@ -49,6 +50,8 @@ def history_expression(environment,view='full'):
 class Service:
     def __init__(self,environment='dcu-pd'):
         self.environment=validate_environment(environment)
+        self.catalog=source_registry.catalog()
+        self.definition=source_registry.source(environment)
         self.client=QueryClient();self.slots=asyncio.Semaphore(2)
         self.latest={'environment':environment,'ts':None,'nodes':{},'source':'victoriametrics'}
         self.latest_point=None;self.error=None;self.watermark=0;self.started=time.time()
@@ -83,11 +86,12 @@ class Service:
             self.watermark=point['ts'];self.error=None
 
     async def run(self):
-        while True:
-            started=time.monotonic()
-            try:await self.cycle()
-            except Exception as error:self.error=type(error).__name__+': '+str(error)[:200]
-            await asyncio.sleep(max(.1,5-(time.monotonic()-started)))
+        with source_registry.use_catalog(self.catalog):
+            while True:
+                started=time.monotonic()
+                try:await self.cycle()
+                except Exception as error:self.error=type(error).__name__+': '+str(error)[:200]
+                await asyncio.sleep(max(.1,5-(time.monotonic()-started)))
 
     async def history(self,hours,start=None,end=None,view='full'):
         validate_view(view)
@@ -107,7 +111,8 @@ class Service:
     async def _cached_history(self,key):
         start,end,step,hours,view=key
         try:
-            async with asyncio.timeout(HISTORY_TIMEOUT),self.client.scope():value=await self._history(hours,start,end,step,view)
+            with source_registry.use_catalog(self.catalog):
+                async with asyncio.timeout(HISTORY_TIMEOUT),self.client.scope():value=await self._history(hours,start,end,step,view)
             self.cache[key]=(time.monotonic(),value);self.cache.move_to_end(key)
             while len(self.cache)>HISTORY_CACHE_SIZE:self.cache.popitem(last=False)
             return value
@@ -143,14 +148,55 @@ class Service:
 
 @asynccontextmanager
 async def lifespan(app):
-    app.state.services={env:Service(env) for env in ENVIRONMENTS}
-    app.state.service=app.state.services['dcu-pd']
-    tasks=[asyncio.create_task(s.run()) for s in app.state.services.values()]
+    app.state.services={}
+    app.state.source_tasks={}
+    app.state.catalog_error=source_registry.load_error()
+    await refresh_directory(app)
+    directory=asyncio.create_task(watch_directory(app))
     try:yield
     finally:
-        for task in tasks:task.cancel()
-        await asyncio.gather(*tasks,return_exceptions=True)
+        directory.cancel()
+        await asyncio.gather(directory,return_exceptions=True)
+        for task in app.state.source_tasks.values():task.cancel()
+        await asyncio.gather(*app.state.source_tasks.values(),return_exceptions=True)
         for service in app.state.services.values():await service.close()
+
+
+async def refresh_directory(app):
+    """One applied snapshot owns each worker and its in-flight query cache."""
+    try:
+        snapshot=source_registry.catalog()
+        definitions=source_registry.sources(snapshot)
+    except (OSError, ValueError, KeyError, TypeError):
+        app.state.catalog_error='monitoring_catalog_unavailable'
+        return
+    with source_registry.use_catalog(snapshot):
+        await refresh_services(app,definitions)
+    app.state.catalog_error=source_registry.load_error()
+
+
+async def refresh_services(app,definitions):
+    def signature(value):
+        return json.dumps({k:v for k,v in value.items() if k!='revision'},sort_keys=True)
+    for env,service in list(app.state.services.items()):
+        if env not in definitions or signature(service.definition)!=signature(definitions[env]):
+            task=app.state.source_tasks.pop(env)
+            task.cancel()
+            await asyncio.gather(task,return_exceptions=True)
+            await service.close()
+            del app.state.services[env]
+    for env in definitions:
+        if env not in app.state.services:
+            service=Service(env)
+            app.state.services[env]=service
+            app.state.source_tasks[env]=asyncio.create_task(service.run())
+    app.state.service=next(iter(app.state.services.values()),None)
+
+
+async def watch_directory(app):
+    while True:
+        await asyncio.sleep(5)
+        await refresh_directory(app)
 
 
 app=FastAPI(lifespan=lifespan,docs_url=None,redoc_url=None)
@@ -169,28 +215,34 @@ async def health(request:Request):
     for env,service in request.app.state.services.items():
         ready=(not service.error and 0<=time.time()-service.watermark<MAX_RECORD_AGE_SECONDS and
                all(service.latest.get('nodes',{}).get(role,{}).get('metrics',{}).get('status')=='ok'
-                   for role in ('prefill','decode')))
+                   for role in service.definition['nodes']))
         environments[env]={'status':'ok' if ready else 'degraded','error':service.error,'processed_at':service.watermark,
             'coverage':{r:n.get('coverage') for r,n in service.latest.get('nodes',{}).items()}}
-    return {'status':'ok' if all(e['status']=='ok' for e in environments.values()) else 'degraded',
+    catalog_error=getattr(request.app.state,'catalog_error',None)
+    return {'status':'ok' if not catalog_error and all(e['status']=='ok' for e in environments.values()) else 'degraded',
         'environments':environments,'metric_policy':native_schema.POLICY,'native_recording':build()[1],
-        'metric_writer':False,'perses_proxy':False}
+        'metric_writer':False,'perses_proxy':False,'catalog_error':catalog_error}
 
 def selected_service(request,environment):
  validate_environment(environment)
- return request.app.state.services[environment]
+ service=request.app.state.services.get(environment)
+ if service is None:raise HTTPException(503,'监控来源正在接入')
+ return service
 
 @app.get('/api/monitoring/latest')
 async def latest(request:Request,environment:str='dcu-pd'):
  s=selected_service(request,environment)
  if s.error or not s.latest.get('ts') or time.time()-s.latest['ts']>=MAX_RECORD_AGE_SECONDS:raise HTTPException(503,'监控数据暂不可用或过期')
  from .cache_sources import source
- return s.latest | {'source':source(environment)}
+ with source_registry.use_catalog(getattr(s,'catalog',source_registry.catalog())):
+  return s.latest | {'source':source(environment)}
 
 @app.get('/api/monitoring/sources')
 def source_catalog():
  from .cache_sources import source
- return {'sources':[source(env) | {'nodes':nodes} for env,nodes in native_schema.NODES.items()]}
+ return {'sources':[source(env) | {'nodes':native_schema.NODES[env], 'resource_nodes':entry['nodes'],
+          'foundation_id':entry['foundation_id'],'name':entry['name'],'adapter':entry['adapter']}
+          for env,entry in source_registry.sources().items()]}
 @app.get('/api/monitoring/history')
 async def history(request:Request,hours:float=1,start:float|None=None,end:float|None=None,environment:str='dcu-pd',view:str='full'):
  validate_view(view)
@@ -203,7 +255,8 @@ async def history(request:Request,hours:float=1,start:float|None=None,end:float|
   async with asyncio.timeout(HISTORY_TIMEOUT):
    value=await s.history(hours,start,end,view=view)
    from .cache_sources import source
-   return value | {'source':source(environment)}
+   with source_registry.use_catalog(getattr(s,'catalog',source_registry.catalog())):
+    return value | {'source':source(environment)}
  except (TimeoutError,httpx.HTTPError,ValueError):raise HTTPException(503,'监控历史查询暂不可用')
 
 from .request_profile import router as request_profile_router

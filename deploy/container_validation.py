@@ -2,6 +2,7 @@
 import json
 import math
 import re
+import ssl
 import time
 import urllib.parse
 import urllib.request
@@ -57,7 +58,7 @@ class ComponentProbe:
         config = container['Config']
         args = (config.get('Entrypoint') or []) + (config.get('Cmd') or [])
         env = dict(x.split('=', 1) for x in config.get('Env', []) if '=' in x)
-        if name in ('monitoring-api', 'monitoring-probes'):
+        if name in ('monitoring-api', 'monitoring-probes', 'monitoring-controller'):
             host, port = option(args, '--host'), option(args, '--port')
             require(host and port, 'Missing API listener arguments')
             address = ('[' + host + ']' if ':' in host and not host.startswith('[') else host) + ':' + port
@@ -75,6 +76,14 @@ class ComponentProbe:
             raise RuntimeError('Unsupported monitoring component: ' + name)
         require(address, 'Missing component listener')
         self.base = base_url(address)
+        self.ssl_context = None
+        if name == 'monitoring-controller':
+            self.base = env.get('MONITOR_CONTROLLER_PUBLIC_URL')
+            require(self.base and self.base.startswith('https://'), 'Controller needs verified public HTTPS URL')
+            certificate = option(args, '--ssl-certfile')
+            source = next((m['Source'] for m in container.get('Mounts', []) if m['Destination'] == certificate), None)
+            require(source, 'Controller certificate mount missing')
+            self.ssl_context = ssl.create_default_context(cafile=source)
         self.last_scrapes = None
         self.activity_observed = False
 
@@ -82,12 +91,17 @@ class ComponentProbe:
         def fetch(path, as_json=False):
             remaining = deadline - time.monotonic()
             require(remaining > 0, 'Component acceptance deadline exceeded')
-            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            handlers = [urllib.request.ProxyHandler({})]
+            if self.ssl_context:
+                handlers.append(urllib.request.HTTPSHandler(context=self.ssl_context))
+            opener = urllib.request.build_opener(*handlers)
             with opener.open(self.base + path, timeout=min(4, remaining)) as response:
                 data = response.read().decode()
             return json.loads(data) if as_json else data
 
-        if self.name == 'monitoring-probes':
+        if self.name == 'monitoring-controller':
+            require(fetch('/health', True).get('status') == 'ok', 'Controller unavailable')
+        elif self.name == 'monitoring-probes':
             value = fetch('/health', True)
             require(value['status'] == 'ok' and value['targets'] == 3, 'Probe worker or VM unavailable')
         elif self.name == 'monitoring-api':

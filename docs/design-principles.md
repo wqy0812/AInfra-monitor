@@ -1,6 +1,6 @@
 # 设计原则
 
-监控是三个仓库中独立的观测面：vmagent 采集，VictoriaMetrics 存储，vmalert 计算记录规则，monitoring-api 只读查询，Perses 展示。原始瞬时值直接查询 VM，不重复保存记录；平台（[AInfra](https://github.com/wqy0812/AInfra)）只读消费查询结果。网关功能服务 `aigate-proxy`（[AInfra-gate](https://github.com/wqy0812/AInfra-gate)）通过免认证观测端口暴露 `aigate_*` 指标；切流服务不重复采集或计数。
+监控是三个仓库中独立的观测面：vmagent 采集，VictoriaMetrics 存储，vmalert 计算记录规则，monitoring-api 只读查询，Perses 展示。原始瞬时值直接查询 VM，不重复保存记录；平台（[AInfra](https://github.com/wqy0812/AInfra)）保存权威底座/入口登记，经独立鉴权的 controller 同步期望配置，并只读消费查询结果。网关功能服务 `aigate-proxy`（[AInfra-gate](https://github.com/wqy0812/AInfra-gate)）通过免认证观测端口暴露 `aigate_*` 指标；切流服务不重复采集或计数。
 
 当前按一套部署管理，不预设其他部署环境；增加部署由用户另行说明。本文区分已实现行为、已决定待实现的目标和待验证方案。
 
@@ -24,7 +24,8 @@
 | 计算记录 | vmalert（`monitoring/native_rules.py`） | 固定窗口计算；每条规则只读原始指标 |
 | 查询 | monitoring-api（`monitoring/`） | latest、history、request-profile；读取计算记录和原始瞬时值；来源 IP 白名单，默认只允许回环 |
 | 展示 | Perses | 源定义在 `perses/projects/`，由生成器产出 |
-| 消费 | 平台 Web | 只读调用 monitoring-api |
+| 接入 | 独立 monitoring-controller | 接收平台版本化登记，生成采集、规则和 Perses，持有运行副本与应用日志 |
+| 消费 | 平台 Web | 只读调用 monitoring-api；登记写入由 engine 完成 |
 
 ## 监控规则
 

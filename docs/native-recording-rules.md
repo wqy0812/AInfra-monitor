@@ -1,5 +1,7 @@
 # 原生记录规则
 
+启用[自动监控](automatic-monitoring.md)后，`native_rules.build(catalog)` 从目录绑定适配模板，来源、节点及预期实例数动态生成。controller 先 dry-run 再发布 `rules.json`，运行服务以 `--rules-file` 只读使用该文件。下文 202 条是旧三环境模板基线，实际规则数以当前目录和 vmalert 读回为准。多节点角色汇总使用独立 `monitoring_scope="role"` 记录，逐节点看板排除该汇总，避免重复计数。
+
 2026-10-11 已批准 D1–D6，现行实现见 [口径评审](native-standard-review-20261011.md)。生产按新系统建设；测试环境迁移不要求复刻旧 Python 的窗口否决、代次发布及自动历史接续。
 
 官方 vmalert 1.151.0 每 5 秒计算固定 1 分钟窗口并写回 VM，指标前缀 `monitoring_native_`。规则来源为 `monitoring/native_rules.py`，当前源码的 202 条规则均直接读取原始指标，不依赖另一条记录规则的写入时序。API 只读计算记录及原始瞬时值并转换 code-eval JSON；请求画像及网关查询仍提供原有只读接口。Perses 使用 `victoriametrics` 数据源，已移除 `/internal/perses` 代理和 `perses-accelerated` 数据源。

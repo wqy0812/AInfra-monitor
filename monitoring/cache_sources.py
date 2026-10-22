@@ -13,6 +13,7 @@ import posixpath
 from urllib.parse import unquote, urlsplit, urlunsplit
 
 from .native_schema import NODES
+from . import source_registry
 
 SCHEMA = 'service-cache-v1'
 TIERS = {'dcu-pd': ['device', 'host', 'storage'], 'a3-vllm': ['device', 'storage'], 'xpu-pd': []}
@@ -62,10 +63,11 @@ def local_endpoint(value):
 def source(environment):
     if environment not in NODES:
         raise ValueError('unknown_cache_source')
-    definition = {'environment': environment, 'prefill_node': NODES[environment]['prefill'],
-                  'semantics': {'dcu-pd':'prefill-effective-v1', 'a3-vllm':'vllm-prefill-source-v1', 'xpu-pd':'xpu-native-prefix-v1'}[environment],
-                  'method': 'time_average' if environment == 'xpu-pd' else 'token_weighted',
-                  'tiers': TIERS[environment], 'adapter_version': 1}
+    entry=source_registry.source(environment)
+    definition = {'environment': environment, 'prefill_node': NODES[environment].get('prefill'),
+                  'semantics': entry['semantics'],
+                  'method': 'time_average' if entry['baseline'] == 'xpu-pd' else 'token_weighted',
+                  'tiers': entry['tiers'], 'adapter_version': 1}
     return {**definition, 'id': environment, 'revision': digest(definition)}
 
 
@@ -75,7 +77,28 @@ def bindings():
     if data.get('version') != 1 or not isinstance(data.get('bindings'), list):
         raise ValueError('invalid_cache_source_config')
     result = []
-    for item in data['bindings']:
+    items=data['bindings']
+    if source_registry.configured():
+        current=[]
+        for foundation in source_registry.catalog()['foundations']:
+            current.extend((foundation.get('router') or {}).get('bindings', []))
+        # Legacy evidence is retained up to the first recorded catalog binding;
+        # a mutable latest backend never rewrites an earlier report window.
+        cutoffs={}
+        for item in current:
+            env=item.get('environment')
+            if isinstance(item.get('valid_from'), (float,int)):
+                cutoffs[env]=min(cutoffs.get(env, math.inf), item['valid_from'])
+        retained=[]
+        for item in items:
+            if item.get('environment') not in NODES:
+                continue
+            cutoff=cutoffs.get(item['environment'], math.inf)
+            if item.get('valid_from', math.inf) >= cutoff:
+                continue
+            retained.append({**item, **({'valid_until':min(item.get('valid_until', math.inf),cutoff)} if cutoff < math.inf else {})})
+        items=retained+current
+    for item in items:
         item = dict(item)
         source(item['environment'])
         item['backend_url'] = canonical_url(item['backend_url'])

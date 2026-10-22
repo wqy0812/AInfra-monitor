@@ -1,5 +1,7 @@
 # Perses 看板与维护
 
+启用[自动监控](../docs/automatic-monitoring.md)后，controller 使用本目录的版本化模板为新增底座生成项目和能力分区，并保留已有项目、面板和入口身份。环境、节点、实例及期望数量来自登记目录。自动资源与人工并发修改发生冲突时，先在 code-eval 查看和解决冲突，不直接覆盖线上编辑。
+
 入口使用 [HTTPS](https://122.247.53.162:18431)，支持 HTTP/2。证书为自签 IP 证书，SAN 为 `IP:122.247.53.162`；访问设备需要信任证书。服务器证书位于 `/data2/monitoring/perses/tls/server.crt`，私钥 `server.key` 仅保留服务器，由容器用户只读访问。证书到期前需更新证书并重启 Perses。
 
 维护客户端默认使用 HTTPS，在服务器上自动加载上述证书进行校验。本机执行时设置 `PERSES_CA_FILE=/path/to/server.crt`；`PERSES_URL` 可指定其他环境。不要关闭证书验证。镜像替换必须保留证书挂载和全部 `--web.tls-*` 参数；登录 Cookie 使用 `security.cookie.secure: true`。
@@ -12,11 +14,11 @@ DCU、A3、XPU 各有 7 个公开入口，共 261 个面板：总览、网关监
 
 全部看板直接通过 `victoriametrics` 数据源查询 VM。已移除 `perses-accelerated` 和 API 代理；原有加速目录/发布状态仅用于历史审计，不控制当前发布。新指标和覆盖/质量定义见 [原生记录规则](../docs/native-recording-rules.md)。
 
-原始瞬时值使用共享的 `monitoring/raw_gauges.py` 生成查询，不写重复记录。`runtime apply` 的候选 `release/` 除 Perses 模块及 `projects/` 外，还须包含同一源码版本的 `monitoring/__init__.py`、`monitoring/native_rules.py`、`monitoring/raw_gauges.py`；安装器把该包与生成器一并校验、记入日志并安装，缺少模块会在写入前停止。独立安装后的生成器应能重新生成相同资源，不依赖开发目录的 `PYTHONPATH`。
+原始瞬时值使用共享的 `monitoring/raw_gauges.py` 生成查询，不写重复记录。`runtime apply` 的候选 `release/` 除 Perses 模块及 `projects/` 外，还须包含同一源码版本的 `monitoring/__init__.py`、`monitoring/native_rules.py`、`monitoring/raw_gauges.py`、`monitoring/source_registry.py`；安装器把该包与生成器一并校验、记入日志并安装，缺少模块会在写入前停止。独立安装后的生成器应能重新生成相同资源，不依赖开发目录的 `PYTHONPATH`。
 
 查询维护工具支持分区源和合并后的线上快照。catalog 和安装清单保留逻辑分区 ID，候选及 API 写回使用实际公开资源 ID；修改合并看板时仍检查整张资源是否被并发编辑。生成器安装将查询变更映射回原分区文件。
 
-查询维护安装器同样将上述三个共享模块纳入源码指纹、运行目录快照和安装日志。旧运行目录缺少 `monitoring/` 时，计划记录该新增目录，安装前校验全部文件及目录状态，再创建目录并输出其路径；其他缺失目录仍须显式准备。候选源码或运行文件变化后须重新审计，不复用旧证据。
+查询维护安装器同样将上述四个共享模块纳入源码指纹、运行目录快照和安装日志。旧运行目录缺少 `monitoring/` 时，计划记录该新增目录，安装前校验全部文件及目录状态，再创建目录并输出其路径；其他缺失目录仍须显式准备。候选源码或运行文件变化后须重新审计，不复用旧证据。
 
 ## 生成与初始化
 

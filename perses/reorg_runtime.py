@@ -10,7 +10,7 @@ MODULES = ('connection.py', 'align_dashboards.py', 'dashboard_reorg.py', 'dashbo
            'xpu_hardware.py', 'xpu_cache.py', 'xpu_topology.py', 'query_acceleration.py', 'acceleration_catalog.py',
            'acceleration_publication.py', 'acceleration_state.json', 'a3_coverage.py', 'a3_cache.py', 'a3_mooncake.py',
            'panel_trim.py', 'summary_dashboard.py', 'drilldown_layout.py', 'query_slimming.py', 'native_records.py',
-           'monitoring/__init__.py', 'monitoring/native_rules.py', 'monitoring/raw_gauges.py')
+           'monitoring/__init__.py', 'monitoring/native_rules.py', 'monitoring/raw_gauges.py', 'monitoring/source_registry.py')
 
 
 def encoded(path):

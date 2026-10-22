@@ -117,11 +117,14 @@ class Stream:
             raise ProbeFailure('empty_output')
 
 
-async def probe(client, url, *, api_key='', timeout=TIMEOUT):
+async def probe(client, url, *, api_key='', timeout=TIMEOUT, expected_router=''):
     started, clock = time.time(), time.monotonic()
     status, reason = None, 'success'
     stream = Stream()
     headers = {'Accept': 'text/event-stream'}
+    actual_router = None
+    if expected_router:
+        headers['X-Aigate-Expected-Router'] = expected_router
     if api_key:
         headers['Authorization'] = 'Bearer ' + api_key
     try:
@@ -129,8 +132,13 @@ async def probe(client, url, *, api_key='', timeout=TIMEOUT):
             async with client.stream('POST', url, json=BODY, headers=headers,
                                      timeout=httpx.Timeout(timeout, connect=min(10, timeout))) as response:
                 status = response.status_code
+                actual_router = response.headers.get('X-Aigate-Backend')
+                if actual_router and (len(actual_router) > 64 or not re.fullmatch(r'[A-Za-z0-9_-]+', actual_router)):
+                    actual_router = None
                 if not 200 <= status < 300:
                     raise ProbeFailure('http_error')
+                if expected_router and actual_router != expected_router:
+                    raise ProbeFailure('identity_mismatch')
                 if response.headers.get('content-type', '').split(';')[0].strip().lower() != 'text/event-stream':
                     raise ProbeFailure('invalid_stream')
                 async for chunk in response.aiter_bytes():
@@ -144,7 +152,7 @@ async def probe(client, url, *, api_key='', timeout=TIMEOUT):
         reason = 'connection_error'
     return {'started_at': started, 'finished_at': time.time(), 'duration_seconds': time.monotonic()-clock,
             'first_output_seconds': stream.first_output_at-clock if stream.first_output_at is not None else None,
-            'http_status': status, 'reason': reason}
+            'http_status': status, 'reason': reason, 'actual_router_id': actual_router}
 
 
 @dataclass(frozen=True)
@@ -208,18 +216,127 @@ async def run_target(client, vm, environment, url, offset, *, api_key=''):
             LOG.error('Probe observation not stored: %s (%s)', environment, type(error).__name__)
 
 
+class ManagedProbes:
+    """One scheduler owns dispatch, reloads and acknowledgements; probes remain serial."""
+    def __init__(self, client, vm):
+        from . import probe_catalog
+        self.client, self.vm = client, vm
+        self.targets, self.due, self.running = {}, {}, {}
+        self.error = None
+        self.catalog_revision = None
+        self.offset_path = Path(os.environ.get('STATE_DIR', '/state')) / 'probe-offsets.json'
+        self.offsets = probe_catalog.read_json(self.offset_path)
+        state = probe_catalog.read_json(probe_catalog.state_file('status'))
+        self.intervals = state.get('pause_intervals', {})
+        # Do not claim a process-down interval was a deliberate pause.
+        last = state.get('observed_at', time.time())
+        for intervals in self.intervals.values():
+            if intervals and intervals[-1].get('end') is None:
+                intervals[-1]['end'] = last
+
+    def pause_history(self, identity, target, now):
+        intervals = self.intervals.setdefault(identity, [])
+        self.intervals[identity] = intervals = [entry for entry in intervals if (entry.get('end') or now) >= now-172800][-4096:]
+        reason = target.get('pause_reason', '')
+        active = intervals[-1] if intervals and intervals[-1].get('end') is None else None
+        if active and active['reason'] != reason:
+            active['end'] = now
+            active = None
+        if reason and not active:
+            intervals.append({'start': now, 'end': None, 'reason': reason})
+
+    async def execute(self, target):
+        try:
+            result = await probe(self.client, target['url'], expected_router=target.get('expected_router', ''))
+            async with asyncio.timeout(IMPORT_TIMEOUT):
+                response = await self.client.post(self.vm + '/api/v1/import',
+                    content=samples(target.get('environment', ''), result, target=target), timeout=IMPORT_TIMEOUT)
+                response.raise_for_status()
+        except Exception as error:
+            LOG.error('Probe observation not stored: %s (%s)', target['probe_id'], type(error).__name__)
+
+    async def tick(self, now=None):
+        from . import probe_catalog
+        now = time.time() if now is None else now
+        for identity, task in list(self.running.items()):
+            if task.done():
+                self.running.pop(identity)
+        control = probe_catalog.read_json(probe_catalog.state_file('control'))
+        try:
+            directory = probe_catalog.catalog()
+            targets = probe_catalog.targets(value=directory, control=control, now=now)
+            if targets is None:
+                raise ValueError('Managed catalog is no longer configured')
+            self.catalog_revision = directory['revision']
+            self.error = None
+        except (OSError, ValueError, TypeError, KeyError):
+            self.error = 'catalog_unavailable'
+            targets = [target | {'dispatch_status':'paused', 'pause_reason':'catalog_unavailable'}
+                       for target in self.targets.values()]
+        current = {target['probe_id']:target for target in targets}
+        changed_offsets = False
+        for identity, target in current.items():
+            if identity not in self.offsets:
+                self.offsets[identity] = target['offset_seconds']
+                changed_offsets = True
+            target['offset_seconds'] = self.offsets[identity]
+            previous = self.targets.get(identity)
+            paused = target['dispatch_status'] != 'active'
+            if paused or previous != target or identity not in self.due:
+                self.due[identity] = next_run(now, target['offset_seconds'])
+            self.pause_history(identity, target, now)
+            task = self.running.get(identity)
+            if not paused and now >= self.due[identity]:
+                due = self.due[identity]
+                self.due[identity] = next_run(now, target['offset_seconds'])
+                if now-due < 5 and task is None:
+                    self.running[identity] = asyncio.create_task(self.execute(dict(target)))
+        if changed_offsets:
+            probe_catalog.atomic_json(self.offset_path, self.offsets)
+        for identity in self.targets.keys() - current.keys():
+            self.due.pop(identity, None)
+            self.pause_history(identity, {'pause_reason':'disabled'}, now)
+        self.targets = current
+        # Written after dispatch decisions. Matching operation IDs prove the
+        # pause request has reached the scheduler, even if an old request drains.
+        pauses = control.get('paused_routers') or {}
+        probe_catalog.atomic_json(probe_catalog.state_file('status'), {
+            'observed_at':now, 'control_revision':control.get('revision'),
+            'catalog_revision':self.catalog_revision, 'target_ids':sorted(current),
+            'paused_routers':sorted(pauses), 'pause_operations':pauses,
+            'inflight':{identity:1 for identity, task in self.running.items() if not task.done()},
+            'targets':len(current), 'error':self.error, 'pause_intervals':self.intervals,
+        })
+
+    async def run(self):
+        try:
+            while True:
+                await self.tick()
+                await asyncio.sleep(1)
+        finally:
+            for task in self.running.values():
+                task.cancel()
+            await asyncio.gather(*self.running.values(), return_exceptions=True)
+
+
 @asynccontextmanager
 async def lifespan(app):
-    targets = load_targets(os.environ['PROBE_TARGETS_FILE'])
+    managed = bool(os.environ.get('MONITORING_PROBE_CATALOG_FILE') or os.environ.get('MONITORING_CATALOG_FILE'))
+    targets = None if managed else load_targets(os.environ['PROBE_TARGETS_FILE'])
     vm = os.environ.get('VM_URL', 'http://127.0.0.1:18428').rstrip('/')
     # Share this existing state directory across restarts and all worker instances.
     with open(Path(os.environ.get('STATE_DIR', '/state')) / 'probes.lock', 'a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         async with httpx.AsyncClient(trust_env=False, follow_redirects=False,
                                     limits=httpx.Limits(max_connections=6)) as client:
-            tasks = [asyncio.create_task(run_target(client, vm, env, targets[env].url, OFFSETS[env],
-                                                   api_key=targets[env].api_key))
-                     for env, _ in TARGETS]
+            if managed:
+                app.state.managed = ManagedProbes(client, vm)
+                tasks = [asyncio.create_task(app.state.managed.run())]
+            else:
+                app.state.managed = None
+                tasks = [asyncio.create_task(run_target(client, vm, env, targets[env].url, OFFSETS[env],
+                                                       api_key=targets[env].api_key))
+                         for env, _ in TARGETS]
             app.state.tasks, app.state.client, app.state.vm = tasks, client, vm
             try:
                 yield
@@ -234,11 +351,13 @@ app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None
 
 @app.get('/health')
 async def health():
+    managed = getattr(app.state, 'managed', None)
     try:
         response = await app.state.client.get(app.state.vm + '/health', timeout=2)
         response.raise_for_status()
-        ready = all(not task.done() for task in app.state.tasks)
+        ready = all(not task.done() for task in app.state.tasks) and not (managed and managed.error)
     except httpx.HTTPError:
         ready = False
-    return JSONResponse({'status': 'ok' if ready else 'unavailable', 'targets': len(TARGETS)},
+    return JSONResponse({'status': 'ok' if ready else 'unavailable',
+                         'targets': len(managed.targets) if managed else len(TARGETS)},
                         status_code=200 if ready else 503)

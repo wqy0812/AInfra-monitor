@@ -12,7 +12,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import cache_sources, native_schema
+from . import cache_sources, native_schema, source_registry
 
 router = APIRouter()
 MAX_SPAN = 6 * 3600
@@ -56,6 +56,8 @@ def indexed(rows, increments=False):
 
 
 def selectors(environment):
+    original=environment
+    environment=source_registry.adapter_environment(environment)
     if environment == 'a3-vllm':
         scope = 'environment="a3-vllm",job="vllm-a3",node="a3-1"'
         names = 'vllm:prompt_tokens(_by_source|_cached)?_total'
@@ -63,7 +65,8 @@ def selectors(environment):
         scope = 'environment=' + json.dumps(environment) + ',job="sglang-prefill"'
         names = 'sglang:cache_hit_rate' if environment == 'xpu-pd' else 'sglang:prefill_effective_tokens_total'
     extra = ',tp_rank="0",pp_rank="0"' if environment == 'xpu-pd' else ',tp_rank=~"0|",pp_rank=~"0|",moe_ep_rank=~"0|"' if environment == 'dcu-pd' else ''
-    return '{__name__=~"' + names + '",' + scope + extra + '}', 'up{' + scope + '}'
+    return tuple(source_registry.rewrite_query(value, original) for value in
+                 ('{__name__=~"' + names + '",' + scope + extra + '}', 'up{' + scope + '}'))
 
 
 def usable(stats, right, width=30):
@@ -85,6 +88,7 @@ def delta(stats, baseline, right):
 
 
 def bucket_counts(environment, current, baseline, health, right):
+    environment=source_registry.adapter_environment(environment)
     healthy = {dict(key).get('instance', '') for key, stats in health.items()
                if usable(stats, right) and stats.get('min_over_time') == 1}
     groups = {}
@@ -131,6 +135,7 @@ async def observe(service, snapshot, start, end, offset):
     # clocks retain micro/nanoseconds. Normalize both sides before indexing.
     start, end = round(start, 3), round(end, 3)
     environment = snapshot['source']['environment']
+    baseline_environment=source_registry.adapter_environment(environment)
     metric, up = selectors(environment)
     def stats(selector, width):
         return 'aggr_over_time((' + ','.join(json.dumps(r) for r in ROLLUPS) + '),' + selector + '[' + str(width) + 's]) keep_metric_names'
@@ -141,7 +146,7 @@ async def observe(service, snapshot, start, end, offset):
         return await service.query(expression, left, right, 30, nocache=True)
     # Counter baselines use actual samples at/before the left boundary. Range
     # summaries are strictly (left,right], avoiding overlap across buckets.
-    calculation = 'avg_over_time' if environment == 'xpu-pd' else 'increase_prometheus'
+    calculation = 'avg_over_time' if baseline_environment == 'xpu-pd' else 'increase_prometheus'
     tasks = [query(stats(metric, 30)), query(stats(metric, 15), start, end-30),
              query(stats(up, 30)), query(calculation+'('+metric+'[30s]) keep_metric_names')]
     from .api import history_expression
@@ -154,22 +159,22 @@ async def observe(service, snapshot, start, end, offset):
             if not task.done():task.cancel()
         await asyncio.gather(*pending, return_exceptions=True)
     current, baseline, health = indexed(raw), indexed(base), indexed(up_rows)
-    if environment != 'xpu-pd':
+    if baseline_environment != 'xpu-pd':
         for ts, rows in indexed(extra, increments=True).items():
             for key, values in rows.items():current.setdefault(ts, {}).setdefault(key, {}).update(values)
-    averages = {float(ts): finite(v) for row in extra for ts, v in row['values']} if environment == 'xpu-pd' and len(extra) == 1 else {}
+    averages = {float(ts): finite(v) for row in extra for ts, v in row['values']} if baseline_environment == 'xpu-pd' and len(extra) == 1 else {}
     trends = {p['ts']: p['nodes']['prefill'] for p in native_schema.points(trend_rows, environment, start, end, 30, summary=True)}
     points = []
     for index in range(round((end-start)/30)):
         right = start+(index+1)*30
         node = trends.get(right-15, {})
         cache = node.get('cache_60s', {})
-        cache = cache.get('effective', {}) if environment == 'a3-vllm' else cache
+        cache = cache.get('effective', {}) if baseline_environment == 'a3-vllm' else cache
         point = {'offset_seconds': offset+index*30, 'width_seconds': 30,
                  'trend': {k: cache.get(k) for k in ('ratio', 'device', 'host', 'storage')},
                  'expected_instances': node.get('coverage', {}).get('expected'),
                  'counts': None, 'available_instances': 0, 'valid_seconds': 0}
-        if environment == 'xpu-pd':
+        if baseline_environment == 'xpu-pd':
             rows = list(current.get(right, {}).values())
             ups = list(health.get(right, {}).values())
             valid = len(rows) == 1 and usable(rows[0], right) and rows[0].get('min_over_time', -1) >= 0 and rows[0].get('max_over_time', 2) <= 1
@@ -188,7 +193,7 @@ async def observe(service, snapshot, start, end, offset):
     return {'schema': cache_sources.SCHEMA, 'status': 'complete' if valid == end-start and not partial else 'partial' if valid else 'unavailable',
             'reason': None if valid else 'no_valid_cache_observation', 'points': points,
             'source': snapshot['source'], 'computed_at': time.time(), 'boundary_approximation_seconds': 10,
-            'trend_window_seconds': None if environment == 'xpu-pd' else 60}
+            'trend_window_seconds': None if baseline_environment == 'xpu-pd' else 60}
 
 
 @router.post('/api/monitoring/cache-sources/resolve')

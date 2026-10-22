@@ -82,7 +82,7 @@ def save(root, name, data):
     temporary.replace(path)
 
 
-def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=None, evidence=None):
+def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=None, evidence=None, *, configure=None, probe_factory=None):
     if evidence is not None:
         require(evidence.is_dir(), 'Evidence directory must already exist')
         require(not (evidence / 'container-before.json').exists(), 'Use a fresh evidence directory')
@@ -125,6 +125,10 @@ def replace(name, image, driver_readonly=False, loadavg=False, allowed_clients=N
         require(name == 'monitoring-node', '--loadavg is only for monitoring-node')
         if '--collector.loadavg' not in config['Cmd']:
             config['Cmd'].append('--collector.loadavg')
+    if configure is not None:
+        configure(config)
+    if probe_factory is not None:
+        probe = probe_factory(name, config)
     api_version = docker_api_version()
     require(inspect(name)['Id'] == old['Id'], 'Original container changed before replacement')
     before = {key: old[key] for key in ('Id', 'Image', 'Name', 'State')}

@@ -59,6 +59,18 @@ docker compose -f tests/compose.vm.yml up -d
 docker compose -f tests/compose.vm.yml down
 ```
 
+## 自动接入完整生命周期
+
+`test_managed_monitoring_e2e.py` 使用真实 VM、vmagent、vmalert 以及本地合成 exporter、Proxy 流式响应和 Perses HTTP 服务，验证目录发布、原生规则写入、两个新底座、Basic 凭据轮换、双层探测、维护暂停、停用及删除后的历史保留。它不访问真实模型或实际任务数据。
+
+预先准备与仓库一致的 `victoriametrics/victoria-metrics:v1.151.0`、`victoriametrics/vmagent:v1.151.0` 和 `victoriametrics/vmalert:v1.151.0` 镜像，然后运行：
+
+```sh
+MONITORING_MANAGED_E2E=1 .venv/bin/python -m pytest tests/test_managed_monitoring_e2e.py -q --basetemp=work/managed-e2e
+```
+
+每次运行使用独立 Docker 网络、随机容器名称和随机回环端口，单容器限制为 1 CPU / 512 MiB。合成 HTTP 服务在测试期间监听临时端口供 Docker 访问；测试结束会关闭服务并删除本次容器和网络。结果及容器日志保留在指定临时目录的 `managed/e2e-result.json` 和 `managed/container-logs.json`；同一 `--basetemp` 会由 pytest 重建，保留上次证据时使用新目录。
+
 ## 已删除的历史升级测试
 
 2026-09-30 删除依赖 code-eval 退役发布脚本的“活动任务不能冻结”测试及其跨项目加载/开关。该用例验证旧升级流程，不适用于当前 monitoring 停机窗口升级；`--run-cross-project` 和 `CODE_EVAL_ROOT` 不再是本项目测试入口。

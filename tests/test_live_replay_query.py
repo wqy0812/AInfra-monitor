@@ -16,7 +16,10 @@ from monitoring.replay import decode_export
 async def test_snapshot_is_published_only_after_infrastructure_finishes(tmp_path, monkeypatch):
     monkeypatch.setattr(api, 'STATE', tmp_path)
     service = api.Service()
-    service.watermark = int(time.time() // 5) * 5 - 10
+    # The native reader deliberately waits for ingestion and rule publication.
+    # Keep this fixture inside its actual query window so the test reaches the
+    # infrastructure request whose atomic publication boundary it exercises.
+    service.watermark = int((time.time() - api.READ_DELAY_SECONDS) // 5) * 5
     previous = service.latest
     entered, release = asyncio.Event(), asyncio.Event()
 
@@ -26,6 +29,7 @@ async def test_snapshot_is_published_only_after_infrastructure_finishes(tmp_path
             await release.wait()
         return httpx.Response(200, json={'status':'success','data': {'result': ([{'metric':{'__name__':'monitoring_native_backend_requests_per_second','environment':'dcu-pd','node':'dcu2','role':'decode'},'values':[[service.watermark,'1']]}] if request.url.path=='/api/v1/query_range' else [])}})
 
+    await service.client.aclose()
     service.client = QueryClient(transport=httpx.MockTransport(transport))
     task = asyncio.create_task(service.cycle())
     try:

@@ -5,16 +5,19 @@ tests compare their expressions with the checked-in dashboards for every node.
 """
 import asyncio
 import math
+import json
+import re
 
 import httpx
 
 from .native_schema import NODES
+from . import source_registry
 
 FIELD = 'accelerator_utilization_percent'
 
 
-def expression(environment, step):
-    if environment not in NODES or not isinstance(step, int) or step < 5 or step % 5:
+def _template_expression(environment, step):
+    if environment not in source_registry.LEGACY_NODES or not isinstance(step, int) or step < 5 or step % 5:
         raise ValueError('Invalid accelerator history environment or step')
     if environment == 'dcu-pd':
         value = 'dcu_utilization_percent{node=~".*",device=~".*",environment="dcu-pd",node=~".*"}'
@@ -42,19 +45,33 @@ def expression(environment, step):
                      f'and (count_over_time({value}[$__interval]) >= ($__interval / 5)) '
                      f'and on(job,instance,environment) ({source}))')
     query = f'avg by(node) ({query})'
-    for role, node in NODES[environment].items():
+    for role, node in source_registry.LEGACY_NODES[environment].items():
         query = f'label_replace({query}, "role", "{role.title()}", "node", "{node}")'
     return query.replace('$__interval', f'{step}s')
 
 
+def expression(environment, step):
+    baseline = source_registry.adapter_environment(environment)
+    query = source_registry.rewrite_query(_template_expression(baseline, step), environment)
+    if source_registry.configured():
+        for role, old in source_registry.LEGACY_NODES[baseline].items():
+            pattern='|'.join(re.escape(name) for name in source_registry.nodes(environment).get(role, [])) or 'a^'
+            query=query.replace(', "node", '+json.dumps(old)+')', ', "node", '+json.dumps(pattern)+')')
+        # Label each valid device by its catalog role before averaging. This
+        # weights effective devices equally when a role spans several nodes.
+        query=query.replace('avg by(node) (', '(')
+        query='avg by(role) ('+query+')'
+    return query
+
+
 def samples(rows, environment, start, end):
     result, seen = {}, set()
-    roles = {node: role for role, node in NODES[environment].items()}
+    roles = {node: role for role, nodes in source_registry.nodes(environment).items() for node in nodes}
     for row in rows:
         labels = row['metric']
-        role = roles.get(labels.get('node'))
+        role = roles.get(labels.get('node')) or (labels.get('role', '').lower() if source_registry.configured() else None)
         # avg by(node) removes environment; the query itself is environment-scoped.
-        if not role or labels.get('environment', environment) != environment or labels.get('role') != role.title():
+        if role not in source_registry.nodes(environment) or labels.get('environment', environment) != environment or labels.get('role') != role.title():
             continue
         for raw_ts, raw_value in row['values']:
             ts, value = float(raw_ts), float(raw_value)

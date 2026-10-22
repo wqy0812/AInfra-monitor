@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from monitoring import api, gateway_live
+from monitoring import api, gateway_live, accelerator_history, source_registry
 from monitoring.access import client_allowlist
 from monitoring.query_client import QueryClient
 
@@ -57,10 +57,11 @@ def test_startup_requires_allowlist_before_directory_or_container_changes(tmp_pa
 def healthy_state(now):
     services = {}
     for env in api.ENVIRONMENTS:
+        definition = source_registry.source(env)
         nodes = {role: {'metrics': {'status': 'ok'},
                         'telemetry': {'status': 'ok', 'data': {'gpus': [{}]*8}},
-                        'host_cpu': {'status': 'ok'}} for role in ('prefill', 'decode')}
-        services[env] = SimpleNamespace(latest={'nodes': nodes, 'mooncake': {'status': 'ok'}},
+                        'host_cpu': {'status': 'ok'}} for role in definition['nodes']}
+        services[env] = SimpleNamespace(definition=definition, latest={'nodes': nodes, 'mooncake': {'status': 'ok'}},
             watermark=now-5, error=None, started=now-100, host_cpu_status='ok', retention_gap=None)
     return SimpleNamespace(service=services['dcu-pd'], services=services)
 
@@ -74,7 +75,7 @@ async def test_health_detects_each_environment_failure(monkeypatch, environment,
     service = state.services[environment]
     if fault == 'source-error': service.latest['nodes']['prefill']['metrics']['status'] = 'error'
     elif fault == 'missing-role': service.latest['nodes'].pop('prefill')
-    elif fault == 'stale': service.watermark = 180
+    elif fault == 'stale': service.watermark = 200 - api.MAX_RECORD_AGE_SECONDS
     else: service.error = 'VM query failed'
     result = await api.health(SimpleNamespace(app=SimpleNamespace(state=state)))
     assert result['status'] == 'degraded'
@@ -93,7 +94,7 @@ async def test_health_does_not_require_unintegrated_xpu_telemetry(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_optional_gateway_and_cache_deadlines_overlap_and_preserve_backend(tmp_path, monkeypatch):
+async def test_optional_gateway_and_accelerator_deadlines_overlap_and_preserve_backend(tmp_path, monkeypatch):
     monkeypatch.setattr(api, 'STATE', tmp_path)
     monkeypatch.setattr(api, 'HISTORY_TIMEOUT', .3)
     service = api.Service('xpu-pd')
@@ -101,22 +102,26 @@ async def test_optional_gateway_and_cache_deadlines_overlap_and_preserve_backend
     original = gateway_live.history
     async def gateway(*args): return await original(*args, timeout=.05)
     monkeypatch.setattr(gateway_live, 'history', gateway)
+    original_accelerator = accelerator_history.history
+    async def accelerator(*args): return await original_accelerator(*args, timeout=.05)
+    monkeypatch.setattr(accelerator_history, 'history', accelerator)
     async def query(expression, start, end, step):
         if 'monitoring_native_' in expression:
             return [{'metric': {'__name__':'monitoring_native_backend_decode_tokens_per_second',
                      'environment':'xpu-pd','node':'xpu-1','role':'decode'}, 'values': [[start, '42']]}]
-        entered.add('gateway')
+        entered.add('gateway' if 'aigate_' in expression else 'accelerator')
         await asyncio.Event().wait()
     service.query = query
     request = asyncio.create_task(service.history(1, 100, 105))
     try:
         for _ in range(30):
             await asyncio.sleep(0)
-            if entered == {'gateway'}: break
-        assert entered == {'gateway'}
+            if entered == {'gateway', 'accelerator'}: break
+        assert entered == {'gateway', 'accelerator'}
         result = await request
         assert result['points'][0]['nodes']['decode']['decode_tokens'] == 42
         assert set(result['gateway_status'].values()) == {'unavailable'}
+        assert result['accelerator_status'] == 'unavailable'
         assert result['points'][0]['nodes']['prefill']['cache_60s']['ratio'] is None
         assert 'cache' in result['points'][0]['nodes']['prefill']['gap_before']
     finally:

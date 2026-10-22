@@ -105,7 +105,8 @@ class CounterWindow:
         self.service, self.vm = service, vm
         self.start, self.end = start, end
         self.backend, self.model = backend, model
-        if environment not in ('dcu-pd', 'a3-vllm', 'xpu-pd'):
+        from .source_registry import sources
+        if environment not in sources():
             raise ValueError('Unknown profile environment')
         self.environment = environment
         self.slots = asyncio.Semaphore(4)

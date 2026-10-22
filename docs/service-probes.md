@@ -1,6 +1,21 @@
 # 模型服务真实请求探测
 
-本功能由 monitoring 的独立 `monitoring-probes` 进程执行，平台 Web 只读展示。代码已提供探测、VM 写入与查询、平台页面；启用以实际发布记录为准。
+启用[自动监控目录](automatic-monitoring.md)后，目标来自 code-eval：底座固定 Proxy 与网关入口分别探测和保存历史，目录不再限制为三个目标。维护暂停、30 秒底座运行许可和显式旧入口历史映射以自动监控协议为准。下文的三入口 JSON 是未设置受管目录时的旧部署配置，配套接管后不再手工维护。
+
+本功能由 monitoring 的独立 `monitoring-probes` 进程执行，平台 Web 只读展示。已实现由 code-eval 登记自动生成底座与网关入口两组探测；是否已启用以实际发布记录为准。
+
+## 自动接入与身份
+
+配置 `MONITORING_PROBE_CATALOG_FILE` 后，worker 和查询 API 读取 controller 已接收的登记目录；未单独配置时使用 `MONITORING_CATALOG_FILE`。目录格式为 `schema_version: 1`、`revision`、`foundations` 和 `gateways`。缺失、格式错误或空目录不会恢复旧目标。未配置两种目录的安装在协调迁移前沿用下文的三入口配置。
+
+- 底座使用 `foundation:<id>` 为 `probe_id`，`probe_kind=foundation`，向固定 Router 的 Proxy 业务地址发送请求，附带 `X-Aigate-Expected-Router` 并核对 `X-Aigate-Backend`。缺失或不一致的响应身份记为 `identity_mismatch`。必须已选择支持的监控适配模板、启用底座并登记 Router 业务地址才执行；资源 exporter 的 URL 不用于生成请求。
+- 入口使用 `gateway:<id>`，`probe_kind=gateway`，访问登记的业务地址。只接入属于已登记底座的 Router 入口；未绑定入口显示待登记，其他已分配但与底座无关的入口不自动恢复探测。入口响应携带的实际 Router 随结果保存；没有该响应信息时保留空值，不用当前绑定解释历史。
+- 每个目标每 60 秒一次，两组分别发起真实模型请求，沿用 64 Token 输出预算、50 秒时限和完整 SSE 判定。新底座使用稳定的奇数秒偏移，新入口使用稳定的偶数秒偏移，worker 将偏移持久化在 `STATE_DIR/probe-offsets.json`。同一目标串行，新增目标、恢复或配置变化等待下一个未来时点。
+- 维护通过 controller 的显式 pause/resume 接口控制。worker 每秒读取 `MONITORING_PROBE_CONTROL_FILE`（默认 `STATE_DIR/probes-control.json`），根据 `paused_routers` 停止新底座请求。controller 只有读到 worker 在 `MONITORING_PROBE_STATUS_FILE`（默认 `STATE_DIR/probes-runtime.json`）写入的对应操作及新观察时间才确认停止派发。已发起请求按原时限收尾。
+- controller 的 `heartbeat_at` 超过 30 秒未续期时，底座探测暂停；入口继续走业务入口自身的准入。暂停不会伪造一次服务失败。worker 保留最近两天的暂停区间，页面将对应计划槽位标成暂停，实际失败记录仍具有优先级。
+- 迁移旧三入口历史须在对应 gateway 明确登记 `legacy_probe_environment` 和 `probe_migrated_at`。仅将迁移时间之前、没有 `probe_id` 标签的旧样本接回该入口组；同一旧来源只能映射一个网关。旧样本不会被解释为底座探测。已迁移 A3/XPU/DCU 入口沿用 0/20/40 秒偏移。
+
+受管 `GET /api/monitoring/probes` 返回 `probe_schema=managed-v1`，`services` 中包含 `probe_id`、`probe_kind`、所属底座或入口、`dispatch_status`、`pause_reason`、`pause_intervals` 及原有记录字段。`records[].actual_router_id` 只来自真实响应标签。公开返回不包含目标 URL、运行凭据。平台按 `probe_id` 选择详情，来源别名相同也不会混合两组结果。
 
 每个入口每 60 秒一次，A3/XPU/DCU 分别使用 UTC 周期内的 0/20/40 秒偏移；新增入口不调整已有偏移，避免改变历史记录的分钟槽位归属。每个入口串行；启动、恢复和错过周期都只等待下一次未来时点，不补发、不立即重试。探测请求使用网关普通业务准入，不申请测试占用、不绕过维护或暂停。请求可能进入已有网关业务统计，最多每个入口每天 1440 次；不为排除这些请求修改现有网关。
 
@@ -10,7 +25,7 @@
 
 写入现有 VM `/api/v1/import` 的 `model_probe_*` 原始样本，标签只有稳定入口 environment；Router 交换不改变入口归属，也不尝试反推历史后端。每次结果使用同一个完成时间戳保存结果类别、请求开始时间、总耗时、首个输出耗时、HTTP 状态。导入设置 5 秒总时限（覆盖完整请求与响应读取），失败留下缺口，不重新生成。停止时正在执行的探测被取消且不记作服务故障。
 
-`GET /api/monitoring/probes` 固定读取最近 24 小时原始导出，不使用 query_range 的向前填充。返回 observed_at/start/end、interval_seconds=60、stale_after_seconds=120，以及四个 services，各含 environment/name/status/latest/records 和 offset_seconds（与 worker 共用调度定义，分别为 0/20/40/50）。记录包含 started_at/finished_at/status/reason/duration_seconds/first_output_seconds/http_status。缺失或矛盾的字段显示 unknown；没有记录或最后结果超过 120 秒时当前状态 unknown，旧结果仍保留原时间。VM 不可达返回 503。
+`GET /api/monitoring/probes` 固定读取最近 24 小时原始导出，不使用 query_range 的向前填充。返回 observed_at/start/end、interval_seconds=60、stale_after_seconds=120，以及登记目录中的 services，各含 environment/name/status/latest/records 和 offset_seconds。未接管目录时返回旧三入口及 0/20/40 秒偏移。记录包含 started_at/finished_at/status/reason/duration_seconds/first_output_seconds/http_status。缺失或矛盾的字段显示 unknown；没有记录或最后结果超过 120 秒时当前状态 unknown，旧结果仍保留原时间。VM 不可达返回 503。
 
 平台 Web 代理同路径，前端打开时每 30 秒读取、切走或隐藏时停止，手动刷新只读结果。时间轴按浏览器本地日期展示当天 00:00—24:00，每点 10 分钟，按左闭右开区间汇总，完整区间对应十次一分钟探测。北京时间每天固定 144 个时间格，未来时间保留空心位置，标注“未到时间”且不可点击。点宽、间距、高度（30px）及自动换行沿用现有样式，页面保留现有 Perses HTTPS 入口。
 
@@ -24,7 +39,9 @@
 
 ## 发布
 
-沿用停机窗口与 `deploy/release.py`，不需要升级网关或修改历史数据。探测目标仅包含 A3、XPU、DCU，从平台“网关与 Router 登记”核对三个业务 URL，按 `deploy/probes.example.json` 准备实际 JSON 配置，不使用 Router 或模型直连地址。配置是入口地址的部署副本，入口地址变更后同步，Router 交换无需修改。
+沿用停机窗口与 `deploy/release.py`，不需要升级网关或修改历史数据。自动接入的 worker 与 API 必须挂载同一 accepted probe catalog、control 与 runtime 状态文件，worker 对 state 具有写权限；controller 根据实际 ack 确认维护暂停。迁移前先停止旧 probe worker，核对并登记旧三入口映射与迁移时刻，再启用受管 worker，避免同入口重复生成。
+
+下列手工配置流程用于尚未接管目录的安装：探测目标仅包含 A3、XPU、DCU，从平台“网关与 Router 登记”核对三个业务 URL，按 `deploy/probes.example.json` 准备实际 JSON 配置，不使用 Router 或模型直连地址。配置是入口地址的部署副本，入口地址变更后同步，Router 交换无需修改。
 
 从四入口配置升级时，先停止 probe worker，再移除实际配置中的 `ppu` 项，更新 API 和 worker 后启动。配置校验要求恰好包含三个保留入口；原有 0/20/40 秒偏移不变，不补发。PPU 历史样本继续保留在 VM 中，查询接口与平台页面不再展示 PPU。此调整不改变 PPU 服务及准入状态。
 
@@ -40,4 +57,4 @@ worker 继续兼容需业务认证的其他入口配置 `{"url": "http://gateway
 
 ## 本地验证
 
-使用项目 `.venv` 运行 `python -m pytest tests/test_probes.py -q`；通过 `scripts/test_local_vm.sh tests/test_probes_vm.py -q` 在可丢弃 VM 中验证真实导入、读取、缺测、过期和部分写入。平台使用对应后端代理测试及浏览器夹具，浏览器仅拦截合成数据，线上真实模型请求在启用验收时执行。
+使用项目 `.venv` 运行 `python -m pytest tests/test_probes.py tests/test_managed_probes.py -q`；通过 `scripts/test_local_vm.sh tests/test_probes_vm.py -q` 在可丢弃 VM 中验证真实导入、读取、缺测、过期和部分写入。受管回归覆盖双层身份、旧历史映射、Router 身份断言、运行许可、真实停止派发确认及暂停区间。平台 `test:browser:probes` 和 `test:browser:monitoring-integration` 覆盖桌面与 iPhone 竖屏，浏览器仅使用合成 API，线上真实模型请求在启用验收时执行。

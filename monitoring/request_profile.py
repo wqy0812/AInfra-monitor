@@ -4,6 +4,7 @@ import json
 import math
 import time
 import httpx
+from . import source_registry
 from fastapi import APIRouter, HTTPException, Request
 
 router = APIRouter()
@@ -11,7 +12,7 @@ from .profile_counters import CounterWindow, profile_values, HISTOGRAMS, COUNTER
 
 
 def validate_environment(environment):
-    if environment not in ('dcu-pd', 'a3-vllm', 'xpu-pd'):
+    if environment not in source_registry.sources():
         raise HTTPException(400, '未知画像环境')
     return environment
 
@@ -118,7 +119,8 @@ async def metrics(service, vm, start, end, backend='', model='', environment='dc
 async def profile_metrics(request: Request, start: float, end: float, backend: str = '', model: str = '', environment: str = 'dcu-pd'):
     from .api import VM
     validate_environment(environment)
-    service = request.app.state.service
+    from .api import selected_service
+    service = selected_service(request, environment)
     validate_window(start, end, backend, model)
     # Reuse the service's global admission limit. Profile queries never materialize into VM.
     try:

@@ -6,9 +6,9 @@ code-eval API boundary; Perses builds selectors from these same field meanings.
 import math
 from urllib.parse import quote
 from .native_rules import PREFIX, EVAL_DELAY_SECONDS, READ_DELAY_SECONDS, MAX_RECORD_AGE_SECONDS
-from . import raw_gauges
+from . import raw_gauges, source_registry
 
-NODES={'dcu-pd':{'prefill':'dcu1','decode':'dcu2'},'a3-vllm':{'prefill':'a3-1','decode':'a3-2'},'xpu-pd':{'prefill':'xpu-2','decode':'xpu-1'}}
+NODES=source_registry.NODES
 POLICY={'schema':'native-1m-v1','window_seconds':60,'record_interval_seconds':5,
         'evaluation_delay_seconds':EVAL_DELAY_SECONDS,'snapshot_delay_seconds':READ_DELAY_SECONDS,
         'snapshot_max_age_seconds':MAX_RECORD_AGE_SECONDS,
@@ -35,7 +35,8 @@ def get(obj,path):
 
 
 def role_of(labels):
-    return labels.get('role') or next((r for r,n in NODES.get(labels.get('environment'),{}).items() if n==labels.get('node')),None)
+    role=labels.get('role')
+    return role if role in ('prefill','decode') else source_registry.role_of(labels.get('environment'), labels.get('node'))
 
 
 def mappings(labels):
@@ -44,17 +45,19 @@ def mappings(labels):
     if metric.startswith(PREFIX) and metric.removeprefix(PREFIX) in raw_gauges.FAMILIES:return []
     name=metric.removeprefix(PREFIX).removeprefix(raw_gauges.PREFIX)
     env=labels.get('environment');role=role_of(labels)
+    baseline=source_registry.adapter_environment(env)
     # Old A3 decode records may still exist in VM. The shared output record is
     # authoritative, including for history; never merge or fall back to its alias.
-    if env=='a3-vllm' and name=='backend_decode_tokens_per_second':return []
-    root='nodes.'+role+'.' if role else None
+    if baseline=='a3-vllm' and name=='backend_decode_tokens_per_second':return []
+    root='nodes.'+role+'.' if role else ('node_details.'+key(labels['node'])+'.'
+        if labels.get('node') in source_registry.source(env)['all_nodes'] else None)
     field=labels.get('field');kind=labels.get('kind');tier=labels.get('tier')
     result=[]
     def add(path,factor=1):result.append((path,factor))
     if root:
         if name.startswith('backend_') and name.endswith('_per_second'):
             add(root+name[len('backend_'):-len('_per_second')])
-            if env=='a3-vllm' and name=='backend_output_tokens_per_second':add(root+'decode_tokens')
+            if baseline=='a3-vllm' and name=='backend_output_tokens_per_second':add(root+'decode_tokens')
         elif name in ('backend_requests_total','backend_input_tokens_total','backend_output_tokens_total'):
             add(root+'counters.'+name[len('backend_'):-len('_total')])
         elif name=='backend_latency_seconds':
@@ -88,7 +91,7 @@ def mappings(labels):
         elif name=='host_filesystem_bytes':add(root+'host.disks.'+key(labels.get('mountpoint',''))+'.'+field)
         elif name.startswith('host_') and name.endswith('_bytes_per_second'):
             add(root+'host.'+name[len('host_'):-len('_bytes_per_second')]+'_rates.'+key(labels.get('device',''))+'.'+field)
-    pre='nodes.prefill.cache_60s.'+('effective.' if env=='a3-vllm' else '')
+    pre='nodes.prefill.cache_60s.'+('effective.' if baseline=='a3-vllm' else '')
     if name=='prefill_cache_tier_ratio':add(pre+tier)
     elif name=='prefill_cache_hit_ratio':add(pre+'ratio')
     elif name=='prefill_effective_tokens':
@@ -110,6 +113,7 @@ def mappings(labels):
 
 def empty_point(environment,ts):
     return {'environment':environment,'ts':ts,'source':'victoriametrics','metric_policy':POLICY,
+            'node_details':{key(node):{'node':node,'role':role} for node,role in source_registry.source(environment)['all_nodes'].items()},
             'nodes':{role:{'node':node,'requests':None,'output_tokens':None,'decode_tokens':None,'cpu':None,
               'cpu_iowait':None,'rate_interval_seconds':60,'latency_window_seconds':60,
               'percentiles':{k:dict.fromkeys(('p50','p95','p99','samples')) for k in ('ttft','itl','e2e')},
@@ -123,6 +127,8 @@ def empty_point(environment,ts):
 
 def points(rows,environment,start,end,step,summary=False):
     result={};seen=set()
+    directory=source_registry.nodes(environment)
+    multi={role for role,names in directory.items() if len(names)>1}
     for row in rows:
         labels=row['metric']
         if labels.get('environment')!=environment:continue
@@ -134,6 +140,16 @@ def points(rows,environment,start,end,step,summary=False):
             point=result.setdefault(ts,empty_point(environment,ts))
             for path,factor in paths:
                 if summary and ('.resources.' in path or '.host.' in path or '.counters.' in path):continue
+                role=role_of(labels)
+                node=labels.get('node')
+                if role in multi and path.startswith('nodes.'+role+'.') and labels.get('monitoring_scope')!='role':
+                    # Keep per-node values separately. Role percentiles and
+                    # ratios must come from pooled raw records, not a Python
+                    # average or the last node encountered.
+                    if node in directory[role]:
+                        path='node_details.'+key(node)+'.'+path.removeprefix('nodes.'+role+'.')
+                    else:
+                        continue
                 identity=(ts,path)
                 # An old single-store JSON field cannot represent two stores.
                 # Never silently choose one or add replicated capacities.
@@ -143,7 +159,7 @@ def points(rows,environment,start,end,step,summary=False):
         for role,node in point['nodes'].items():
             coverage=node['coverage'];expected=coverage.get('expected');available=coverage.get('available')
             coverage['status']='unknown' if expected is None or available is None else 'complete' if available==expected else 'partial'
-            node['cache_60s']['semantics']='xpu-native-prefix-v1' if environment=='xpu-pd' else 'native-1m-v1'
+            node['cache_60s']['semantics']='xpu-native-prefix-v1' if source_registry.adapter_environment(environment)=='xpu-pd' else 'native-1m-v1'
             note='仅汇总当前可用实例；覆盖不完整' if coverage['status']!='complete' else None
             issues=node['quality'].get('cache',{})
             if any(v for v in issues.values() if v is not None):note='缓存计数存在不一致；曲线显示原生计算结果'

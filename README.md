@@ -1,6 +1,8 @@
 # 独立监控
 
-monitoring 采集 DCU、A3、XPU 的模型、主机、加速卡、网关和缓存指标，使用 VictoriaMetrics 保存时序，由官方 vmalert 计算记录规则；monitoring-api 只读提供 latest/history，Perses 直接查询 VM。code-eval 负责消费查询结果，不启动采集，也不保存本项目的监控快照。
+monitoring 按 code-eval 登记目录采集模型、主机、加速卡、网关和缓存指标，使用 VictoriaMetrics 保存时序，由官方 vmalert 计算记录规则；monitoring-api 只读提供 latest/history，Perses 直接查询 VM。首版适配 DCU、A3、XPU，同类新增底座通过独立 controller 自动接入。code-eval 保存权威登记并消费查询结果，采集和时序仍由 monitoring 执行。
+
+自动接入协议、分组件状态、双层探测和维护窗口接管入口见[自动监控](docs/automatic-monitoring.md)。未配置受管目录时保留旧三环境配置，便于配套升级；配置为空目录明确表示没有活动来源。
 
 本文描述仓库当前配置；线上镜像、健康和数据新鲜度须在操作时重新核验。历次部署结论见 [发布归档](docs/releases/README.md)。
 
@@ -8,11 +10,12 @@ monitoring 采集 DCU、A3、XPU 的模型、主机、加速卡、网关和缓�
 
 | 组件 | 配置与职责 |
 | --- | --- |
-| VictoriaMetrics / vmagent | test4 中央存储与采集；固定版本见 `vendor/releases.json`，当前采集目标以 `deploy/scrape.yml` 为准 |
-| monitoring-api | `monitoring/`；来源 IP 白名单、三环境只读 JSON 查询与请求画像查询；配置见 `deploy/start.py central` |
+| VictoriaMetrics / vmagent | test4 中央存储与采集；固定版本见 `vendor/releases.json`，自动模式读取受管 `scrape.json`；未迁移的基线为 `deploy/scrape.yml` |
+| monitoring-api | `monitoring/`；来源 IP 白名单、动态来源只读 JSON 查询与请求画像查询；配置见 `deploy/start.py central` |
+| 接入控制器 | `monitoring/controller.py`；接收 engine 版本化登记，生成采集/规则/Perses，保存应用结果；独立 TLS 鉴权端口 |
 | 节点采集 | node/DCU exporter 及平台原生 HTTP 指标；采集配置保留各平台真实 job 与标签 |
-| Perses | `perses/projects/` 保存分区源定义；发布为 3 个项目、21 张看板、261 个面板，网关与模型推理各一个入口；统一直接使用 VM 数据源 |
-| 原生记录规则 | `monitoring/native_rules.py` 定义 202 条 raw-only 规则；速率和分位数固定 1m 窗口、5s 记录；82 个瞬时值字段由 `monitoring/raw_gauges.py` 直读原始采样，不重复落盘 |
+| Perses | `perses/projects/` 保存分区源定义；旧三环境基线为 21 张看板、261 个面板；新增底座按能力生成项目，网关与模型推理各一个入口；统一直接使用 VM 数据源 |
+| 原生记录规则 | `monitoring/native_rules.py` 定义适配模板，旧三环境基线为 202 条 raw-only 规则，受管规则按拓扑生成；速率和分位数固定 1m 窗口、5s 记录；82 个瞬时值字段由 `monitoring/raw_gauges.py` 直读原始采样，不重复落盘 |
 
 test4 配置的接口为 VM `127.0.0.1:18428`、vmagent `127.0.0.1:18429`、API `:18430`、Perses `:18431`。实际监听、代理和访问控制以目标机配置为准。API 拒绝空白、通配符和网段白名单；默认只允许 IPv4/IPv6 回环，显式调用方通过 `ALLOWED_CLIENTS` 指定。
 
@@ -24,9 +27,9 @@ aigate 拆分后，vmagent 直接访问 `aigate-proxy` 的免认证观测端口�
 
 - `/api/monitoring/latest`：当前快照、源观测时间、模型/主机/缓存指标及存储与积压状态。
 - `/api/monitoring/history`：按环境查询，支持大于 0、最多 720 小时；默认完整数据，`view=summary` 去除逐卡/逐 rank 资源明细，保留聚合数值、空值和断档。返回的是实际已积累历史。
-- `/api/monitoring/probes`：三个网关入口最近 24 小时真实流式请求探测；独立 worker 对每个入口每 60 秒发起一次（三个入口按 0/20/40 秒错开），API 只读、不触发生成。配置、口径与启用步骤见 [服务探测](docs/service-probes.md)。
+- `/api/monitoring/probes`：登记底座与网关入口最近 24 小时真实流式请求探测；独立 worker 对每个目标每 60 秒发起一次（旧三个入口保留 0/20/40 秒偏移），API 只读、不触发生成。配置、口径与启用步骤见 [服务探测](docs/service-probes.md)。
 - `/api/request-profile/metrics`：从 VM 查询网关计数与直方图，按 `environment=dcu-pd|a3-vllm|xpu-pd` 隔离来源，默认 DCU；声明 `counter_method=lifecycle-v2`。
-- `/health`：三环境模型来源、处理进度和错误；缺失必需来源或水位过旧时报告降级。
+- `/health`：已登记模型来源、处理进度和错误；缺失必需来源或水位过旧时报告降级。
 - Perses 通过 VM 读取计算记录和原始瞬时值，`/internal/perses/` 已移除。定义与维护见 [原生记录规则](docs/native-recording-rules.md)。
 
 保留统计对象、单位及 DP/TP/PP 来源身份，采用原生计数器重置和直方图语义，允许部分来源聚合；覆盖与质量单独展示。计算记录启用前和缺口留空，不自动回源或补算；瞬时值始终读取原始采样，因此可以显示记录启用前仍保留的真实历史。变更见 [已批准的 D1–D6](docs/native-standard-review-20261011.md) 和[当前读取方式](docs/native-recording-rules.md)。
