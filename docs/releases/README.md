@@ -1,5 +1,30 @@
 # 发布身份与历史检索
 
+## 2026-10-22 code-eval 登记驱动的自动接入
+
+最终 API/controller 已更新并通过核验，95 目标全部 up，各容器 restart_count=0。平台于北京时间 13:53:47 确认恢复原 `maintenance=false`；修复后的 A3 一小时历史实际返回 HTTP 200，三个 A3 来源分别约 1.04/0.50/0.90 秒，桌面与手机各两次复核通过。
+
+本轮新增 HTTPS/token/IP 白名单控制器，由 code-eval 登记驱动采集配置、原生规则、Perses 和两类探测目录。应用实现为 `b49c19659008cbcf7dcf0653e9cd5fe91c458f2f`，SGLang 指标兼容修复为 `88ca6f216c0bd856621373b9b18ac60100d4ed26`，历史响应组装和完整采集状态发布修复为 `71a581b911cdb5b4ca92adb4335039f351a7ce9f`。源码位于本地 `codex/automatic-monitoring-integration`，未推送；各组件身份分别记录，不能用仓库 HEAD 代替所有运行镜像。
+
+| 组件 | 发布镜像 | 应用源码 |
+| --- | --- | --- |
+| API、controller | `sha256:7a64ca38e555adeaabb17043b0c85252fd5b350a83487c7693327c2041c3f2cd` | `71a581b911cdb5b4ca92adb4335039f351a7ce9f` |
+| probes | `sha256:2ee8561899ad9a110d3c263a5a281b6b78bc48c9bdebacf64f179a4473c79f2e` | `b49c19659008cbcf7dcf0653e9cd5fe91c458f2f` |
+| native vmalert | `sha256:54f478ce5bfaab5fb1f98b73fdacf165e5ffa97c94cfa172af1da110dc5dcf76` | `b49c19659008cbcf7dcf0653e9cd5fe91c458f2f` |
+| vmagent | `sha256:d57065b16cffceb0ae46de4c358121386a7f0a98b381a65f0aa3d2515beeae8b` | 本轮替换配置挂载，复用原二进制 |
+
+统一按停机窗口更新受影响组件，保留 VM 原容器/数据卷、发送缓冲和处理水位。接管原 DCU、A3-1/2、XPU，并由登记自动加入 A3-3/4、A3-5/6。5 来源、88 个登记 exporter、95 个采集目标；原 43 个目标的 URL、有效标签、间隔、超时和过滤规则逐项完全一致，仅新增 52 个目标。原历史没有复制或改写，旧探测停止时间 `1792646681.8726075` 同时写入平台与探测目录作为准确分界。
+
+独立线上核验覆盖 366 条规则、5 项目/35 看板及全部 45 个 Perses 资源摘要；88 入口与 95 目标健康，5 来源 P/D 覆盖完整、采样年龄小于 30 秒，5 底座和 5 入口的正常定时流式探测全部成功且 Router 匹配。PPU 为 `not_configured` 且不在探测目录。TLS 验证、匿名/错误 token 拒绝、私有文件权限、24 小时前历史和缓冲状态通过。Perses 1080p 全部 35 页及修复后 6 个代表页通过，39 个真实查询中 35 个有时序，4 个无业务数据的空集合保留。
+
+现场 SGLang 返回 OpenMetrics 下划线转义名称，首版检查器误判为类型不符；修复同时支持冒号与下划线。新 A3 的 18082/18084 原白名单缺少 test4，按来源精确补入，控制端口仍拒绝。ACL unit restart 意外触发 A3-3/5 的 switch/proxy 级联重启（北京时间 13:35:26–29），随后恢复绑定、准入和正常探测；模型 ID/PID 保持。日志不能证明停止瞬间没有在途请求，影响与失败证据保留，维护说明已改为直接执行规则脚本。A3 本轮没有新增目录。
+
+平台复测发现 A3 一小时历史 503：7 个 VM 查询各 0.039–0.090 秒，Python 组装却为 361 个时间点初始化 24,126 次、重建来源 52,704 次，插桩耗时 10.613 秒。修复按时间点初始化、按序列解析路径及角色；真实 79 条序列/360 点的前后完整结果 SHA-256 相同，本地组装从 2.428 秒降到 0.055 秒。控制器同时改为采集读回后原子发布完整状态，避免异步中间态丢失 collection 字段或误报健康。未放宽超时、历史缺口或指标新鲜度口径。
+
+发布前全量 724 passed、654 条环境条件 skipped；另执行真实 VM 回归与完整 VM/vmagent/vmalert/合成 Proxy/Perses 端到端验收。现场修复相关 144 passed、8 条需隔离 VM 的用例 skipped，并以真实线上 payload 做等价核验。最终服务与平台恢复回执在 `evidence/automatic-monitoring-20261022/`，本轮失败日志、修复前审计与计时证据分别保留，不覆盖失败结论。配套 code-eval 应用为 `fe361c68eda8fc704b56666ed7a61e6c9fabdf11`，平台迁移、桌面及手机验收见其发布记录。
+
+test4 新增 `/data2/monitoring/release/automatic-monitoring-20261022/`（含 source）、`/data2/monitoring/evidence/automatic-monitoring-20261022/`（构建、安装及两轮修复证据）、`/data2/monitoring/control/` 和 `/data2/monitoring/state/managed/`（目录、规则、凭据、二进制和运行状态）。完整目录清单保存于本批 `created-directories.json`；token 和私有部署配置不进入公开证据。
+
 ## 2026-10-21 底座目录配套监控来源接口
 
 源码 `eeebf3454fe9c11d6ca6b416eae0d172ee43c974` 已推送 main，test4 仅替换 monitoring-api。固定基底为 `sha256:b69a6553ec3a25e6260298bf1dd46bcda4e6b29163d454e4171f2c1bddecc8e7`，最终镜像为 `sha256:24e6e5f0c09ad40829976a696443c6cc658bb15295826283532691c51cdb8e7e`。使用通用 api-image 工具按精确提交、精确依赖禁网构建，36 个运行包文件与输入清单一致；API 运行参数、环境、HostConfig 和 state 挂载保持，restart_count=0。
