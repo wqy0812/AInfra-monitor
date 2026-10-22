@@ -58,6 +58,7 @@ class ComponentProbe:
         config = container['Config']
         args = (config.get('Entrypoint') or []) + (config.get('Cmd') or [])
         env = dict(x.split('=', 1) for x in config.get('Env', []) if '=' in x)
+        self.managed_probes = bool(env.get('MONITORING_PROBE_CATALOG_FILE') or env.get('MONITORING_CATALOG_FILE'))
         if name in ('monitoring-api', 'monitoring-probes', 'monitoring-controller'):
             host, port = option(args, '--host'), option(args, '--port')
             require(host and port, 'Missing API listener arguments')
@@ -103,7 +104,10 @@ class ComponentProbe:
             require(fetch('/health', True).get('status') == 'ok', 'Controller unavailable')
         elif self.name == 'monitoring-probes':
             value = fetch('/health', True)
-            require(value['status'] == 'ok' and value['targets'] == 3, 'Probe worker or VM unavailable')
+            targets = value.get('targets')
+            valid = (value.get('mode') == 'managed' and type(targets) is int and targets >= 0
+                     and type(value.get('catalog_revision')) is int) if self.managed_probes else targets == 3
+            require(value['status'] == 'ok' and valid, 'Probe worker or VM unavailable')
         elif self.name == 'monitoring-api':
             require(fetch('/health', True)['status'] == 'ok', 'API health degraded')
             for environment in ('dcu-pd', 'a3-vllm', 'xpu-pd'):

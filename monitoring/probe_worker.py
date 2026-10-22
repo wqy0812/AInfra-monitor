@@ -222,6 +222,7 @@ class ManagedProbes:
         from . import probe_catalog
         self.client, self.vm = client, vm
         self.targets, self.due, self.running = {}, {}, {}
+        self.rounds, self.outcomes, self.coverage = {}, {}, {}
         self.error = None
         self.catalog_revision = None
         self.offset_path = Path(os.environ.get('STATE_DIR', '/state')) / 'probe-offsets.json'
@@ -246,14 +247,79 @@ class ManagedProbes:
             intervals.append({'start': now, 'end': None, 'reason': reason})
 
     async def execute(self, target):
+        identity = target['probe_id']
+        scheduled = target['scheduled_at']
+        round_start = math.floor(scheduled / INTERVAL) * INTERVAL
+        outcome = None
         try:
             result = await probe(self.client, target['url'], expected_router=target.get('expected_router', ''))
+            result.update(scheduled_at=scheduled, source_probe_id=identity,
+                          observation_source='switch' if target['probe_kind'] == 'gateway' else 'direct')
+            body = samples(target.get('environment', ''), result, target=target)
+            shared = []
+            if target['probe_kind'] == 'gateway' and result['reason'] == 'success' and result.get('actual_router_id'):
+                for foundation in target.get('foundation_snapshots', []):
+                    if foundation['router_id'] != result['actual_router_id']:
+                        continue
+                    shared.append(foundation)
+                    body += samples(foundation.get('environment', ''),
+                                    result | {'observation_source': 'switch_shared'}, target=foundation)
             async with asyncio.timeout(IMPORT_TIMEOUT):
                 response = await self.client.post(self.vm + '/api/v1/import',
-                    content=samples(target.get('environment', ''), result, target=target), timeout=IMPORT_TIMEOUT)
+                    content=body, timeout=IMPORT_TIMEOUT)
                 response.raise_for_status()
+            outcome = result
+            for foundation in shared:
+                key = self.signature(foundation)
+                self.coverage[key] = max(round_start, self.coverage.get(key, 0))
         except Exception as error:
-            LOG.error('Probe observation not stored: %s (%s)', target['probe_id'], type(error).__name__)
+            LOG.error('Probe observation not stored: %s (%s)', identity, type(error).__name__)
+        finally:
+            if target['probe_kind'] == 'gateway':
+                self.outcomes[(identity, round_start)] = (self.signature(target), outcome)
+
+    @staticmethod
+    def signature(target):
+        return target.get('router_id'), target['url']
+
+    def launch(self, target, scheduled):
+        snapshot = dict(target, scheduled_at=scheduled)
+        if target['probe_kind'] == 'gateway':
+            snapshot['foundation_snapshots'] = [dict(f) for f in self.targets.values()
+                if f['probe_kind'] == 'foundation' and f['dispatch_status'] == 'active']
+        self.running[target['probe_id']] = asyncio.create_task(self.execute(snapshot))
+
+    def resolve_rounds(self, now):
+        for key, pending in list(self.rounds.items()):
+            identity, minute = key
+            target = self.targets.get(identity)
+            if (not target or target['dispatch_status'] != 'active'
+                    or self.signature(target) != pending['signature']):
+                self.rounds.pop(key)
+                continue
+            if self.coverage.get(self.signature(target), -1) >= minute:
+                self.rounds.pop(key)
+                continue
+            waiting = False
+            deadline = pending['scheduled_at']
+            for gateway in pending['gateways']:
+                # A rebind/removal ends this source's coverage; old requests still
+                # finish and retain their actual response identity in history.
+                current = self.targets.get(gateway['probe_id'])
+                if not current or self.signature(current) != self.signature(gateway) or current['dispatch_status'] != 'active':
+                    continue
+                source_deadline = minute + gateway['offset_seconds'] + TIMEOUT + IMPORT_TIMEOUT
+                deadline = max(deadline, source_deadline)
+                observation = self.outcomes.get((gateway['probe_id'], minute))
+                if (not observation or observation[0] != self.signature(gateway)) and now < source_deadline:
+                    waiting = True
+            if waiting:
+                continue
+            self.rounds.pop(key)
+            # No catch-up generation after a suspended process, and no overlap
+            # with a previous direct request that is still draining.
+            if now - deadline < 5 and identity not in self.running:
+                self.launch(target, pending['scheduled_at'])
 
     async def tick(self, now=None):
         from . import probe_catalog
@@ -275,6 +341,7 @@ class ManagedProbes:
                        for target in self.targets.values()]
         current = {target['probe_id']:target for target in targets}
         changed_offsets = False
+        ready = []
         for identity, target in current.items():
             if identity not in self.offsets:
                 self.offsets[identity] = target['offset_seconds']
@@ -290,13 +357,25 @@ class ManagedProbes:
                 due = self.due[identity]
                 self.due[identity] = next_run(now, target['offset_seconds'])
                 if now-due < 5 and task is None:
-                    self.running[identity] = asyncio.create_task(self.execute(dict(target)))
+                    ready.append((target, due))
         if changed_offsets:
             probe_catalog.atomic_json(self.offset_path, self.offsets)
         for identity in self.targets.keys() - current.keys():
             self.due.pop(identity, None)
             self.pause_history(identity, {'pause_reason':'disabled'}, now)
         self.targets = current
+        for target, due in ready:
+            if target['probe_kind'] == 'gateway':
+                self.launch(target, due)
+            else:
+                minute = math.floor(due / INTERVAL) * INTERVAL
+                gateways = [dict(g) for g in current.values() if g['probe_kind'] == 'gateway'
+                            and g['dispatch_status'] == 'active' and g['router_id'] == target['router_id']]
+                self.rounds[(target['probe_id'], minute)] = {
+                    'scheduled_at': due, 'signature': self.signature(target), 'gateways': gateways}
+        self.resolve_rounds(now)
+        self.outcomes = {key:value for key,value in self.outcomes.items() if key[1] >= now-180}
+        self.coverage = {key:value for key,value in self.coverage.items() if value >= now-180}
         # Written after dispatch decisions. Matching operation IDs prove the
         # pause request has reached the scheduler, even if an old request drains.
         pauses = control.get('paused_routers') or {}
@@ -359,5 +438,6 @@ async def health():
     except httpx.HTTPError:
         ready = False
     return JSONResponse({'status': 'ok' if ready else 'unavailable',
-                         'targets': len(managed.targets) if managed else len(TARGETS)},
+                         'targets': len(managed.targets) if managed else len(TARGETS),
+                         **({'mode': 'managed', 'catalog_revision': managed.catalog_revision} if managed else {})},
                         status_code=200 if ready else 503)

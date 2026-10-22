@@ -27,7 +27,7 @@ aigate 拆分后，vmagent 直接访问 `aigate-proxy` 的免认证观测端口�
 
 - `/api/monitoring/latest`：当前快照、源观测时间、模型/主机/缓存指标及存储与积压状态。
 - `/api/monitoring/history`：按环境查询，支持大于 0、最多 720 小时；默认完整数据，`view=summary` 去除逐卡/逐 rank 资源明细，保留聚合数值、空值和断档。返回的是实际已积累历史。
-- `/api/monitoring/probes`：登记底座与网关入口最近 24 小时真实流式请求探测；独立 worker 对每个目标每 60 秒发起一次（旧三个入口保留 0/20/40 秒偏移），API 只读、不触发生成。配置、口径与启用步骤见 [服务探测](docs/service-probes.md)。
+- `/api/monitoring/probes`：登记底座与网关入口最近 24 小时真实流式请求探测；独立 worker 每 60 秒探测入口，成功共享给对应底座，未覆盖或异常时独立探测底座（旧三个入口保留 0/20/40 秒偏移），API 只读、不触发生成。配置、口径与启用步骤见 [服务探测](docs/service-probes.md)。
 - `/api/request-profile/metrics`：从 VM 查询网关计数与直方图，按 `environment=dcu-pd|a3-vllm|xpu-pd` 隔离来源，默认 DCU；声明 `counter_method=lifecycle-v2`。
 - `/health`：已登记模型来源、处理进度和错误；缺失必需来源或水位过旧时报告降级。
 - Perses 通过 VM 读取计算记录和原始瞬时值，`/internal/perses/` 已移除。定义与维护见 [原生记录规则](docs/native-recording-rules.md)。

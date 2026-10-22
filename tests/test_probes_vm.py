@@ -60,3 +60,35 @@ async def test_probe_import_export_preserves_failure_gaps_and_missing_fields():
 async def read_after_expiry(vm, now):
     async with httpx.AsyncClient(trust_env=False) as client:
         return await probes.history(client, vm, now)
+
+
+@pytest.mark.asyncio
+async def test_managed_shared_observation_roundtrip_and_partial_provenance(monkeypatch, tmp_path):
+    import json
+    from monitoring import probe_catalog
+    vm = os.environ.get('MONITORING_TEST_VM_URL')
+    if not vm:
+        pytest.skip('Use scripts/test_local_vm.sh for the real VM test')
+    now = int(time.time())
+    value = {'schema_version':1, 'revision':1, 'foundations':[{'id':'shared-vm','name':'Shared',
+        'monitoring_adapter':'a3-vllm-v1', 'router':{'id':'r-vm','proxy_url':'http://unused.test'}}], 'gateways':[]}
+    catalog_path = tmp_path/'catalog.json'
+    catalog_path.write_text(json.dumps(value))
+    monkeypatch.setenv('MONITORING_CATALOG_FILE', str(catalog_path))
+    monkeypatch.setenv('MONITORING_PROBE_CATALOG_FILE', str(catalog_path))
+    target = probe_catalog.targets(value=value, now=now)[0]
+    result = {'reason':'success','started_at':now-4,'finished_at':now-3,'duration_seconds':1,
+        'first_output_seconds':.1,'http_status':200,'actual_router_id':'r-vm',
+        'observation_source':'switch_shared','source_probe_id':'gateway:vm','scheduled_at':now-5}
+    raw = probes.samples('',result,target=target)
+    partial = probes.samples('',result|{'finished_at':now-1},target=target).splitlines()[:-1]
+    async with httpx.AsyncClient(trust_env=False) as client:
+        (await client.post(vm+'/api/v1/import',content=raw+'\n'.join(partial)+'\n')).raise_for_status()
+        (await client.get(vm+'/internal/force_flush')).raise_for_status()
+        data = await probes.history(client,vm,now=now)
+    records = data['services'][0]['records']
+    assert records[0]['status'] == 'success'
+    assert records[0]['scheduled_at'] == now-5
+    assert records[0]['source_probe_id'] == 'gateway:vm'
+    assert records[0]['actual_router_id'] == 'r-vm'
+    assert records[1]['status'] == 'unknown'

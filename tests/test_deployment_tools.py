@@ -559,3 +559,18 @@ def test_replacement_uses_new_image_metadata_without_losing_runtime_labels(monke
     labels=docker.containers['monitoring-api']['Config']['Labels']
     assert labels['org.opencontainers.image.revision']=='new' and labels['monitoring.source-sha256']=='new-sha'
     assert labels['monitoring.owner']=='independent' and labels['custom-label']=='retain'
+
+
+@pytest.mark.parametrize('targets', [0, 10, 12])
+def test_managed_probe_readiness_accepts_dynamic_catalog(monkeypatch, targets):
+    state = container('monitoring-probes')
+    state['Config']['Cmd'] = ['-m','uvicorn','monitoring.probe_worker:app','--host','127.0.0.1','--port','18433']
+    state['Config']['Env'] = ['MONITORING_PROBE_CATALOG_FILE=/state/probes-catalog.json']
+    probe = cv.ComponentProbe('monitoring-probes',state)
+    payload = {'status':'ok','targets':targets,'mode':'managed','catalog_revision':3}
+    monkeypatch.setattr(cv.urllib.request,'build_opener',lambda *a:SimpleNamespace(
+        open=lambda *a,**k:io.BytesIO(json.dumps(payload).encode())))
+    probe.check(cv.time.monotonic()+10)
+    payload.pop('catalog_revision')
+    with pytest.raises(RuntimeError):
+        probe.check(cv.time.monotonic()+10)

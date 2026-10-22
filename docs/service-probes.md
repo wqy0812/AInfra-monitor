@@ -1,8 +1,8 @@
 # 模型服务真实请求探测
 
-启用[自动监控目录](automatic-monitoring.md)后，目标来自 code-eval：底座固定 Proxy 与网关入口分别探测和保存历史，目录不再限制为三个目标。维护暂停、30 秒底座运行许可和显式旧入口历史映射以自动监控协议为准。下文的三入口 JSON 是未设置受管目录时的旧部署配置，配套接管后不再手工维护。
+启用[自动监控目录](automatic-monitoring.md)后，目标来自 code-eval：优先探测网关入口，成功结果共享给实际经过的底座固定 Proxy/Router，未覆盖或失败时独立探测底座，目录不再限制为三个目标。维护暂停、30 秒底座运行许可和显式旧入口历史映射以自动监控协议为准。下文的三入口 JSON 是未设置受管目录时的旧部署配置，配套接管后不再手工维护。
 
-本功能由 monitoring 的独立 `monitoring-probes` 进程执行，平台 Web 只读展示。已实现由 code-eval 登记自动生成底座与网关入口两组探测；是否已启用以实际发布记录为准。
+本功能由 monitoring 的独立 `monitoring-probes` 进程执行，平台 Web 只读展示。已实现由 code-eval 登记自动生成底座与网关入口两组观测；是否已启用以实际发布记录为准。
 
 ## 自动接入与身份
 
@@ -10,12 +10,12 @@
 
 - 底座使用 `foundation:<id>` 为 `probe_id`，`probe_kind=foundation`，向固定 Router 的 Proxy 业务地址发送请求，附带 `X-Aigate-Expected-Router` 并核对 `X-Aigate-Backend`。缺失或不一致的响应身份记为 `identity_mismatch`。必须已选择支持的监控适配模板、启用底座并登记 Router 业务地址才执行；资源 exporter 的 URL 不用于生成请求。
 - 入口使用 `gateway:<id>`，`probe_kind=gateway`，访问登记的业务地址。只接入属于已登记底座的 Router 入口；未绑定入口显示待登记，其他已分配但与底座无关的入口不自动恢复探测。入口响应携带的实际 Router 随结果保存；没有该响应信息时保留空值，不用当前绑定解释历史。
-- 每个目标每 60 秒一次，两组分别发起真实模型请求，沿用 64 Token 输出预算、50 秒时限和完整 SSE 判定。新底座使用稳定的奇数秒偏移，新入口使用稳定的偶数秒偏移，worker 将偏移持久化在 `STATE_DIR/probe-offsets.json`。同一目标串行，新增目标、恢复或配置变化等待下一个未来时点。
+- 网关入口每 60 秒一次；底座按同一分钟轮次等待关联入口结果，任一入口完整 SSE 成功且实际 Router 匹配时共享成功，不额外生成。全部入口失败、缺测、身份无法确认或没有关联入口时，通过固定 Proxy 独立探测，每轮最多一次；派发前检查更新轮次的成功覆盖。切流后失去覆盖的 Router 恢复独立探测，入口和底座失败分别保存。同目标保持串行，不补发已错过轮次，沿用 64 Token 输出预算、50 秒时限和完整 SSE 判定。新底座使用稳定的奇数秒偏移，新入口使用稳定的偶数秒偏移，worker 将偏移持久化在 `STATE_DIR/probe-offsets.json`。同一目标串行，新增目标、恢复或配置变化等待下一个未来时点。
 - 维护通过 controller 的显式 pause/resume 接口控制。worker 每秒读取 `MONITORING_PROBE_CONTROL_FILE`（默认 `STATE_DIR/probes-control.json`），根据 `paused_routers` 停止新底座请求。controller 只有读到 worker 在 `MONITORING_PROBE_STATUS_FILE`（默认 `STATE_DIR/probes-runtime.json`）写入的对应操作及新观察时间才确认停止派发。已发起请求按原时限收尾。
 - controller 的 `heartbeat_at` 超过 30 秒未续期时，底座探测暂停；入口继续走业务入口自身的准入。暂停不会伪造一次服务失败。worker 保留最近两天的暂停区间，页面将对应计划槽位标成暂停，实际失败记录仍具有优先级。
 - 迁移旧三入口历史须在对应 gateway 明确登记 `legacy_probe_environment` 和 `probe_migrated_at`。仅将迁移时间之前、没有 `probe_id` 标签的旧样本接回该入口组；同一旧来源只能映射一个网关。旧样本不会被解释为底座探测。已迁移 A3/XPU/DCU 入口沿用 0/20/40 秒偏移。
 
-受管 `GET /api/monitoring/probes` 返回 `probe_schema=managed-v1`，`services` 中包含 `probe_id`、`probe_kind`、所属底座或入口、`dispatch_status`、`pause_reason`、`pause_intervals` 及原有记录字段。`records[].actual_router_id` 只来自真实响应标签。公开返回不包含目标 URL、运行凭据。平台按 `probe_id` 选择详情，来源别名相同也不会混合两组结果。
+受管 `GET /api/monitoring/probes` 返回 `probe_schema=managed-v1`，`services` 中包含 `probe_id`、`probe_kind`、所属底座或入口、`dispatch_status`、`pause_reason`、`pause_intervals` 及原有记录字段。`records[].actual_router_id` 只来自真实响应标签。新记录增加 `observation_source=switch|switch_shared|direct`、`source_probe_id` 和 `scheduled_at`。共享记录保留来源请求的真实开始/结束时间和整条 switch 链路耗时；同批导入入口及底座观测。底座归属取派发时的目录快照与实际响应身份，不按后来绑定重解释历史。共享覆盖不属于暂停。新记录缺少计划时间或其他必要字段时显示 unknown，旧五字段记录继续读取。公开返回不包含目标 URL、运行凭据。平台按 `probe_id` 选择详情，来源别名相同也不会混合两组结果。
 
 每个入口每 60 秒一次，A3/XPU/DCU 分别使用 UTC 周期内的 0/20/40 秒偏移；新增入口不调整已有偏移，避免改变历史记录的分钟槽位归属。每个入口串行；启动、恢复和错过周期都只等待下一次未来时点，不补发、不立即重试。探测请求使用网关普通业务准入，不申请测试占用、不绕过维护或暂停。请求可能进入已有网关业务统计，最多每个入口每天 1440 次；不为排除这些请求修改现有网关。
 
@@ -27,15 +27,11 @@
 
 `GET /api/monitoring/probes` 固定读取最近 24 小时原始导出，不使用 query_range 的向前填充。返回 observed_at/start/end、interval_seconds=60、stale_after_seconds=120，以及登记目录中的 services，各含 environment/name/status/latest/records 和 offset_seconds。未接管目录时返回旧三入口及 0/20/40 秒偏移。记录包含 started_at/finished_at/status/reason/duration_seconds/first_output_seconds/http_status。缺失或矛盾的字段显示 unknown；没有记录或最后结果超过 120 秒时当前状态 unknown，旧结果仍保留原时间。VM 不可达返回 503。
 
-平台 Web 代理同路径，前端打开时每 30 秒读取、切走或隐藏时停止，手动刷新只读结果。时间轴按浏览器本地日期展示当天 00:00—24:00，每点 10 分钟，按左闭右开区间汇总，完整区间对应十次一分钟探测。北京时间每天固定 144 个时间格，未来时间保留空心位置，标注“未到时间”且不可点击。点宽、间距、高度（30px）及自动换行沿用现有样式，页面保留现有 Perses HTTPS 入口。
+平台 Web 代理同路径，每 30 秒只读刷新，切走或隐藏时停止；手动刷新不触发生成。保留底座服务和网关入口两组，用自适应多列紧凑卡片显示最近 6 小时。桌面 1280×720 可排三列，手机竖屏单列。卡片保留服务名、状态、来源、最近观测时间和时间轴，详情展示来源探测 ID、计划时间、真实请求时间、耗时、HTTP 状态与实际 Router。
 
-点的颜色按失败优先：有任一次失败为红色；无失败但有缺测、等待结果或不完整记录为灰色；已到计划时间的探测全部成功才为绿色。未来分钟不参与汇总；无结果的槽位在下次计划时间之前显示“等待结果”，到下次计划时间仍无结果则显示“缺测”。当天已到计划时间的格始终保留，不再隐藏无结果的当前格。
+时间轴使用滚动的 `[当前时间−6小时，当前时间]`，每点 10 分钟，首尾截取未满区间；通常有 37 点，恰好十分钟边界时为 36 点。跨午夜连续展示。新记录按来源计划时间归属分钟，避免把 switch 的偏移套入底座偏移；旧记录沿用实际开始时间减原偏移归槽，保留提前一秒容差。结果读取截止时间不随本地时钟伪增。尚未到期分钟不参与汇总，当前已到期无结果的槽位先显示等待，到下一周期仍无结果才显示缺测。
 
-前端从 API 读取 interval_seconds、offset_seconds 和 stale_after_seconds，10 分钟展示粒度独立固定。按实际请求开始时间归属日期，再减去入口偏移确定分钟槽位，允许计时器提前 1 秒的容差且不跨日期移动；开始时间无效时按结束时间兜底。不完整记录仍为 unknown。跨分钟或跨 10 分钟完成的探测更新原槽位；同槽位多个记录全部保留，有失败不能被后来的成功覆盖。跨零点完成的请求归属于开始日期，不计入次日时间轴；本页只展示当天，不增加历史日期选择。
-
-日期在本地午夜自动切换，即使新读取尚未完成或读取失败也不把昨天的格子显示为今天；旧日期的详情随之关闭。等待与缺测状态以最近一次读取的 end 为准，随每 30 秒读取或手动刷新更新。顶部最近结果独立使用 API 的 latest 和 120 秒新鲜度，跨零点仍可显示昨天开始的最新请求结果。点击时间点后按时间排序列出所有实际探测的开始时间（精确到秒）与成功、失败或记录不完整状态；缺测和等待行显示计划时间。点击实际记录后自动滚动到详情，查看开始/结束时间、首个输出耗时、总耗时、HTTP 状态和原因。弹窗及选中的记录详情随读取更新。
-
-切换前当天的五分钟原始记录也按新的采样周期判断完整性，不补造历史。旧时段通常因分钟记录不足显示灰色，有失败则仍显示红色；当天实际时间与结果保留，次日自然切换为新日期。不增加频率切换边界或历史迁移；API 仍返回最近 24 小时原始记录，页面消费其中属于今天的记录，VM 历史保持不变。平台应与 monitoring API/worker 配套升级，先更新 monitoring；本地修改和验证不代表已经部署。
+颜色按失败优先：有任一次失败为红色；无失败但有缺测、等待或记录不完整为灰色；全部已到期记录成功为绿色，维护暂停黄色。共享结果与独立结果均保留，同槽位失败不能被成功覆盖。详情按来源与完成时间区分记录，随刷新更新，选中区间移出最近 6 小时后关闭。API 继续返回最近 24 小时原始记录，不改写旧历史或补造共享结果。
 
 ## 发布
 
@@ -57,4 +53,4 @@ worker 继续兼容需业务认证的其他入口配置 `{"url": "http://gateway
 
 ## 本地验证
 
-使用项目 `.venv` 运行 `python -m pytest tests/test_probes.py tests/test_managed_probes.py -q`；通过 `scripts/test_local_vm.sh tests/test_probes_vm.py -q` 在可丢弃 VM 中验证真实导入、读取、缺测、过期和部分写入。受管回归覆盖双层身份、旧历史映射、Router 身份断言、运行许可、真实停止派发确认及暂停区间。平台 `test:browser:probes` 和 `test:browser:monitoring-integration` 覆盖桌面与 iPhone 竖屏，浏览器仅使用合成 API，线上真实模型请求在启用验收时执行。
+使用项目 `.venv` 运行 `python -m pytest tests/test_probes.py tests/test_managed_probes.py tests/test_switch_first_probes.py -q`；通过 `scripts/test_local_vm.sh tests/test_probes_vm.py -q` 在可丢弃 VM 中验证真实导入、读取、缺测、过期和部分写入。受管回归覆盖双层身份、旧历史映射、Router 身份断言、运行许可、真实停止派发确认及暂停区间。平台 `test:browser:probes` 和 `test:browser:monitoring-integration` 覆盖桌面与 iPhone 竖屏，浏览器仅使用合成 API，线上真实模型请求在启用验收时执行。

@@ -16,6 +16,7 @@ OFFSETS = {'a3-vllm': 0, 'xpu-pd': 20, 'dcu-pd': 40}
 REASONS = ('success', 'http_error', 'timeout', 'connection_error', 'stream_error',
            'invalid_stream', 'empty_output', 'incomplete_stream', 'identity_mismatch')
 FIELDS = ('result', 'started_at_seconds', 'duration_seconds', 'first_output_seconds', 'http_status')
+OPTIONAL_FIELDS = ('scheduled_at_seconds',)
 PREFIX = 'model_probe_'
 router = APIRouter()
 
@@ -33,9 +34,16 @@ def samples(environment, result, *, target=None):
             if target.get(name): labels[name] = target[name]
         if result.get('actual_router_id'):
             labels['actual_router_id'] = result['actual_router_id']
+        for name in ('observation_source', 'source_probe_id'):
+            if result.get(name):
+                labels[name] = result[name]
+    fields = FIELDS
+    if result.get('scheduled_at') is not None:
+        fields += OPTIONAL_FIELDS
+        values += (result['scheduled_at'],)
     return '\n'.join(json.dumps({'metric': {'__name__': PREFIX + field, **labels},
                                  'values': [value], 'timestamps': [stamp]})
-                     for field, value in zip(FIELDS, values)) + '\n'
+                     for field, value in zip(fields, values)) + '\n'
 
 
 def decode(raw, start, end, *, targets=None):
@@ -57,7 +65,7 @@ def decode(raw, start, end, *, targets=None):
         if old_target:
             identity = old_target['probe_id']
         field = labels.get('__name__', '').removeprefix(PREFIX)
-        if identity not in observations or field not in FIELDS:
+        if identity not in observations or field not in FIELDS + OPTIONAL_FIELDS:
             continue
         target = by_id[identity]
         if managed and not old_target and labels.get('probe_kind') != target['probe_kind']:
@@ -70,11 +78,13 @@ def decode(raw, start, end, *, targets=None):
                 continue
             if old_target and ts >= old_target['probe_migrated_at']:
                 continue
-            point = observations[identity].setdefault(ts, {})
-            actual = labels.get('actual_router_id') or None
-            if 'actual_router_id' in point and point['actual_router_id'] != actual:
-                point['invalid'] = True
-            point['actual_router_id'] = actual
+            source = labels.get('source_probe_id') or ''
+            point = observations[identity].setdefault((ts, source), {})
+            for name in ('actual_router_id', 'observation_source', 'source_probe_id'):
+                value_label = labels.get(name) or None
+                if name in point and point[name] != value_label:
+                    point['invalid'] = True
+                point[name] = value_label
             # Conflicting duplicate series must never produce a green result.
             if field in point and point[field] != value:
                 point['invalid'] = True
@@ -82,7 +92,7 @@ def decode(raw, start, end, *, targets=None):
     services = []
     for target in targets:
         records = []
-        for ts, values in sorted(observations[target['probe_id']].items()):
+        for (ts, _), values in sorted(observations[target['probe_id']].items()):
             valid = (not values.get('invalid') and all(k in values and math.isfinite(values[k]) for k in FIELDS))
             if valid:
                 code, started, duration, first, status = (values[k] for k in FIELDS)
@@ -90,6 +100,16 @@ def decode(raw, start, end, *, targets=None):
                          and 0 <= duration and (first == -1 or 0 <= first <= duration)
                          and status.is_integer() and (status == 0 or 100 <= status <= 599)
                          and (code != 0 or (first >= 0 and 200 <= status < 300)))
+            provenance = values.get('observation_source')
+            scheduled = values.get('scheduled_at_seconds')
+            if provenance:
+                valid = (valid and provenance in ('switch', 'switch_shared', 'direct')
+                         and isinstance(values.get('source_probe_id'), str)
+                         and isinstance(scheduled, (float, int)) and math.isfinite(scheduled)
+                         and 0 < scheduled <= ts + .001)
+                if provenance == 'switch_shared':
+                    valid = (valid and code == 0 and bool(values.get('actual_router_id'))
+                             and values['source_probe_id'].startswith('gateway:'))
             record = {'finished_at': ts, 'started_at': started if valid else None,
                             'status': ('success' if code == 0 else 'failure') if valid else 'unknown',
                             'reason': REASONS[int(code)] if valid else 'incomplete_observation',
@@ -98,6 +118,8 @@ def decode(raw, start, end, *, targets=None):
                             'http_status': int(status) if valid and status else None}
             if managed:
                 record['actual_router_id'] = values.get('actual_router_id')
+                record.update(observation_source=provenance, source_probe_id=values.get('source_probe_id'),
+                              scheduled_at=scheduled if valid else None)
             records.append(record)
         latest = records[-1] if records else None
         from .probe_catalog import public
@@ -114,7 +136,7 @@ async def history(client, vm, now=None):
     start = end - 86400
     from . import probe_catalog
     targets = probe_catalog.targets(now=end)
-    family = '__name__=~"model_probe_(' + '|'.join(FIELDS) + ')"'
+    family = '__name__=~"model_probe_(' + '|'.join(FIELDS + OPTIONAL_FIELDS) + ')"'
     if targets is None:
         selectors = ['{' + family + ',environment=~"' + '|'.join(env for env, _ in TARGETS) + '"}']
     else:
