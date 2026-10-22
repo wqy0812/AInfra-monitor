@@ -1,5 +1,19 @@
 # 发布身份与历史检索
 
+## 2026-10-22 switch 优先的链路共享探测
+
+已在 test4 更新 monitoring-api 与 monitoring-probes，应用源码 `b2933af18c687d610e583659be9ec88cf04c63a0`，镜像均为 `sha256:f8f919d9127865ac8eaf46d592e537aafb950d3c810a2960284552a4bdfe2776`，固定基底 `sha256:7a64ca38e555adeaabb17043b0c85252fd5b350a83487c7693327c2041c3f2cd`。两个运行容器各 40 个源码/资源文件与构建输入逐项一致，restart_count=0；controller、VM、vmagent、vmalert、Perses 与登记目录保持既有部署。
+
+入口每分钟优先发起真实 SSE 请求，成功后按响应实际 Router 及派发时底座快照写入共享观测。未覆盖、入口失败或缺测时才派发独立底座请求；维护、许可和串行约束保留。观测新增来源、来源 ID 和计划时间，旧记录继续读取。部署工具的受管 worker 健康校验改为动态目录，旧三入口模式仍严格校验三个目标。
+
+上线自然定时观测核对北京时间 17:33—17:38 六个完整分钟：每分钟 5 个 switch 请求、5 份共享底座观测、0 个独立请求，最新 10 个服务全部成功。启动的首个不完整周期保留一次真实独立探测，不补造旧入口的请求或共享结果。没有为验收额外生成模型请求或执行真实切流/故障注入。
+
+相关回归 194 passed，真实 VM 2 passed，包含 VM/vmagent/vmalert/Proxy/Perses 的完整受管生命周期 1 passed。首次生命周期测试的工作区不在 Docker 共享目录内，转入已共享的 `monitoring/work/switch-first-e2e` 后通过。切流、失败恢复、身份缺失、迟到结果和串行派发使用合成服务回归；真实模型仅消费上线定时探测。
+
+配套 code-eval Web 应用 `c44ebec12d35eab7fb9695ffe7407047b505e59c` 展示最近 6 小时紧凑卡片，桌面三列、手机单列并标明共享来源。前端 65 项单测、lint、构建以及合成/线上桌面 1280×720 与 390×844 触控模拟通过。平台按同一停机窗口完成核验并恢复原准入状态。
+
+新增 test4 `/data2/monitoring/releases/switch-first-probes-20261022/`，包含 source、build、api-window、probes-window 和 checks。公开运行字节与观测收据保存在 checks；VM 历史、缓冲与处理水位保留。应用及交付文档位于本地 `codex/switch-first-probes` 分支，未推送。平台镜像与配套窗口见其发布身份记录。
+
 ## 2026-10-22 code-eval 登记驱动的自动接入
 
 最终 API/controller 已更新并通过核验，95 目标全部 up，各容器 restart_count=0。平台于北京时间 13:53:47 确认恢复原 `maintenance=false`；修复后的 A3 一小时历史实际返回 HTTP 200，三个 A3 来源分别约 1.04/0.50/0.90 秒，桌面与手机各两次复核通过。

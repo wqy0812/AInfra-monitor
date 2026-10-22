@@ -23,7 +23,7 @@
 
 ## 数据与查询
 
-写入现有 VM `/api/v1/import` 的 `model_probe_*` 原始样本，标签只有稳定入口 environment；Router 交换不改变入口归属，也不尝试反推历史后端。每次结果使用同一个完成时间戳保存结果类别、请求开始时间、总耗时、首个输出耗时、HTTP 状态。导入设置 5 秒总时限（覆盖完整请求与响应读取），失败留下缺口，不重新生成。停止时正在执行的探测被取消且不记作服务故障。
+写入现有 VM `/api/v1/import` 的 `model_probe_*` 原始样本，旧模式使用稳定入口 environment；受管模式另保存 probe_id/probe_kind、底座或入口 ID、实际 Router 和观测来源标签，新记录增加来源计划时间样本。Router 交换不改变入口归属，也不尝试反推历史后端。每次结果使用同一个完成时间戳保存结果类别、请求开始时间、总耗时、首个输出耗时、HTTP 状态。导入设置 5 秒总时限（覆盖完整请求与响应读取），失败留下缺口，不重新生成。停止时正在执行的探测被取消且不记作服务故障。
 
 `GET /api/monitoring/probes` 固定读取最近 24 小时原始导出，不使用 query_range 的向前填充。返回 observed_at/start/end、interval_seconds=60、stale_after_seconds=120，以及登记目录中的 services，各含 environment/name/status/latest/records 和 offset_seconds。未接管目录时返回旧三入口及 0/20/40 秒偏移。记录包含 started_at/finished_at/status/reason/duration_seconds/first_output_seconds/http_status。缺失或矛盾的字段显示 unknown；没有记录或最后结果超过 120 秒时当前状态 unknown，旧结果仍保留原时间。VM 不可达返回 503。
 
