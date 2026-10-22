@@ -351,3 +351,52 @@ async def test_crash_after_desired_commit_rebuilds_public_probe_catalog(tmp_path
     assert json.loads((tmp_path / 'probes-catalog.json').read_text())['revision'] == 1
     await recovered.accept(catalog())
     assert recovered.control()['revision'] == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('adapter,name', [
+    ('dcu-sglang-v1', 'sglang_prefill_effective_tokens_total'),
+    ('xpu-sglang-v1', 'sglang_num_requests_total'),
+    ('dcu-sglang-v1', 'sglang:num_requests_total'),
+    ('a3-vllm-v1', 'vllm_request_success_total'),
+    ('a3-vllm-v1', 'vllm:request_success_total'),
+])
+async def test_inference_check_accepts_native_and_openmetrics_escaped_names(tmp_path, adapter, name):
+    from monitoring.controller import Publisher as HTTPPublisher
+    endpoint = {'type': 'inference', 'url': 'http://exporter.invalid/metrics', 'auth': {'type': 'none'}}
+    async def handler(request):
+        assert 'application/openmetrics-text' in request.headers['accept']
+        return httpx.Response(200, headers={'Content-Type':
+            'application/openmetrics-text; version=1.0.0; charset=utf-8; escaping=underscores'},
+            text='# TYPE ' + name.removesuffix('_total') + ' counter\n' + name + '{engine_type="prefill"} 1.0\n# EOF\n')
+    publisher = HTTPPublisher(settings(tmp_path), httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    result = await publisher.check_endpoint(endpoint, adapter)
+    await publisher.close()
+    assert result['status'] == 'passed'
+    assert result['format_valid'] and result['type_matches']
+    assert result['metric_names'] == [name]
+
+
+@pytest.mark.asyncio
+async def test_gateway_status_distinguishes_unmanaged_disabled_and_worker_pending(tmp_path):
+    from monitoring.probe_catalog import targets
+    c = Controller(settings(tmp_path), Publisher())
+    body = catalog()
+    prototype = body['gateways'][0]
+    body['gateways'].extend([
+        {**prototype, 'id': 'ppu', 'router_id': 'ppu-unmanaged', 'admission': False},
+        {**prototype, 'id': 'disabled', 'enabled': False},
+        {**prototype, 'id': 'unbound', 'router_id': None},
+        {**prototype, 'id': 'awaiting-worker'},
+        {**prototype, 'id': 'closed-entry', 'admission': False},
+    ])
+    await c.accept(body)
+    atomic_json(c.settings.probe_status, {'observed_at': time.time(), 'catalog_revision': 1,
+        'target_ids': ['foundation:new-foundation', 'gateway:entry-1', 'gateway:disabled', 'gateway:closed-entry']})
+    await c.reconcile()
+    statuses = {g['gateway_id']: g['status'] for g in c.status()['gateways']}
+    assert statuses == {'entry-1': 'ready', 'ppu': 'not_configured', 'disabled': 'disabled',
+                        'unbound': 'not_configured', 'awaiting-worker': 'pending', 'closed-entry': 'ready'}
+    # Reporting a terminal unconfigured state never opts the gateway into probes.
+    dispatch = targets(value=body, control=c.control())
+    assert all(target['probe_id'] != 'gateway:ppu' for target in dispatch)

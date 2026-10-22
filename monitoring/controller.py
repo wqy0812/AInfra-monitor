@@ -201,7 +201,8 @@ class Publisher:
                         return result
                     prefixes = {'host': ('node_',),
                                 'accelerator': {'dcu-sglang-v1': ('dcu_',), 'a3-vllm-v1': ('npu_', 'machine_npu_nums'), 'xpu-sglang-v1': ('node_xpu_',)}[adapter],
-                                'inference': ('vllm:',) if adapter == 'a3-vllm-v1' else ('sglang:',),
+                                # OpenMetrics escaping=underscores can normalize namespace colons.
+                                'inference': ('vllm:', 'vllm_') if adapter == 'a3-vllm-v1' else ('sglang:', 'sglang_'),
                                 'mooncake': ('master_', 'segment_', 'total_get_nums_', 'valid_get_nums_', 'mem_cache_hit_nums_', 'file_cache_hit_nums_')}
                     matched = sorted(n for n in names if n.startswith(prefixes[endpoint['type']]))
                     result.update(format_valid=True, type_matches=bool(matched), metric_count=len(names), metric_names=matched[:20],
@@ -530,9 +531,20 @@ class Controller:
                 self.mark(revision, 'probes', status, fid=fid)
             await self.observe_collection(catalog, revision)
             probe = read_json(self.settings.probe_status, {})
+            definitions = {g['id']: g for g in catalog['gateways']}
+            owners = {(f.get('router') or {}).get('id'): f for f in catalog['foundations'] if (f.get('router') or {}).get('id')}
             for gateway in self.state['gateways']:
-                gateway['status'] = 'ready' if (0 <= time.time() - probe.get('observed_at', 0) <= 5 and not probe.get('error')
-                    and probe.get('catalog_revision') == revision and 'gateway:' + gateway['gateway_id'] in probe.get('target_ids', [])) else 'pending'
+                definition = definitions[gateway['gateway_id']]
+                owner = owners.get(definition.get('router_id'))
+                if not definition.get('enabled', True) or (owner and not owner.get('enabled', True)):
+                    gateway['status'] = 'disabled'
+                elif not owner or not owner.get('monitoring_adapter') or not definition.get('business_url'):
+                    # Unmanaged registrations are intentionally absent from the
+                    # worker. They are not jobs waiting to become active.
+                    gateway['status'] = 'not_configured'
+                else:
+                    gateway['status'] = 'ready' if (0 <= time.time() - probe.get('observed_at', 0) <= 5 and not probe.get('error')
+                        and probe.get('catalog_revision') == revision and 'gateway:' + gateway['gateway_id'] in probe.get('target_ids', [])) else 'pending'
             states = [v['status'] for f in self.state['foundations'] for v in f['components'].values()]
             if all(s in ('ready', 'disabled', 'not_configured') for s in states):
                 self.state['applied_revision'] = revision
