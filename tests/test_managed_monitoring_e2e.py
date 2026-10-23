@@ -56,7 +56,12 @@ class SyntheticServices:
             def do_GET(self):
                 if self.path.startswith('/api/v1/'):
                     with owner.lock:
-                        value = copy.deepcopy(owner.resources.get(self.path))
+                        value = ([copy.deepcopy(value) for key, value in owner.resources.items()
+                                  if key.rsplit('/', 1)[0] == self.path]
+                                 if self.path.endswith(('/dashboards', '/datasources')) else copy.deepcopy(owner.resources.get(self.path)))
+                    if isinstance(value, list):
+                        self.reply(200, value)
+                        return
                     self.reply(200 if value else 404, value or {'error':'not_found'})
                     return
                 if self.path.startswith('/alpha/') and self.path.endswith('/metrics'):
@@ -93,6 +98,11 @@ class SyntheticServices:
                 with owner.lock:
                     owner.resources[self.path] = body
                 self.reply(200, body)
+
+            def do_DELETE(self):
+                with owner.lock:
+                    value = owner.resources.pop(self.path, None)
+                self.reply(200 if value else 404, {})
 
         self.server = ThreadingHTTPServer(('0.0.0.0',0),Handler)
         self.thread = threading.Thread(target=self.server.serve_forever,daemon=True)
@@ -330,7 +340,11 @@ async def test_managed_end_to_end_publish_rotate_pause_disable(tmp_path,monkeypa
         async def resumed():
             return worker.targets['foundation:alpha']['dispatch_status']=='active'
         await wait_until(resumed,5)
-        # Disable stops native targets; old samples and dashboards remain.
+        # Retire all project content, including custom dashboards, preserving VM history.
+        custom = copy.deepcopy(next(v for v in services.resources.values()
+                                    if v['kind'] == 'Dashboard' and v['metadata']['project'] == 'foundation-alpha'))
+        custom['metadata']['name'] = 'manual-retirement-check'
+        services.resources['/api/v1/projects/foundation-alpha/dashboards/manual-retirement-check'] = custom
         body=desired(services.port,3,password=services.password)
         body['foundations'][0]['enabled']=False
         await controller.accept(body)
@@ -338,8 +352,10 @@ async def test_managed_end_to_end_publish_rotate_pause_disable(tmp_path,monkeypa
         current=(await publisher.client.get(stack.agent+'/api/v1/targets')).json()['data']['activeTargets']
         assert all(row['labels'].get('environment')!='foundation-alpha' for row in current)
         assert set(source_registry.sources())=={'foundation-beta'}
-        assert '停用' in services.resources['/api/v1/projects/foundation-alpha']['spec']['display']['name']
-        assert worker.targets['foundation:alpha']['dispatch_status']=='paused'
+        assert not any(key.startswith('/api/v1/projects/foundation-alpha') for key in services.resources)
+        assert {v['metadata']['project'] for v in services.resources.values() if v['kind']=='Dashboard'} == {'foundation-beta'}
+        assert 'foundation:alpha' not in worker.targets and 'gateway:entry-alpha' not in worker.targets
+        assert {s['probe_id'] for s in (await probes.history(publisher.client,stack.vm))['services']} == {'foundation:beta','gateway:entry-beta'}
         history=(await publisher.client.get(stack.vm+'/api/v1/query',params={
             'query':'count_over_time(vllm:request_success_total{environment="foundation-alpha"}[10m])','nocache':1})).json()
         assert history['data']['result']
@@ -348,7 +364,7 @@ async def test_managed_end_to_end_publish_rotate_pause_disable(tmp_path,monkeypa
         await controller.accept(body)
         await wait_until(applied,60)
         assert source_registry.sources()=={}
-        assert len([v for v in services.resources.values() if v['kind']=='Dashboard'])==dashboard_count
+        assert not services.resources
         atomic_json(state/'e2e-result.json',{'status':'passed','revisions':4,'dashboards':dashboard_count,
             'synthetic_generations':len(services.generations),'authenticated_reads':services.authenticated_reads,
             'vm':stack.vm,'vmagent':stack.agent,'vmalert':stack.alert,'images':stack.identities,

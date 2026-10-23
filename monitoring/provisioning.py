@@ -259,6 +259,8 @@ def scrape_config(catalog, exclude=None):
 
 def perses_resources(foundation, catalog, templates, vm_url='http://127.0.0.1:18428'):
     """Generate a new project from versioned source templates, never live copies."""
+    if not foundation.get('enabled', True):
+        return {'projects': [], 'datasources': [], 'dashboards': []}
     from .source_registry import rewrite_query, use_catalog
     baseline = ADAPTERS[foundation['monitoring_adapter']]
     old_project, project = PROJECTS[baseline], project_name(foundation)

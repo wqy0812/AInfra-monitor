@@ -78,6 +78,8 @@ def targets(value=None, control=None, now=None):
         router = foundation.get('router') or {}
         if router.get('id'):
             owners[router['id']] = foundation
+        if not foundation.get('enabled', True):
+            continue
         fid = foundation['id']
         identity = 'foundation:' + fid
         url = generation_url(router.get('proxy_url'))
@@ -93,6 +95,8 @@ def targets(value=None, control=None, now=None):
                        'expected_router': router.get('id', ''), 'legacy_probe_environment': ''})
     for gateway in value['gateways']:
         owner = owners.get(gateway.get('router_id'))
+        if owner and not owner.get('enabled', True):
+            continue
         # An unrelated registered gateway (for example a retired environment)
         # must not silently regain real model traffic through monitoring.
         if gateway.get('router_id') and owner is None:

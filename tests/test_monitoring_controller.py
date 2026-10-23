@@ -73,7 +73,15 @@ class Publisher:
     async def perses_request(self, method, path, body=None):
         self.calls.append((method, path))
         if method == 'GET':
+            if path.endswith(('/dashboards', '/datasources')):
+                return [copy.deepcopy(value) for key, value in self.resources.items() if key.rsplit('/', 1)[0] == path]
             return copy.deepcopy(self.resources.get(path))
+        if method == 'DELETE':
+            self.resources.pop(path, None)
+            if self.unknown_once:
+                self.unknown_once = False
+                raise httpx.ReadTimeout('unknown delete result')
+            return None
         key = path + '/' + body['metadata']['name'] if method == 'POST' else path
         self.resources[key] = copy.deepcopy(body)
         if self.unknown_once:
@@ -237,20 +245,147 @@ async def test_repeated_resume_does_not_clear_a_new_maintenance_pause(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_deleted_foundation_stops_collection_and_retains_disabled_perses(tmp_path):
+async def test_deleted_foundation_removes_entire_project_and_waits_for_worker_ack(tmp_path):
     pub = Publisher()
     c = Controller(settings(tmp_path), pub)
     await c.accept(catalog())
     await c.reconcile()
+    path = next(k for k, v in pub.resources.items() if v['kind'] == 'Dashboard')
+    pub.resources[path]['spec']['display']['description'] = 'custom edit to retire'
+    custom = copy.deepcopy(pub.resources[path])
+    custom['metadata']['name'] = 'manual-dashboard'
+    pub.resources[path.rsplit('/', 1)[0] + '/manual-dashboard'] = custom
+    pub.resources['/api/v1/globaldatasources/shared'] = {'kind': 'GlobalDatasource', 'spec': {}}
     await c.accept({'schema_version': 1, 'revision': 2, 'foundations': [], 'gateways': []})
     await c.reconcile()
     active = json.loads((tmp_path / 'catalog.json').read_text())
     assert len(active['foundations']) == 1 and active['foundations'][0]['archived']
     scrape = json.loads((tmp_path / 'scrape.json').read_text())
     assert all(not j['job_name'].startswith('managed-') for j in scrape['scrape_configs'])
-    project = next(v for v in pub.resources.values() if v['kind'] == 'Project')
-    assert project['spec']['display']['name'].endswith('（已停用）')
-    assert len([v for v in pub.resources.values() if v['kind'] == 'Dashboard']) == 7
+    assert list(pub.resources) == ['/api/v1/globaldatasources/shared']
+    assert c.status()['applied_revision'] != 2
+    assert c.status()['foundations'][0]['components']['probes']['status'] == 'pending'
+    atomic_json(c.settings.probe_status, {'observed_at': time.time(), 'catalog_revision': 2, 'target_ids': [],
+                                        'inflight': {'gateway:entry-1': 1}})
+    await c.reconcile()
+    assert c.status()['applied_revision'] != 2
+    atomic_json(c.settings.probe_status, {'observed_at': time.time(), 'catalog_revision': 2, 'target_ids': [], 'inflight': {}})
+    await c.reconcile()
+    assert c.status()['applied_revision'] == 2
+    assert c.status()['foundations'][0]['status'] == 'disabled'
+    assert c.status()['foundations'][0]['perses_url'] is None
+    snapshots = [json.loads(p.read_text()) for p in (tmp_path / 'retirement-evidence').glob('*.json')]
+    assert any('custom edit to retire' in json.dumps(snapshot) and 'manual-dashboard' in json.dumps(snapshot) for snapshot in snapshots)
+    assert all(p.stat().st_mode & 0o777 == 0o600 for p in (tmp_path / 'retirement-evidence').glob('*.json'))
+    calls = len([call for call in pub.calls if call[0] in ('DELETE', 'PUT', 'POST')])
+    await c.reconcile()
+    assert len([call for call in pub.calls if call[0] in ('DELETE', 'PUT', 'POST')]) == calls
+
+
+@pytest.mark.asyncio
+async def test_retirement_unknown_delete_recovers_after_restart_and_preserves_other_project(tmp_path):
+    pub = Publisher()
+    c = Controller(settings(tmp_path), pub)
+    body = catalog()
+    other = copy.deepcopy(body['foundations'][0])
+    other.update(id='other', monitoring_source='other-source', router=None, monitoring_endpoints=[])
+    body['foundations'].append(other)
+    await c.accept(body)
+    await c.reconcile()
+    other_resources = {k: copy.deepcopy(v) for k, v in pub.resources.items() if 'foundation-other' in k}
+    assert other_resources
+    body['revision'] = 2
+    body['foundations'][0]['enabled'] = False
+    await c.accept(body)
+    pub.unknown_once = True
+    await c.reconcile()
+    assert c.status()['foundations'][0]['status'] == 'error'
+    assert c.status()['applied_revision'] != 2
+    c = Controller(settings(tmp_path), pub)
+    atomic_json(c.settings.probe_status, {'observed_at': time.time(), 'catalog_revision': 2, 'target_ids': [], 'inflight': {}})
+    await c.reconcile()
+    assert c.status()['foundations'][0]['status'] == 'disabled'
+    assert {k: v for k, v in pub.resources.items() if 'foundation-other' in k} == other_resources
+    assert not any('foundation-new-foundation' in k for k in pub.resources)
+
+
+@pytest.mark.asyncio
+async def test_retirement_concurrent_change_is_visible_and_retry_deletes_custom_content(tmp_path):
+    pub = Publisher()
+    c = Controller(settings(tmp_path), pub)
+    await c.accept(catalog())
+    await c.reconcile()
+    path = next(k for k, v in pub.resources.items() if v['kind'] == 'Dashboard')
+    original = pub.perses_request
+    edited = False
+    async def edit_on_read(method, key, body=None):
+        nonlocal edited
+        if method == 'GET' and key == path and not edited:
+            pub.resources[path]['spec']['display']['description'] = 'concurrent change'
+            edited = True
+        return await original(method, key, body)
+    pub.perses_request = edit_on_read
+    body = catalog(2)
+    body['foundations'][0]['enabled'] = False
+    await c.accept(body)
+    await c.reconcile()
+    assert c.status()['foundations'][0]['components']['perses']['status'] == 'conflict'
+    assert pub.resources[path]['spec']['display']['description'] == 'concurrent change'
+    await c.reconcile()
+    assert not pub.resources
+
+
+@pytest.mark.asyncio
+async def test_retirement_ownership_conflict_never_deletes_project(tmp_path):
+    pub = Publisher()
+    c = Controller(settings(tmp_path), pub)
+    await c.accept(catalog())
+    await c.reconcile()
+    before = copy.deepcopy(pub.resources)
+    path = next(k for k, v in pub.resources.items() if v['kind'] == 'Dashboard')
+    c.state['resources'][path]['owner'] = 'other-foundation'
+    body = catalog(2)
+    body['foundations'][0]['enabled'] = False
+    await c.accept(body)
+    await c.reconcile()
+    assert c.status()['foundations'][0]['components']['perses']['status'] == 'conflict'
+    assert pub.resources == before
+
+
+@pytest.mark.asyncio
+async def test_retirement_cannot_claim_an_unmanaged_project_with_the_same_name(tmp_path):
+    pub = Publisher()
+    c = Controller(settings(tmp_path), pub)
+    await c.accept(catalog())
+    await c.reconcile()
+    before = copy.deepcopy(pub.resources)
+    c.state['resources'] = {}
+    body = catalog(2)
+    body['foundations'][0]['enabled'] = False
+    await c.accept(body)
+    await c.reconcile()
+    assert c.status()['foundations'][0]['components']['perses']['status'] == 'conflict'
+    assert pub.resources == before
+
+
+@pytest.mark.asyncio
+async def test_existing_retired_registration_cleans_up_without_adapter_or_new_revision(tmp_path):
+    pub = Publisher()
+    c = Controller(settings(tmp_path), pub)
+    await c.accept(catalog())
+    await c.reconcile()
+    body = catalog(2)
+    body['foundations'][0].update(enabled=False, monitoring_adapter=None)
+    await c.accept(body)
+    # Simulate the old release having already reported this revision applied.
+    c.state['applied_revision'] = 2
+    c.save()
+    c = Controller(settings(tmp_path), pub)
+    assert c.status()['applied_revision'] != 2
+    atomic_json(c.settings.probe_status, {'observed_at': time.time(), 'catalog_revision': 2, 'target_ids': [], 'inflight': {}})
+    await c.reconcile()
+    assert c.status()['foundations'][0]['status'] == 'disabled'
+    assert c.status()['applied_revision'] == 2 and not pub.resources
 
 
 @pytest.mark.asyncio
