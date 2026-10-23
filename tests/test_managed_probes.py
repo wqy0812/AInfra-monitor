@@ -77,6 +77,26 @@ def test_unrelated_gateway_is_not_reenabled_and_drafts_do_not_probe(managed):
     assert targets[0]['pause_reason'] == targets[1]['pause_reason'] == 'awaiting_adapter'
 
 
+@pytest.mark.asyncio
+async def test_retirement_removes_targets_and_history_without_cancelling_inflight(managed):
+    scheduler = worker.ManagedProbes(None, 'http://vm.test')
+    await scheduler.tick(1000)
+    release = asyncio.Event()
+    running = asyncio.create_task(release.wait())
+    scheduler.running['foundation:new-foundation'] = running
+    value = manifest()
+    value['revision'] += 1
+    value['foundations'][0]['enabled'] = False
+    (managed/'catalog.json').write_text(json.dumps(value))
+    await scheduler.tick(1001)
+    assert scheduler.targets == {} and not running.done()
+    assert catalog.read_json(catalog.state_file('status'))['target_ids'] == []
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda _: pytest.fail('No retired history query'))) as client:
+        assert (await probes.history(client, 'http://vm.test', now=1001))['services'] == []
+    release.set()
+    await running
+
+
 def test_decode_stitches_legacy_only_to_gateway_and_preserves_actual_router(managed):
     targets = catalog.targets(now=1000)
     raw = (probes.samples('a3-vllm', result(800)) + probes.samples('a3-vllm', result(950))

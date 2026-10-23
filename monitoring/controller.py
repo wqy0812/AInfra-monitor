@@ -227,7 +227,7 @@ class Publisher:
         response = await self.client.request(method, self.settings.perses + path, json=body, headers=headers)
         if response.status_code == 401:
             self.token = None
-        if method == 'GET' and response.status_code == 404:
+        if method in ('GET', 'DELETE') and response.status_code == 404:
             return None
         response.raise_for_status()
         return response.json() if response.content else None
@@ -255,6 +255,16 @@ class Controller:
             self.save()
         if self.desired:
             atomic_json(self.settings.state / 'probes-catalog.json', public_catalog(self.desired['catalog']))
+            # Re-verify old disabled registrations on upgrade: earlier versions
+            # deliberately retained their Perses projects.
+            for foundation in self.desired['catalog']['foundations']:
+                if not foundation.get('enabled', True):
+                    for row in self.state['foundations']:
+                        if row['foundation_id'] == foundation['id']:
+                            row.update(status='pending', components={name: {'status': 'pending'}
+                                       for name in ('scrape', 'rules', 'perses', 'probes')})
+                    self.state['applied_revision'] = min(self.state['applied_revision'], self.state['accepted_revision'] - 1)
+            self.save()
             self.event.set()
 
     def save(self):
@@ -283,6 +293,10 @@ class Controller:
                 for prior in self.desired.get('catalog', {}).get('foundations', []):
                     if prior['id'] not in live_ids:
                         safe['foundations'].append({**copy.deepcopy(prior), 'enabled': False, 'archived': True})
+                live_gateways = {g['id'] for g in safe['gateways']}
+                for prior in self.desired.get('catalog', {}).get('gateways', []):
+                    if prior['id'] not in live_gateways:
+                        safe['gateways'].append({**copy.deepcopy(prior), 'enabled': False, 'archived': True})
                 self.desired = {'catalog': safe, 'digest': signature}
                 atomic_json(self.desired_path, self.desired)
                 # Desired file is the crash-recovery authority. It is committed
@@ -299,10 +313,9 @@ class Controller:
         return {'accepted_revision': revision, 'applied_revision': self.state['applied_revision']}
 
     def new_foundation(self, foundation, revision):
-        enabled = foundation.get('enabled', True)
         return {'foundation_id': foundation['id'], 'monitoring_source': foundation.get('monitoring_source'),
-                'name': foundation.get('name', foundation['id']), 'status': 'pending' if enabled else 'disabled',
-                'desired_revision': revision, 'components': {name: {'status': 'pending' if enabled else 'disabled'}
+                'name': foundation.get('name', foundation['id']), 'status': 'pending',
+                'desired_revision': revision, 'components': {name: {'status': 'pending'}
                                                          for name in ('scrape', 'rules', 'perses', 'probes')},
                 'perses_url': self.settings.perses + '/projects/' + project_name(foundation) if foundation.get('monitoring_source') else None}
 
@@ -312,18 +325,24 @@ class Controller:
 
     def mark(self, revision, component, status, *, fid=None, error=None):
         self.current(revision)
+        definitions = {f['id']: f for f in self.desired['catalog']['foundations']}
         for foundation in self.state['foundations']:
             if fid and foundation['foundation_id'] != fid:
                 continue
-            value = {'status': status, 'applied_revision': revision if status in ('ready', 'disabled') else None}
+            retired = not definitions[foundation['foundation_id']].get('enabled', True)
+            applied_status = 'disabled' if retired and status == 'ready' and component in ('scrape', 'rules') else status
+            value = {'status': applied_status, 'applied_revision': revision if applied_status in ('ready', 'disabled') else None}
             if error:
                 value['error'] = error
             foundation['components'][component] = value
             states = [v['status'] for v in foundation['components'].values()]
-            foundation['status'] = ('disabled' if foundation.get('status') == 'disabled' else
+            foundation['status'] = ('disabled' if retired and all(s == 'disabled' for s in states) else
                                     'ready' if all(s in ('ready', 'not_configured') for s in states) else
                                     'conflict' if 'conflict' in states else
-                                    'partial' if 'ready' in states else 'error' if 'error' in states else 'pending')
+                                    'error' if 'error' in states else
+                                    'partial' if any(s in ('ready', 'disabled') for s in states) else 'pending')
+            if retired and foundation['components']['perses']['status'] == 'disabled':
+                foundation['perses_url'] = None
         self.save()
 
     async def apply_config(self, revision, component, value):
@@ -389,10 +408,13 @@ class Controller:
         return value
 
     async def publish_resources(self, revision, foundation, resources):
+        if not foundation.get('enabled', True):
+            raise Conflict('retired_foundation_cannot_publish')
         owner = foundation['id']
         forced = {path: record.get('conflict_digest') for path, record in self.state['resources'].items()
                   if owner in self.forced and record.get('owner') == owner and record.get('conflict_digest')}
         self.forced.discard(owner)
+
         for category in ('projects', 'datasources', 'dashboards'):
             for document in resources[category]:
                 self.current(revision)
@@ -430,6 +452,78 @@ class Controller:
                 self.state['resources'][path] = {'owner': owner, 'applied_digest': desired_digest, 'revision': revision}
                 self.save()
         self.forced.discard(owner)
+
+    async def retire_resources(self, revision, foundation):
+        """Delete dedicated projects, including custom content, with durable evidence.
+
+        Ownership conflicts are checked for the entire project before any write.
+        Deleted resource records remain as tombstones for restart/readback.
+        """
+        owner = foundation['id']
+        prefix = '/api/v1/projects/'
+        projects = {path[len(prefix):].split('/')[0] for path, record in self.state['resources'].items()
+                    if path.startswith(prefix) and record.get('owner') == owner}
+        if foundation.get('monitoring_source'):
+            projects.add(project_name(foundation))
+        for project in sorted(projects):
+            root = prefix + project
+            if any(record.get('owner') != owner for path, record in self.state['resources'].items()
+                   if path == root or path.startswith(root + '/')):
+                raise Conflict('perses_project_ownership_conflict')
+            if any(f['id'] != owner and f.get('monitoring_source') and project_name(f) == project
+                   for f in self.desired['catalog']['foundations']):
+                raise Conflict('perses_project_ownership_conflict')
+        for project in sorted(projects):
+            self.current(revision)
+            root = prefix + project
+            document = await self.publisher.perses_request('GET', root)
+            if document is None:
+                for path, record in self.state['resources'].items():
+                    if path == root or path.startswith(root + '/'):
+                        record.update(deleted=True, deleting=False, revision=revision)
+                self.save()
+                continue
+            if (document.get('kind') != 'Project' or document.get('metadata', {}).get('name') != project
+                    or self.state['resources'].get(root, {}).get('owner') != owner):
+                raise Conflict('perses_project_ownership_conflict')
+            resources = []
+            for category, kind in (('dashboards', 'Dashboard'), ('datasources', 'Datasource')):
+                items = await self.publisher.perses_request('GET', root + '/' + category)
+                if not isinstance(items, list):
+                    raise RuntimeError('perses_inventory_invalid')
+                for item in items:
+                    if item.get('kind') != kind or item.get('metadata', {}).get('project') != project:
+                        raise Conflict('perses_project_ownership_conflict')
+                    resources.append((root + '/' + category + '/' + item['metadata']['name'], item))
+            resources.append((root, document))
+            evidence = {'revision': revision, 'foundation_id': owner, 'project': project,
+                        'resources': [{'path': path, 'document': item, 'digest': digest(item)} for path, item in resources]}
+            # Content-addressed snapshots survive subsequent retries and are not
+            # returned from the public integrations endpoint.
+            atomic_json(self.settings.state / 'retirement-evidence' / (digest(evidence) + '.json'), evidence)
+            for path, item in resources:
+                self.current(revision)
+                current = await self.publisher.perses_request('GET', path)
+                if current is not None and digest(current) != digest(item):
+                    raise Conflict('perses_concurrent_edit')
+                if path == root:
+                    # A new child created during cleanup must be inventoried on
+                    # the next pass, never removed by a cascading project delete.
+                    for category in ('dashboards', 'datasources'):
+                        if await self.publisher.perses_request('GET', root + '/' + category):
+                            raise Conflict('perses_concurrent_edit')
+                self.state['resources'][path] = {**self.state['resources'].get(path, {}),
+                    'owner': owner, 'delete_digest': digest(item), 'revision': revision, 'deleting': True}
+                self.save()
+                if current is not None:
+                    self.current(revision)
+                    await self.publisher.perses_request('DELETE', path)
+                if await self.publisher.perses_request('GET', path) is not None:
+                    raise RuntimeError('perses_delete_readback_pending')
+                self.state['resources'][path].update(deleting=False, deleted=True)
+                self.save()
+            if await self.publisher.perses_request('GET', root) is not None:
+                raise RuntimeError('perses_delete_readback_pending')
 
     async def observe_endpoints(self, catalog, revision):
         checks = self.state.setdefault('endpoint_checks', {})
@@ -505,6 +599,30 @@ class Controller:
             for foundation in catalog['foundations']:
                 self.current(revision)
                 fid = foundation['id']
+                if not foundation.get('enabled', True):
+                    row = next(f for f in self.state['foundations'] if f['foundation_id'] == fid)
+                    try:
+                        if not all(row['components'][name]['status'] == 'disabled' for name in ('scrape', 'rules')):
+                            self.mark(revision, 'perses', 'pending', fid=fid, error='retirement_collection_pending')
+                        else:
+                            await self.retire_resources(revision, foundation)
+                            self.mark(revision, 'perses', 'disabled', fid=fid)
+                    except Superseded:
+                        raise
+                    except Exception as error:
+                        self.mark(revision, 'perses', 'conflict' if isinstance(error, Conflict) else 'error',
+                                  fid=fid, error=self.error_code(error, 'perses'))
+                    probe = read_json(self.settings.probe_status, {})
+                    removed = {'foundation:' + fid} | {'gateway:' + g['id'] for g in catalog['gateways']
+                              if g.get('router_id') and g['router_id'] == (foundation.get('router') or {}).get('id')}
+                    stopped = (0 <= time.time() - probe.get('observed_at', 0) <= 5 and not probe.get('error')
+                               and probe.get('catalog_revision') == revision
+                               and isinstance(probe.get('target_ids'), list)
+                               and removed.isdisjoint(probe['target_ids'])
+                               and not any(probe.get('inflight', {}).get(identity) for identity in removed))
+                    self.mark(revision, 'probes', 'disabled' if stopped else 'pending', fid=fid,
+                              error=None if stopped else 'retirement_probe_ack_pending')
+                    continue
                 if any(e.startswith('missing_monitoring_') for e in invalid.get(fid, [])):
                     for component in ('scrape', 'rules', 'perses'):
                         self.mark(revision, component, 'pending', fid=fid, error=invalid[fid][0])
@@ -546,6 +664,8 @@ class Controller:
             states = [v['status'] for f in self.state['foundations'] for v in f['components'].values()]
             if all(s in ('ready', 'disabled', 'not_configured') for s in states):
                 self.state['applied_revision'] = revision
+            else:
+                self.state['applied_revision'] = min(self.state['applied_revision'], revision - 1)
             self.save()
 
     @staticmethod
@@ -671,6 +791,8 @@ def create_app(settings=None, publisher=None):
             fid = body.get('foundation_id')
             if fid not in {f['foundation_id'] for f in controller.state['foundations']}:
                 raise HTTPException(404, 'foundation_not_found')
+            if any(f['id'] == fid and not f.get('enabled', True) for f in controller.desired['catalog']['foundations']):
+                raise HTTPException(409, 'retired_foundation_cannot_publish')
             controller.forced.add(fid)
         controller.event.set()
         return {'accepted_revision': controller.state['accepted_revision']}

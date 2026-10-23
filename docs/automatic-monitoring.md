@@ -2,6 +2,10 @@
 
 本文描述已实现的接入协议和部署入口。代码验证、线上部署与真实业务验收分别记录；发布身份及验收结论仍以 `docs/releases/README.md` 和本次证据为准。
 
+退役专属项目清理已在当前源码实现，本轮尚未部署。后续按停机窗口更新 controller、API 和 probe worker，保留原受管目录和持久化状态；再更新 code-eval 配套组件。启动会补清理原有退役对象，验收需核对在用底座新鲜度、退役资源消失及清理读回状态。
+
+相关本地回归：`.venv/bin/python -m pytest tests/test_monitoring_controller.py tests/test_managed_probes.py tests/test_source_catalog.py -q`。真实 VM 生命周期使用 `MONITORING_MANAGED_E2E=1 .venv/bin/python -m pytest tests/test_managed_monitoring_e2e.py -q`；独立 Perses 删除契约使用 `MONITORING_PERSES_E2E=1 .venv/bin/python -m pytest tests/test_perses_retirement.py -q`，预先准备 `perses/image-lock.json` 固定的镜像。两项仅使用本次临时容器、合成服务和数据，结束清理测试容器与网络，保留结果证据。
+
 code-eval 是底座、exporter、固定 Router/Proxy 与网关入口的登记权威。engine 在保存后同步，并每 15 秒补偿同步；独立 `monitoring-controller` 持久化目录版本，编译采集、记录规则和 Perses 资源。vmagent、VM、vmalert、只读 API 与探测 worker 继续执行各自职责。新增同类底座无需编写采集配置或复制线上看板。
 
 ## 登记和能力
@@ -32,7 +36,9 @@ controller 运行目录包含 `desired.json`、`integration-state.json`、`scrap
 
 编译先调用已部署固定版本 vmagent/vmalert 的 dry-run；成功后原子替换文件、重载并核对实际目标、带配置指纹的采集池以及规则名称、表达式和标签。采集池名称包含配置摘要，最终时序的 job 标签保持原身份，因此凭据或过滤规则单独变化也能确认已生效。不确定结果通过读回恢复，不重复创建 Perses 资源。受管配置文件或 Perses 资源被并发改动时保留冲突，停止覆盖；故障按当前版本修复，没有版本回退路径。
 
-删除底座停止采集和规则，保留停用目录及 Perses 历史项目。停止采集不删除 VM 历史、发送缓冲和处理水位。
+底座退役（`enabled=false`）后退出运行查询和探测目录，停止新探测，已发请求按原时限收尾；采集和规则移除后核对 native 实际配置。controller 删除该底座整个专属 Perses 项目，包括手工新增或修改的看板和项目数据源；全局、共享和其他底座的资源保留。资源归属冲突停止清理并报告失败。
+
+清理前在 `STATE_DIR/retirement-evidence/` 保存 0600 的资源内容及摘要，持久化删除意图并逐项读回，按看板、项目数据源、项目的顺序删除。并发变化保留冲突，重试时重新留证；请求结果不明或重启后先查询是否已经删除。采集、规则、专属项目和探测进程的新鲜停止／在途收尾确认全部完成，接入状态才成为 `disabled`；失败不会被退役标记掩盖。既有退役登记在 controller 启动后同样清理，不需要新目录版本；重新生成入口拒绝重建退役资源。底座资料、VM 历史、发送缓冲和处理水位保留。
 
 ## Perses 和双层探测
 
