@@ -1,5 +1,19 @@
 # 发布身份与历史检索
 
+## 2026-10-23 退役监控清理与专属 Perses 项目删除
+
+test4 已按停机窗口更新 monitoring-api、monitoring-probes 和 monitoring-controller，应用源码 `22def3ed726d9f19d09768038d9386c98bbe16a4`（#8 合并提交），三个组件均使用镜像 `sha256:f55312295de2b3dd595ba081283bd98cb45ce2b828cb69296bd7bc87e4217c97`，restart_count=0；每个运行包 40 个源码文件与确定提交构建输入逐项一致。
+
+本轮首次使用原 API 镜像 `sha256:f8f919d9127865ac8eaf46d592e537aafb950d3c810a2960284552a4bdfe2776` 构建时触及 Docker 镜像层数上限，尚未替换服务即停止。保留失败日志后，改用已安装、精确依赖匹配且层数更少的 `sha256:b69a6553ec3a25e6260298bf1dd46bcda4e6b29163d454e4171f2c1bddecc8e7` 作为依赖基底，离线重建当前完整源码；没有启动旧版服务。
+
+控制器启动补清理已有 PPU 退役登记，四项 scrape/rules/perses/probes 均为 disabled，专属项目 `foundation-1cb92478d6194655a048ec7d29778a98` 已确认不存在。该对象此前 Perses 报错且 applied_revision 停在 3；更新后 accepted_revision=applied_revision=18。5 个在用底座均 ready/healthy，95 个采集目标全部 up，快照年龄约 17.5–22.5 秒，探测 worker 有 10 个目标；发布前历史窗口仍可查询，A3 返回 26 条 up 历史序列。
+
+保留原 state 目录、目录版本、凭据、VM 数据挂载、发送缓冲和处理水位。替换组件的启动参数、环境、资源与访问控制挂载均保持；VM、vmagent、vmalert 和 Perses 没有替换。退役删除按当前源码保留归属检查、删除意图和读回流程；本次实际旧退役项目原本已不存在，不能将其验收解释为线上删除了有内容的项目。手工资源删除和中断恢复由此前合成回归覆盖，本轮未重复运行真实容器合成验收。
+
+配套 code-eval 源码 `cd493ba219ab74ae0ab276065fa25547020cf68f` 已部署 test1，并于北京时间 17:40:26 完成检查、恢复原准入。线上桌面 1280×720 和 iPhone 竖屏确认退役资源过滤与清理状态，无业务写入；没有为验收额外生成模型请求。code-eval #21 已知在途切流与退役竞态尚未修复，详见平台发布记录。
+
+test4 新增 `/data2/monitoring/releases/retirement-20261023/`，含 source、首次失败的 build、成功的 build-r2、三个组件 window、checks 及受限 private。完成回执：`evidence/retirement-20261023/checks/completed.json`；构建身份：`evidence/retirement-20261023/api-build.json`；失败证据同目录保留。完整部署配置仅保存在服务器 private/。
+
 ## 2026-10-22 switch 优先的链路共享探测
 
 已在 test4 更新 monitoring-api 与 monitoring-probes，应用源码 `b2933af18c687d610e583659be9ec88cf04c63a0`，镜像均为 `sha256:f8f919d9127865ac8eaf46d592e537aafb950d3c810a2960284552a4bdfe2776`，固定基底 `sha256:7a64ca38e555adeaabb17043b0c85252fd5b350a83487c7693327c2041c3f2cd`。两个运行容器各 40 个源码/资源文件与构建输入逐项一致，restart_count=0；controller、VM、vmagent、vmalert、Perses 与登记目录保持既有部署。
